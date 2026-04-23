@@ -24,7 +24,8 @@ export function parseAnatomy(content: string): { entries: AnatomyEntry[]; metada
   let currentSection = "";
   let files = 0, hits = 0, misses = 0;
 
-  for (const line of content.split("\n")) {
+  for (const raw of content.split("\n")) {
+    const line = raw.replace(/\r$/, "");
     const metaMatch = line.match(/Files:\s*(\d+).*hits:\s*(\d+).*Misses:\s*(\d+)/i);
     if (metaMatch) {
       files = parseInt(metaMatch[1]);

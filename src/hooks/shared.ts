@@ -65,7 +65,8 @@ export interface AnatomyEntry {
 export function parseAnatomy(content: string): Map<string, AnatomyEntry[]> {
   const sections = new Map<string, AnatomyEntry[]>();
   let currentSection = "";
-  for (const line of content.split("\n")) {
+  for (const raw of content.split("\n")) {
+    const line = raw.replace(/\r$/, "");
     const sm = line.match(/^## (.+)/);
     if (sm) {
       currentSection = sm[1].trim();
