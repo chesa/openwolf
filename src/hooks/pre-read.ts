@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import {
-  getWolfDir, ensureWolfDir, readJSON, writeJSON, readMarkdown, parseAnatomy,
+  getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, readMarkdown, parseAnatomy,
   estimateTokens, readStdin, normalizePath
 } from "./shared.js";
 
@@ -16,8 +16,7 @@ interface SessionData {
 async function main(): Promise<void> {
   ensureWolfDir();
   const wolfDir = getWolfDir();
-  const hooksDir = path.join(wolfDir, "hooks");
-  const sessionFile = path.join(hooksDir, "_session.json");
+  const sessionFile = path.join(getSessionDir(), "_session.json");
 
   const raw = await readStdin();
   let input: { tool_input?: { file_path?: string; path?: string } };
