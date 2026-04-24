@@ -214,6 +214,16 @@ Ask Claude to help you pick a UI framework. OpenWolf ships a curated knowledge b
 
 OpenWolf is not an AI wrapper. It is 6 hook scripts and a `.wolf/` directory. It doesn't run your AI for you or change your workflow. It gives Claude Code what it lacks: a project map so it reads less, a memory so it learns faster, and a ledger so you see where tokens go.
 
+## Git Worktrees
+
+OpenWolf works transparently inside git worktrees (created via `git worktree add` or `claude --worktree`). No setup required — when Claude Code launches in a linked worktree, OpenWolf automatically:
+
+- Resolves `.wolf/` to the main checkout via `git rev-parse --git-common-dir`
+- Reads shared knowledge files (`cerebrum.md`, `anatomy.md`, `buglog.json`) from the main checkout so all worktrees share the same brain
+- Writes session-scoped state (`memory.md`, `token-ledger.json`) to `.wolf/sessions/<worktree-id>/` to prevent context leakage between parallel sessions
+
+`openwolf init` must be run from the main checkout, not from inside a worktree. Run `openwolf status` from inside a worktree to confirm instrumentation is active. See the [troubleshooting docs](docs/troubleshooting.md#git-worktrees) for details.
+
 ## Requirements
 
 - Node.js 20+
