@@ -1,11 +1,76 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import { execFileSync } from "node:child_process";
+
+interface WorktreeContext {
+  isWorktree: boolean;
+  mainRepoRoot: string;
+  worktreePath: string;
+  sessionId: string;
+  branch: string;
+}
+
+let _cachedWorktreeCtx: WorktreeContext | null = null;
+
+function detectWorktreeContext(): WorktreeContext {
+  if (_cachedWorktreeCtx) return _cachedWorktreeCtx;
+  const dir = path.resolve(process.env.CLAUDE_PROJECT_DIR || process.cwd());
+  try {
+    const commonGitDir = execFileSync(
+      "git", ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+      { cwd: dir, stdio: ["pipe", "pipe", "ignore"], encoding: "utf-8", timeout: 500 }
+    ).trim();
+    const mainRepoRoot = path.resolve(path.dirname(commonGitDir));
+    let branch = "";
+    try {
+      branch = execFileSync(
+        "git", ["rev-parse", "--abbrev-ref", "HEAD"],
+        { cwd: dir, stdio: ["pipe", "pipe", "ignore"], encoding: "utf-8", timeout: 500 }
+      ).trim();
+    } catch {}
+    if (mainRepoRoot === dir) {
+      _cachedWorktreeCtx = { isWorktree: false, mainRepoRoot: dir, worktreePath: dir, sessionId: "", branch };
+    } else {
+      const sessionId = crypto.createHash("sha256").update(dir).digest("hex").slice(0, 8);
+      _cachedWorktreeCtx = { isWorktree: true, mainRepoRoot, worktreePath: dir, sessionId, branch };
+    }
+  } catch {
+    _cachedWorktreeCtx = { isWorktree: false, mainRepoRoot: dir, worktreePath: dir, sessionId: "", branch: "" };
+  }
+  return _cachedWorktreeCtx;
+}
 
 export function getWolfDir(): string {
-  // Prefer CLAUDE_PROJECT_DIR so hooks work even if CWD changes during a session
-  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-  return path.join(projectDir, ".wolf");
+  return path.join(detectWorktreeContext().mainRepoRoot, ".wolf");
+}
+
+export function getSessionDir(): string {
+  const ctx = detectWorktreeContext();
+  if (!ctx.isWorktree) return getWolfDir();
+  return path.join(getWolfDir(), "sessions", ctx.sessionId);
+}
+
+export function getWorktreeContext(): WorktreeContext {
+  return detectWorktreeContext();
+}
+
+export function ensureSessionDir(): void {
+  const ctx = detectWorktreeContext();
+  if (!ctx.isWorktree) return;
+  const sessionDir = getSessionDir();
+  if (!fs.existsSync(sessionDir)) {
+    fs.mkdirSync(sessionDir, { recursive: true });
+  }
+  const metaPath = path.join(sessionDir, "worktree.json");
+  if (!fs.existsSync(metaPath)) {
+    writeJSON(metaPath, {
+      worktreePath: ctx.worktreePath,
+      branch: ctx.branch,
+      mainRepo: ctx.mainRepoRoot,
+      created: new Date().toISOString(),
+    });
+  }
 }
 
 /**
@@ -177,7 +242,7 @@ export function extractDescription(filePath: string): string {
   if (ext === ".rs") {
     const lines = content.split("\n");
     for (const line of lines.slice(0, 20)) {
-      const m = line.match(/^\s*(?:\/\/\/|\/\/!)\s*(.+)/);
+      const m = line.match(/^\s*(?:\/\/|\/\/!)\s*(.+)/);
       if (m && m[1].length > 5) return cap(m[1].trim());
     }
   }
@@ -222,8 +287,8 @@ export function extractDescription(filePath: string): string {
   // ─── PHP / Laravel ───────────────────────────────────────
   if (ext === ".php") {
     if (basename.endsWith(".blade.php")) {
-      const ext2 = content.match(/@extends\(\s*['"]([^'"]+)['"]\s*\)/);
-      const sections = (content.match(/@section\(\s*['"](\w+)['"]/g) || []).map(s => s.match(/['"](\w+)['"]/)?.[1]).filter(Boolean);
+      const ext2 = content.match(/@extends\(\s*['\"]([^'\"]+)[\'\"]\s*\)/);
+      const sections = (content.match(/@section\(\s*['\"](\w+)['\"]/g) || []).map(s => s.match(/['\"](\w+)['\"]/)?.[1]).filter(Boolean);
       const parts: string[] = [];
       if (ext2) parts.push(`extends ${ext2[1]}`);
       if (sections.length) parts.push(`sections: ${sections.join(", ")}`);
@@ -246,19 +311,19 @@ export function extractDescription(filePath: string): string {
 
     if (parent === "Model" || parent === "Authenticatable") {
       const parts: string[] = [];
-      const tbl = content.match(/\$table\s*=\s*['"]([^'"]+)['"]/);
+      const tbl = content.match(/\$table\s*=\s*['\"]([^'\"]+)['\"]/);
       if (tbl) parts.push(`table: ${tbl[1]}`);
       const fill = content.match(/\$fillable\s*=\s*\[([^\]]*)\]/s);
-      if (fill) { const c = (fill[1].match(/['"]/g) || []).length / 2; parts.push(`${Math.floor(c)} fields`); }
+      if (fill) { const c = (fill[1].match(/['\"]/g) || []).length / 2; parts.push(`${Math.floor(c)} fields`); }
       const rels = (content.match(/\$this->(hasMany|hasOne|belongsTo|belongsToMany|morphMany|morphTo)\(/g) || []).length;
       if (rels) parts.push(`${rels} rels`);
       return cap(parts.length ? `Model — ${parts.join(", ")}` : `Model: ${className}`);
     }
 
     if (basename.match(/^\d{4}_\d{2}_\d{2}/)) {
-      const create = content.match(/Schema::create\(\s*['"]([^'"]+)['"]/);
+      const create = content.match(/Schema::create\(\s*['\"]([^'\"]+)['\"]/);
       if (create) return `Migration: create ${create[1]} table`;
-      const alter = content.match(/Schema::table\(\s*['"]([^'"]+)['"]/);
+      const alter = content.match(/Schema::table\(\s*['\"]([^'\"]+)['\"]/);
       if (alter) return `Migration: alter ${alter[1]} table`;
       return "Database migration";
     }
@@ -294,7 +359,7 @@ export function extractDescription(filePath: string): string {
     }
 
     // Express/Fastify routes
-    const routeHits = content.match(/\.(get|post|put|patch|delete)\s*\(\s*['"`]/g);
+    const routeHits = content.match(/\.(get|post|put|patch|delete)\s*\(\s*['`"]/g);
     if (routeHits && routeHits.length > 0) {
       const methods = [...new Set(routeHits.map(r => r.match(/\.(get|post|put|patch|delete)/)?.[1]?.toUpperCase()))];
       return cap(`API routes: ${methods.join(", ")} (${routeHits.length} endpoints)`);
@@ -464,7 +529,7 @@ export function extractDescription(filePath: string): string {
 
   // ─── Vue / Svelte / Astro ────────────────────────────────
   if (ext === ".vue") {
-    const name = content.match(/name:\s*['"]([^'"]+)['"]/);
+    const name = content.match(/name:\s*['\"]([^'\"]+)['\"]/);
     const setup = content.includes("<script setup");
     const parts: string[] = [];
     if (name) parts.push(name[1]);
@@ -486,8 +551,8 @@ export function extractDescription(filePath: string): string {
 
   // ─── SQL ─────────────────────────────────────────────────
   if (ext === ".sql") {
-    const creates = (content.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"']?(\w+)/gi) || [])
-      .map(m => m.match(/(?:TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?)([`"']?\w+)/i)?.[1]?.replace(/[`"']/g, "")).filter(Boolean);
+    const creates = (content.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`'\"](\w+)/gi) || [])
+      .map(m => m.match(/(?:TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?)([`'\"]?\w+)/i)?.[1]?.replace(/[`'\"]/g, "")).filter(Boolean);
     if (creates.length) return cap(`SQL: tables: ${creates.slice(0, 4).join(", ")}`);
   }
 
