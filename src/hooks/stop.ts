@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, readJSON, writeJSON, appendMarkdown, timeShort } from "./shared.js";
+import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, appendMarkdown, timeShort } from "./shared.js";
 
 interface FileRead {
   count: number;
@@ -52,8 +52,8 @@ interface SessionEntry {
 async function main(): Promise<void> {
   ensureWolfDir();
   const wolfDir = getWolfDir();
-  const hooksDir = path.join(wolfDir, "hooks");
-  const sessionFile = path.join(hooksDir, "_session.json");
+  const sessionDir = getSessionDir();
+  const sessionFile = path.join(sessionDir, "_session.json");
 
   const session = readJSON<SessionData>(sessionFile, {
     session_id: "",
@@ -120,7 +120,7 @@ async function main(): Promise<void> {
   };
 
   // Update token-ledger.json
-  const ledgerPath = path.join(wolfDir, "token-ledger.json");
+  const ledgerPath = path.join(sessionDir, "token-ledger.json");
   const ledger = readJSON(ledgerPath, {
     version: 1,
     created_at: "",
@@ -167,7 +167,7 @@ async function main(): Promise<void> {
     try {
       const uniqueFiles = new Set(session.files_written.map(w => path.basename(w.file)));
       const fileList = [...uniqueFiles].slice(0, 5).join(", ");
-      const memoryPath = path.join(wolfDir, "memory.md");
+      const memoryPath = path.join(sessionDir, "memory.md");
       appendMarkdown(memoryPath, `| ${timeShort()} | Session end: ${writeCount} writes across ${uniqueFiles.size} files (${fileList}) | ${readCount} reads | ~${inputTokens + outputTokens} tok |\n`);
     } catch {}
   }

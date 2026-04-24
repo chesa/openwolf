@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
 import {
-  getWolfDir, ensureWolfDir, readJSON, writeJSON, readMarkdown, parseAnatomy, serializeAnatomy,
+  getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, readMarkdown, parseAnatomy, serializeAnatomy,
   extractDescription, estimateTokens, appendMarkdown, timeShort, readStdin, normalizePath
 } from "./shared.js";
 
@@ -33,8 +33,8 @@ interface BugLog {
 async function main(): Promise<void> {
   ensureWolfDir();
   const wolfDir = getWolfDir();
-  const hooksDir = path.join(wolfDir, "hooks");
-  const sessionFile = path.join(hooksDir, "_session.json");
+  const sessionDir = getSessionDir();
+  const sessionFile = path.join(sessionDir, "_session.json");
   const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
   const raw = await readStdin();
@@ -70,7 +70,7 @@ async function main(): Promise<void> {
     try {
       anatomyContent = fs.readFileSync(anatomyPath, "utf-8");
     } catch {
-      anatomyContent = "# anatomy.md\n\n> Auto-maintained by OpenWolf.\n";
+      anatomyContent = "# anatomy.md\n\n> Auto-maintained by OpenWolf.";
     }
 
     const sections = parseAnatomy(anatomyContent);
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
       changeDesc = summarizeEdit(oldStr, newStr, baseName);
     }
 
-    const memoryPath = path.join(wolfDir, "memory.md");
+    const memoryPath = path.join(sessionDir, "memory.md");
     const outcome = changeDesc || "—";
     appendMarkdown(memoryPath, `| ${timeShort()} | ${action} ${relFile} | ${outcome} | ~${writeTokens} |\n`);
   } catch {}
