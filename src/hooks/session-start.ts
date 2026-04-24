@@ -1,10 +1,20 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, writeJSON, appendMarkdown, readJSON, timestamp, timeShort } from "./shared.js";
+import { getWolfDir, ensureWolfDir, getSessionDir, ensureSessionDir, getWorktreeContext, writeJSON, appendMarkdown, readJSON, timestamp, timeShort } from "./shared.js";
 
 async function main(): Promise<void> {
   ensureWolfDir();
+  ensureSessionDir();
   const wolfDir = getWolfDir();
+  const sessionDir = getSessionDir();
+
+  // Announce worktree mode in the Claude transcript
+  const wtCtx = getWorktreeContext();
+  if (wtCtx.isWorktree) {
+    process.stderr.write(
+      `🐺 OpenWolf: Worktree mode (${wtCtx.branch || wtCtx.sessionId}) — shared state from ${wtCtx.mainRepoRoot}\n`
+    );
+  }
 
   // Clean up stale .tmp files left from failed atomic writes
   try {
@@ -15,8 +25,7 @@ async function main(): Promise<void> {
       }
     }
   } catch {}
-  const hooksDir = path.join(wolfDir, "hooks");
-  const sessionFile = path.join(hooksDir, "_session.json");
+  const sessionFile = path.join(sessionDir, "_session.json");
   const now = new Date();
   const sessionId = `session-${now.toISOString().slice(0, 10)}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
 
@@ -35,8 +44,13 @@ async function main(): Promise<void> {
   });
 
   // Append session header to memory.md
-  const memoryPath = path.join(wolfDir, "memory.md");
-  const header = `\n## Session: ${now.toISOString().slice(0, 10)} ${timeShort()}\n\n| Time | Action | File(s) | Outcome | ~Tokens |\n|------|--------|---------|---------|--------|\n`;
+  const memoryPath = path.join(sessionDir, "memory.md");
+  const header = `
+## Session: ${now.toISOString().slice(0, 10)} ${timeShort()}
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+`;
   appendMarkdown(memoryPath, header);
 
   // Check cerebrum freshness — remind Claude to learn
@@ -75,7 +89,7 @@ async function main(): Promise<void> {
   } catch {}
 
   // Increment total_sessions in token-ledger
-  const ledgerPath = path.join(wolfDir, "token-ledger.json");
+  const ledgerPath = path.join(sessionDir, "token-ledger.json");
   const ledger = readJSON(ledgerPath, { version: 1, lifetime: { total_sessions: 0 } }) as {
     version: number;
     lifetime: { total_sessions: number };
