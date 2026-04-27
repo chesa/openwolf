@@ -47,26 +47,20 @@ const CREATE_IF_MISSING = [
 
 // Use $CLAUDE_PROJECT_DIR so hooks resolve correctly even if CWD changes during a session
 const HOOK_SETTINGS = {
-  hooks: {
-    SessionStart: [
-      { file: "session-start.js", enabled: true },
-    ],
-    PreRead: [
-      { file: "pre-read.js", enabled: true },
-    ],
-    PostRead: [
-      { file: "post-read.js", enabled: true },
-    ],
-    PreWrite: [
-      { file: "pre-write.js", enabled: true },
-    ],
-    PostWrite: [
-      { file: "post-write.js", enabled: true },
-    ],
-    Stop: [
-      { file: "stop.js", enabled: true },
-    ],
-  },
+  SessionStart: [
+    { matcher: "", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/session-start.js"', timeout: 5 }] },
+  ],
+  PreToolUse: [
+    { matcher: "Read", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/pre-read.js"', timeout: 5 }] },
+    { matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/pre-write.js"', timeout: 5 }] },
+  ],
+  PostToolUse: [
+    { matcher: "Read", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/post-read.js"', timeout: 5 }] },
+    { matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/post-write.js"', timeout: 10 }] },
+  ],
+  Stop: [
+    { matcher: "", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/stop.js"', timeout: 10 }] },
+  ],
 };
 
 // Find the templates directory (either src/templates or dist/templates)
@@ -115,36 +109,61 @@ function writeHooks(templatesDir: string, wolfDir: string): void {
   }
 }
 
-function writeSettings(templatesDir: string, wolfDir: string): void {
-  const settingsPath = path.join(wolfDir, "settings.json");
-  const identityPath = path.join(wolfDir, "identity.md");
-  
-  // Read identity to extract project name
-  let projectName = "unknown";
+/**
+ * Returns true if a hook entry was registered by OpenWolf
+ * (i.e., its command references .wolf/hooks/).
+ */
+function isOpenWolfHook(hook: unknown): boolean {
+  if (typeof hook !== "object" || hook === null) return false;
+  const h = hook as Record<string, unknown>;
+  if (typeof h.command === "string" && h.command.includes(".wolf/hooks/")) return true;
+  return false;
+}
+
+/**
+ * Replace OpenWolf hooks in an existing settings object while preserving
+ * any user-added hooks that are NOT OpenWolf hooks.
+ */
+function replaceOpenWolfHooks(
+  existing: Record<string, unknown>,
+  newHooks: typeof HOOK_SETTINGS
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...existing };
+  const existingHooks = (typeof existing.hooks === "object" && existing.hooks !== null)
+    ? { ...(existing.hooks as Record<string, unknown>) }
+    : {};
+
+  for (const event of Object.keys(newHooks) as Array<keyof typeof HOOK_SETTINGS>) {
+    const existing_entries = Array.isArray(existingHooks[event])
+      ? (existingHooks[event] as unknown[])
+      : [];
+    // Keep non-OpenWolf entries the user may have added
+    const userEntries = existing_entries.filter((entry) => {
+      if (typeof entry !== "object" || entry === null) return true;
+      const e = entry as Record<string, unknown>;
+      const hooks = Array.isArray(e.hooks) ? e.hooks : [];
+      return !hooks.some(isOpenWolfHook);
+    });
+    existingHooks[event] = [...newHooks[event], ...userEntries];
+  }
+
+  merged.hooks = existingHooks;
+  return merged;
+}
+
+function writeSettings(projectRoot: string): void {
+  const claudeDir = path.join(projectRoot, ".claude");
+  ensureDir(claudeDir);
+  const settingsPath = path.join(claudeDir, "settings.json");
+
+  // Read existing settings to merge (preserve non-OpenWolf hooks)
+  let existing: Record<string, unknown> = {};
   try {
-    const identity = fs.readFileSync(identityPath, "utf-8");
-    const match = identity.match(/^#\s+(.+)/);
-    if (match) projectName = match[1].trim();
+    existing = JSON.parse(fs.readFileSync(settingsPath, "utf-8")) as Record<string, unknown>;
   } catch {}
-  
-  const settings = {
-    version: 1,
-    project: projectName,
-    hooks: HOOK_SETTINGS,
-    features: {
-      anatomy: { enabled: true },
-      buglog: { enabled: true },
-      cerebrum: { enabled: true },
-      cron: { enabled: true },
-      designqc: { enabled: true },
-      ledger: { enabled: true },
-      memory: { enabled: true },
-      reframe: { enabled: true },
-      suggestions: { enabled: true },
-    },
-  };
-  
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf-8");
+
+  const merged = replaceOpenWolfHooks(existing, HOOK_SETTINGS);
+  writeJSON(settingsPath, merged);
 }
 
 function writeIdentity(projectRoot: string, wolfDir: string): void {
@@ -170,21 +189,33 @@ function writeGitIgnore(projectRoot: string): void {
   try {
     gitignore = fs.readFileSync(gitignorePath, "utf-8");
   } catch {}
-  
+
   if (!gitignore.includes(".wolf/")) {
     gitignore += "\n\n# OpenWolf\n.wolf/\n";
     fs.writeFileSync(gitignorePath, gitignore, "utf-8");
   }
 }
 
-function writeReadme(projectRoot: string): void {
-  const readmePath = path.join(projectRoot, "README.md");
-  const hasReadme = fs.existsSync(readmePath);
-  const hasOpenWolfSection = hasReadme ? fs.readFileSync(readmePath, "utf-8").includes("OpenWolf") : false;
-  
-  if (!hasOpenWolfSection) {
-    const append = `\n\n## OpenWolf\n\nThis project uses [OpenWolf](https://github.com/cytostack/openwolf) for token-conscious AI brain.\n\n> 📖 [Documentation](https://github.com/cytostack/openwolf) | 🐺 [Troubleshooting](.wolf/troubleshooting.md)`;
-    fs.appendFileSync(readmePath, append, "utf-8");
+function writeClaudeRules(projectRoot: string, templatesDir: string): void {
+  // Create .claude/rules/ directory
+  const rulesDir = path.join(projectRoot, ".claude", "rules");
+  ensureDir(rulesDir);
+  const destPath = path.join(rulesDir, "openwolf.md");
+  const srcPath = path.join(templatesDir, "claude-rules-openwolf.md");
+  if (fs.existsSync(srcPath)) {
+    fs.copyFileSync(srcPath, destPath);
+  }
+
+  // Insert @.wolf/OPENWOLF.md reference at the top of CLAUDE.md if not present
+  const claudeMdPath = path.join(projectRoot, "CLAUDE.md");
+  const snippet = "@.wolf/OPENWOLF.md";
+  if (fs.existsSync(claudeMdPath)) {
+    const content = fs.readFileSync(claudeMdPath, "utf-8");
+    if (!content.includes(snippet)) {
+      fs.writeFileSync(claudeMdPath, snippet + "\n\n" + content, "utf-8");
+    }
+  } else {
+    fs.writeFileSync(claudeMdPath, snippet + "\n", "utf-8");
   }
 }
 
@@ -254,15 +285,19 @@ export async function initCommand(): Promise<void> {
   // --- Hooks ---
   writeHooks(actualTemplatesDir, wolfDir);
 
-  // --- Settings ---
-  writeSettings(actualTemplatesDir, wolfDir);
+  // --- Settings (.claude/settings.json) ---
+  writeSettings(projectRoot);
 
-  // --- Identity ---
-  writeIdentity(projectRoot, wolfDir);
+  // --- Claude rules + CLAUDE.md snippet ---
+  writeClaudeRules(projectRoot, actualTemplatesDir);
+
+  // --- Identity (only on fresh init, not upgrade) ---
+  if (!isUpgrade) {
+    writeIdentity(projectRoot, wolfDir);
+  }
 
   // --- Project files ---
   writeGitIgnore(projectRoot);
-  writeReadme(projectRoot);
 
   // --- Scan ---
   console.log("\nScanning project files...");
@@ -282,7 +317,7 @@ export async function initCommand(): Promise<void> {
   console.log("=".repeat(60));
   console.log("\nNext steps:");
   console.log(`  1. Add .wolf/ to .gitignore (already done)`);
-  console.log(`  2. Commit the changes: git add .wolf/ .gitignore README.md`);
+  console.log(`  2. Commit the changes: git add .gitignore .claude/ CLAUDE.md`);
   console.log(`  3. Start using OpenWolf in your Claude Code sessions`);
   console.log("\nDocumentation: https://github.com/cytostack/openwolf");
   console.log("Troubleshooting: openwolf status\n");

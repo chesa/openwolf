@@ -15,7 +15,7 @@ let _cachedWorktreeCtx: WorktreeContext | null = null;
 
 function detectWorktreeContext(): WorktreeContext {
   if (_cachedWorktreeCtx) return _cachedWorktreeCtx;
-  const dir = path.resolve(process.env.CLAUDE_PROJECT_DIR || process.cwd());
+  const dir = path.resolve(process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
   try {
     const commonGitDir = execFileSync(
       "git", ["rev-parse", "--path-format=absolute", "--git-common-dir"],
@@ -59,9 +59,8 @@ export function ensureSessionDir(): void {
   const ctx = detectWorktreeContext();
   if (!ctx.isWorktree) return;
   const sessionDir = getSessionDir();
-  if (!fs.existsSync(sessionDir)) {
-    fs.mkdirSync(sessionDir, { recursive: true });
-  }
+  // mkdirSync with recursive:true is idempotent — no existsSync check needed
+  fs.mkdirSync(sessionDir, { recursive: true });
   const metaPath = path.join(sessionDir, "worktree.json");
   if (!fs.existsSync(metaPath)) {
     writeJSON(metaPath, {
