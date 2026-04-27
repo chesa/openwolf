@@ -224,7 +224,12 @@ function writeGitIgnore(projectRoot: string): void {
   let gitignore = "";
   try {
     gitignore = fs.readFileSync(gitignorePath, "utf-8");
-  } catch {}
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`  ⚠ Cannot read ${gitignorePath}: ${(err as Error).message}. Skipping .gitignore update.`);
+      return;
+    }
+  }
 
   if (!gitignore.includes(".wolf/")) {
     gitignore += "\n\n# OpenWolf\n.wolf/\n";
@@ -263,8 +268,11 @@ export async function initCommand(): Promise<void> {
     process.exit(1);
   }
 
+  // Detect project root first — used consistently for worktree check and init
+  const projectRoot = findProjectRoot();
+
   // Worktree guard — init must run from the main checkout
-  const wtCtx = detectWorktreeContext(process.cwd());
+  const wtCtx = detectWorktreeContext(projectRoot);
   if (wtCtx.isWorktree) {
     const mainWolfDir = path.join(wtCtx.mainRepoRoot, ".wolf");
     if (fs.existsSync(mainWolfDir)) {
@@ -278,9 +286,6 @@ export async function initCommand(): Promise<void> {
       process.exit(1);
     }
   }
-
-  // Detect project root
-  const projectRoot = findProjectRoot();
   console.log(`Project root: ${projectRoot}`);
 
   const wolfDir = path.join(projectRoot, ".wolf");

@@ -52,9 +52,15 @@ async function main(): Promise<void> {
 
   const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(projectRoot, filePath);
 
-  // Skip processing for .wolf/ internal files to avoid slow self-referential updates
+  // Skip processing for .wolf/ internal files to avoid slow self-referential updates.
+  // In worktree mode, .wolf/ lives at mainRepoRoot, not projectRoot — check both.
   const relPath = normalizePath(path.relative(projectRoot, absolutePath));
   if (relPath.startsWith(".wolf/")) { process.exit(0); return; }
+  const wolfParent = path.dirname(wolfDir);
+  if (wolfParent !== projectRoot) {
+    const relToMain = normalizePath(path.relative(wolfParent, absolutePath));
+    if (relToMain.startsWith(".wolf/")) { process.exit(0); return; }
+  }
 
   // Never track .env files in anatomy — they contain secrets
   const baseName = path.basename(absolutePath);
@@ -137,7 +143,7 @@ async function main(): Promise<void> {
       changeDesc = summarizeEdit(oldStr, newStr, baseName);
     }
 
-    const memoryPath = path.join(sessionDir, "memory.md");
+    const memoryPath = path.join(wolfDir, "memory.md");
     const outcome = changeDesc || "—";
     appendMarkdown(memoryPath, `| ${timeShort()} | ${action} ${relFile} | ${outcome} | ~${writeTokens} |\n`);
   } catch {}
@@ -571,4 +577,4 @@ function extractCSSProps(code: string): Map<string, string> {
   return props;
 }
 
-main().catch(() => process.exit(0));
+main().catch((err) => { process.stderr.write(`OpenWolf post-write: ${err instanceof Error ? err.message : String(err)}\n`); process.exit(0); });

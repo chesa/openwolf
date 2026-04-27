@@ -26,12 +26,17 @@ async function main(): Promise<void> {
 
   const normalizedFile = normalizePath(filePath);
 
-  // Skip tracking for .wolf/ internal files — consistent with pre-read
+  // Skip tracking for .wolf/ internal files — consistent with pre-read.
+  // In worktree mode, .wolf/ lives at mainRepoRoot, not projectDir — check both.
   const projectDir = normalizePath(process.env.CLAUDE_PROJECT_DIR || process.cwd());
-  const relToProject = normalizedFile.startsWith(projectDir)
-    ? normalizedFile.slice(projectDir.length).replace(/^\//, "")
-    : "";
-  if (relToProject.startsWith(".wolf/") || relToProject.startsWith(".wolf\\")) {
+  const normalizedWolfDir = normalizePath(wolfDir);
+  const isWolfFile = (f: string): boolean => {
+    const relToProject = f.startsWith(projectDir) ? f.slice(projectDir.length).replace(/^\//, "") : "";
+    if (relToProject.startsWith(".wolf/") || relToProject.startsWith(".wolf\\")) return true;
+    if (f.startsWith(normalizedWolfDir + "/") || f.startsWith(normalizedWolfDir + "\\") || f === normalizedWolfDir) return true;
+    return false;
+  };
+  if (isWolfFile(normalizedFile)) {
     process.exit(0);
     return;
   }
@@ -74,4 +79,4 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-main().catch(() => process.exit(0));
+main().catch((err) => { process.stderr.write(`OpenWolf post-read: ${err instanceof Error ? err.message : String(err)}\n`); process.exit(0); });

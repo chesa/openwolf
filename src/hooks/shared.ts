@@ -3,6 +3,8 @@ import * as path from "node:path";
 import * as crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 
+// Intentionally duplicated from src/utils/worktree.ts — hooks run in isolation
+// and cannot import from src/utils/ at runtime. Keep both in sync manually.
 interface WorktreeContext {
   isWorktree: boolean;
   mainRepoRoot: string;
@@ -34,7 +36,8 @@ function detectWorktreeContext(): WorktreeContext {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (!msg.includes("not a git repository") && !msg.includes("ENOENT")) {
-      process.stderr.write(`OpenWolf: worktree detection failed (${msg}). Falling back to non-worktree mode.\n`);
+      const hint = msg.includes("TIMEOUT") || msg.includes("timed out") ? " (slow filesystem? hooks will be disabled if .wolf/ is not at this path)" : "";
+      process.stderr.write(`OpenWolf: worktree detection failed (${msg}).${hint} Falling back to non-worktree mode.\n`);
     }
     _cachedWorktreeCtx = { isWorktree: false, mainRepoRoot: dir, worktreePath: dir, sessionId: "", branch: "" };
   }
@@ -59,8 +62,12 @@ export function ensureSessionDir(): void {
   const ctx = detectWorktreeContext();
   if (!ctx.isWorktree) return;
   const sessionDir = getSessionDir();
-  // mkdirSync with recursive:true is idempotent — no existsSync check needed
-  fs.mkdirSync(sessionDir, { recursive: true });
+  try {
+    fs.mkdirSync(sessionDir, { recursive: true });
+  } catch (err) {
+    process.stderr.write(`OpenWolf: failed to create session dir ${sessionDir} (${err instanceof Error ? err.message : String(err)})\n`);
+    return;
+  }
   const metaPath = path.join(sessionDir, "worktree.json");
   if (!fs.existsSync(metaPath)) {
     writeJSON(metaPath, {
@@ -101,7 +108,11 @@ export function writeJSON(filePath: string, data: unknown): void {
   } catch {
     // On Windows, rename can fail if another process holds a handle.
     // Fall back to direct write and clean up the tmp file.
-    try { fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8"); } catch {}
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+    } catch (fallbackErr) {
+      process.stderr.write(`OpenWolf: failed to write ${filePath} (${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)})\n`);
+    }
     try { fs.unlinkSync(tmp); } catch {}
   }
 }

@@ -17,14 +17,18 @@ async function main(): Promise<void> {
   }
 
   // Clean up stale .tmp files left from failed atomic writes
-  try {
-    const files = fs.readdirSync(wolfDir);
-    for (const f of files) {
-      if (f.endsWith(".tmp")) {
-        try { fs.unlinkSync(path.join(wolfDir, f)); } catch {}
+  const dirsToClean = [wolfDir];
+  if (sessionDir !== wolfDir) dirsToClean.push(sessionDir);
+  for (const dir of dirsToClean) {
+    try {
+      const files = fs.readdirSync(dir);
+      for (const f of files) {
+        if (f.endsWith(".tmp")) {
+          try { fs.unlinkSync(path.join(dir, f)); } catch {}
+        }
       }
-    }
-  } catch {}
+    } catch {}
+  }
   const sessionFile = path.join(sessionDir, "_session.json");
   const now = new Date();
   const sessionId = `session-${now.toISOString().slice(0, 10)}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
@@ -43,8 +47,9 @@ async function main(): Promise<void> {
     stop_count: 0,
   });
 
-  // Append session header to memory.md
-  const memoryPath = path.join(sessionDir, "memory.md");
+  // Append session header to shared memory.md (not session-scoped) so hooks and
+  // Claude write to the same file. Session-specific state lives in _session.json.
+  const memoryPath = path.join(wolfDir, "memory.md");
   const header = `
 ## Session: ${now.toISOString().slice(0, 10)} ${timeShort()}
 
@@ -101,4 +106,4 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-main().catch(() => process.exit(0));
+main().catch((err) => { process.stderr.write(`OpenWolf session-start: ${err instanceof Error ? err.message : String(err)}\n`); process.exit(0); });

@@ -245,7 +245,7 @@ This creates the `.wolf/` directory with `anatomy.md`, `cerebrum.md`, `memory.md
 
 ## Git Worktrees
 
-OpenWolf supports git worktrees (created via `git worktree add`, `claude --worktree`, or the Superpowers `using-git-worktrees` skill) as of v1.1.0. No special setup is required.
+OpenWolf supports git worktrees (created via `git worktree add`, `claude --worktree`, or the Superpowers `using-git-worktrees` skill). No special setup is required.
 
 ### How it works
 
@@ -260,6 +260,10 @@ You will see a confirmation in the Claude transcript at session start:
 ```
 🐺 OpenWolf: Worktree mode (feature/my-branch) — shared state from /path/to/main-repo
 ```
+
+### Limitations
+
+**Bare-repo worktrees are not supported.** OpenWolf derives the main repo root via `path.dirname(git rev-parse --git-common-dir)`, which produces the wrong path for worktrees checked out from a bare repository. If you use bare repos, file an issue.
 
 ### Requirements
 

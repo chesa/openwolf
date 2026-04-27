@@ -167,7 +167,7 @@ async function main(): Promise<void> {
     try {
       const uniqueFiles = new Set(session.files_written.map(w => path.basename(w.file)));
       const fileList = [...uniqueFiles].slice(0, 5).join(", ");
-      const memoryPath = path.join(sessionDir, "memory.md");
+      const memoryPath = path.join(wolfDir, "memory.md");
       appendMarkdown(memoryPath, `| ${timeShort()} | Session end: ${writeCount} writes across ${uniqueFiles.size} files (${fileList}) | ${readCount} reads | ~${inputTokens + outputTokens} tok |\n`);
     } catch {}
   }
@@ -223,4 +223,4 @@ function checkCerebrumFreshness(wolfDir: string, session: SessionData): void {
   }
 }
 
-main().catch(() => process.exit(0));
+main().catch((err) => { process.stderr.write(`OpenWolf stop: ${err instanceof Error ? err.message : String(err)}\n`); process.exit(0); });
