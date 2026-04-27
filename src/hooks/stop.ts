@@ -169,7 +169,9 @@ async function main(): Promise<void> {
       const fileList = [...uniqueFiles].slice(0, 5).join(", ");
       const memoryPath = path.join(wolfDir, "memory.md");
       appendMarkdown(memoryPath, `| ${timeShort()} | Session end: ${writeCount} writes across ${uniqueFiles.size} files (${fileList}) | ${readCount} reads | ~${inputTokens + outputTokens} tok |\n`);
-    } catch {}
+    } catch (err) {
+      process.stderr.write(`OpenWolf stop: memory summary failed (${err instanceof Error ? err.message : String(err)})\n`);
+    }
   }
 
   writeJSON(sessionFile, session);

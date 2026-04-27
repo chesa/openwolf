@@ -253,7 +253,8 @@ When Claude Code launches inside a linked worktree, OpenWolf automatically:
 
 - Resolves `.wolf/` to the main checkout using `git rev-parse --git-common-dir`
 - Reads shared knowledge files (`cerebrum.md`, `anatomy.md`, `buglog.json`) from the main checkout — all worktrees contribute to and benefit from the same brain
-- Writes session-scoped state (`memory.md`, `token-ledger.json`) to an isolated namespace at `.wolf/sessions/<worktree-id>/` to prevent context leakage between parallel sessions
+- Writes session-scoped state (`token-ledger.json`, `_session.json`) to an isolated namespace at `.wolf/sessions/<worktree-id>/` to prevent context leakage between parallel sessions
+- Keeps `memory.md` shared so all worktrees contribute to the same chronological log
 
 You will see a confirmation in the Claude transcript at session start:
 

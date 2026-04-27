@@ -26,7 +26,12 @@ function detectWorktreeContext(): WorktreeContext {
     let branch = "";
     try {
       branch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], gitOpts).toString().trim();
-    } catch {}
+    } catch (branchErr) {
+      const msg = branchErr instanceof Error ? branchErr.message : String(branchErr);
+      if (!msg.includes("HEAD") && !msg.includes("unknown revision")) {
+        process.stderr.write(`OpenWolf: branch detection failed (${msg})\n`);
+      }
+    }
     if (gitDir === commonGitDir) {
       _cachedWorktreeCtx = { isWorktree: false, mainRepoRoot, worktreePath: dir, sessionId: "", branch };
     } else {

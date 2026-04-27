@@ -27,7 +27,11 @@ async function main(): Promise<void> {
           try { fs.unlinkSync(path.join(dir, f)); } catch {}
         }
       }
-    } catch {}
+    } catch (dirErr) {
+      if ((dirErr as NodeJS.ErrnoException).code !== "ENOENT") {
+        process.stderr.write(`OpenWolf: failed to clean tmp files in ${dir} (${(dirErr as Error).message})\n`);
+      }
+    }
   }
   const sessionFile = path.join(sessionDir, "_session.json");
   const now = new Date();
@@ -80,7 +84,9 @@ async function main(): Promise<void> {
         `💡 OpenWolf: cerebrum.md hasn't been updated in ${Math.floor(daysSinceUpdate)} days. Look for opportunities to add learnings this session.\n`
       );
     }
-  } catch {}
+  } catch (err) {
+    process.stderr.write(`OpenWolf: cerebrum freshness check failed (${err instanceof Error ? err.message : String(err)})\n`);
+  }
 
   // Check buglog — remind if empty
   try {
@@ -91,7 +97,9 @@ async function main(): Promise<void> {
         `📋 OpenWolf: buglog.json is empty. If you encounter or fix any bugs, errors, or failed tests this session, log them to .wolf/buglog.json.\n`
       );
     }
-  } catch {}
+  } catch (err) {
+    process.stderr.write(`OpenWolf: buglog check failed (${err instanceof Error ? err.message : String(err)})\n`);
+  }
 
   // Increment total_sessions in token-ledger
   const ledgerPath = path.join(sessionDir, "token-ledger.json");

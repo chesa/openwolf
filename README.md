@@ -220,7 +220,8 @@ OpenWolf works transparently inside git worktrees (created via `git worktree add
 
 - Resolves `.wolf/` to the main checkout via `git rev-parse --git-common-dir`
 - Reads shared knowledge files (`cerebrum.md`, `anatomy.md`, `buglog.json`) from the main checkout so all worktrees share the same brain
-- Writes session-scoped state (`memory.md`, `token-ledger.json`) to `.wolf/sessions/<worktree-id>/` to prevent context leakage between parallel sessions
+- Writes session-scoped state (`token-ledger.json`, `_session.json`) to `.wolf/sessions/<worktree-id>/` to prevent context leakage between parallel sessions
+- Keeps `memory.md` shared so all worktrees contribute to the same chronological log
 
 `openwolf init` must be run from the main checkout, not from inside a worktree. Run `openwolf status` from inside a worktree to confirm instrumentation is active. See the [troubleshooting docs](docs/troubleshooting.md#git-worktrees) for details.
 

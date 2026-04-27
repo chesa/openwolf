@@ -123,10 +123,15 @@ async function main(): Promise<void> {
       fs.writeFileSync(tmp, serialized, "utf-8");
       fs.renameSync(tmp, anatomyPath);
     } catch {
-      try { fs.writeFileSync(anatomyPath, serialized, "utf-8"); } catch {}
+      try { fs.writeFileSync(anatomyPath, serialized, "utf-8"); }
+      catch (fallbackErr) {
+        process.stderr.write(`OpenWolf post-write: failed to write anatomy.md (${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)})\n`);
+      }
       try { fs.unlinkSync(tmp); } catch {}
     }
-  } catch {}
+  } catch (err) {
+    process.stderr.write(`OpenWolf post-write: anatomy update failed (${err instanceof Error ? err.message : String(err)})\n`);
+  }
 
   // 2. Append richer entry to memory.md
   try {
@@ -146,7 +151,9 @@ async function main(): Promise<void> {
     const memoryPath = path.join(wolfDir, "memory.md");
     const outcome = changeDesc || "—";
     appendMarkdown(memoryPath, `| ${timeShort()} | ${action} ${relFile} | ${outcome} | ~${writeTokens} |\n`);
-  } catch {}
+  } catch (err) {
+    process.stderr.write(`OpenWolf post-write: memory append failed (${err instanceof Error ? err.message : String(err)})\n`);
+  }
 
   // 3. Record in session tracker + track edit counts
   try {
@@ -175,14 +182,18 @@ async function main(): Promise<void> {
         `⚠️ OpenWolf: ${baseName} has been edited ${session.edit_counts[editKey]} times this session. If you're fixing a bug, remember to log it to .wolf/buglog.json.\n`
       );
     }
-  } catch {}
+  } catch (err) {
+    process.stderr.write(`OpenWolf post-write: session update failed (${err instanceof Error ? err.message : String(err)})\n`);
+  }
 
   // 4. Auto-detect bug-fix patterns and log them
   try {
     if (oldStr && newStr) {
       autoDetectBugFix(wolfDir, absolutePath, projectRoot, oldStr, newStr);
     }
-  } catch {}
+  } catch (err) {
+    process.stderr.write(`OpenWolf post-write: bug detection failed (${err instanceof Error ? err.message : String(err)})\n`);
+  }
 
   process.exit(0);
 }

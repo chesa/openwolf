@@ -43,21 +43,26 @@ const CREATE_IF_MISSING = [
   "suggestions.json",
 ];
 
-// Use $CLAUDE_PROJECT_DIR so hooks resolve correctly even if CWD changes during a session
-const HOOK_SETTINGS = {
+// Resolve the main repo root at invocation time so hooks work in git worktrees.
+// In a worktree, $CLAUDE_PROJECT_DIR points to the worktree where .wolf/ doesn't exist.
+// git rev-parse --git-common-dir returns the main repo's .git, whose parent is the main root.
+const WOLF_ROOT = 'WOLF_ROOT="$(cd "$CLAUDE_PROJECT_DIR" && dirname "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" 2>/dev/null || echo "$CLAUDE_PROJECT_DIR")"';
+const hookCmd = (script: string) => `${WOLF_ROOT} && node "$WOLF_ROOT/.wolf/hooks/${script}"`;
+
+export const HOOK_SETTINGS = {
   SessionStart: [
-    { matcher: "", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/session-start.js"', timeout: 5 }] },
+    { matcher: "", hooks: [{ type: "command", command: hookCmd("session-start.js"), timeout: 5 }] },
   ],
   PreToolUse: [
-    { matcher: "Read", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/pre-read.js"', timeout: 5 }] },
-    { matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/pre-write.js"', timeout: 5 }] },
+    { matcher: "Read", hooks: [{ type: "command", command: hookCmd("pre-read.js"), timeout: 5 }] },
+    { matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: hookCmd("pre-write.js"), timeout: 5 }] },
   ],
   PostToolUse: [
-    { matcher: "Read", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/post-read.js"', timeout: 5 }] },
-    { matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/post-write.js"', timeout: 10 }] },
+    { matcher: "Read", hooks: [{ type: "command", command: hookCmd("post-read.js"), timeout: 5 }] },
+    { matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: hookCmd("post-write.js"), timeout: 10 }] },
   ],
   Stop: [
-    { matcher: "", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/stop.js"', timeout: 10 }] },
+    { matcher: "", hooks: [{ type: "command", command: hookCmd("stop.js"), timeout: 10 }] },
   ],
 };
 
@@ -66,6 +71,8 @@ function findTemplatesDir(): string {
   const candidates = [
     path.resolve(__dirname, "../../src/templates"),
     path.resolve(__dirname, "../../dist/templates"),
+    path.resolve(__dirname, "../templates"),
+    path.resolve(__dirname, "templates"),
   ];
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) return candidate;
@@ -144,7 +151,7 @@ function writeHooks(wolfDir: string): void {
  * Returns true if a hook entry was registered by OpenWolf
  * (i.e., its command references .wolf/hooks/).
  */
-function isOpenWolfHook(hook: unknown): boolean {
+export function isOpenWolfHook(hook: unknown): boolean {
   if (typeof hook !== "object" || hook === null) return false;
   const h = hook as Record<string, unknown>;
   if (typeof h.command === "string" && h.command.includes(".wolf/hooks/")) return true;
@@ -155,7 +162,7 @@ function isOpenWolfHook(hook: unknown): boolean {
  * Replace OpenWolf hooks in an existing settings object while preserving
  * any user-added hooks that are NOT OpenWolf hooks.
  */
-function replaceOpenWolfHooks(
+export function replaceOpenWolfHooks(
   existing: Record<string, unknown>,
   newHooks: typeof HOOK_SETTINGS
 ): Record<string, unknown> {
@@ -213,7 +220,11 @@ function writeIdentity(projectRoot: string, wolfDir: string): void {
     const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
     if (pkg.name) projectName = pkg.name;
     if (pkg.description) projectDesc = pkg.description;
-  } catch {}
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`  ⚠ Could not parse ${pkgPath}: ${(err as Error).message}`);
+    }
+  }
   
   const identity = `# ${projectName}\n\n${projectDesc}\n\n> Initialized: ${new Date().toISOString()}\n> Root: ${projectRoot}`;
   fs.writeFileSync(identityPath, identity, "utf-8");
@@ -249,15 +260,65 @@ function writeClaudeRules(projectRoot: string, templatesDir: string): void {
 
   // Insert @.wolf/OPENWOLF.md reference at the top of CLAUDE.md if not present
   const claudeMdPath = path.join(projectRoot, "CLAUDE.md");
-  const snippet = "@.wolf/OPENWOLF.md";
+  const marker = "@.wolf/OPENWOLF.md";
+  const fullSnippet = `# CLAUDE.md\n\n${marker}\n\nThis project uses OpenWolf for context management. Read and follow .wolf/OPENWOLF.md every session. Check .wolf/cerebrum.md before generating code. Check .wolf/anatomy.md before reading files.`;
   if (fs.existsSync(claudeMdPath)) {
     const content = fs.readFileSync(claudeMdPath, "utf-8");
-    if (!content.includes(snippet)) {
-      fs.writeFileSync(claudeMdPath, snippet + "\n\n" + content, "utf-8");
+    if (!content.includes("OpenWolf") && !content.includes(marker)) {
+      fs.writeFileSync(claudeMdPath, marker + "\n\n" + content, "utf-8");
     }
   } else {
-    fs.writeFileSync(claudeMdPath, snippet + "\n", "utf-8");
+    fs.writeFileSync(claudeMdPath, fullSnippet + "\n", "utf-8");
   }
+}
+
+function detectProjectName(projectRoot: string): string {
+  const pkgPath = path.join(projectRoot, "package.json");
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+    if (pkg.name) return pkg.name;
+  } catch {}
+  try {
+    const cargo = fs.readFileSync(path.join(projectRoot, "Cargo.toml"), "utf-8");
+    const m = cargo.match(/^name\s*=\s*"([^"]+)"/m);
+    if (m) return m[1];
+  } catch {}
+  try {
+    const py = fs.readFileSync(path.join(projectRoot, "pyproject.toml"), "utf-8");
+    const m = py.match(/^name\s*=\s*"([^"]+)"/m);
+    if (m) return m[1];
+  } catch {}
+  return path.basename(projectRoot);
+}
+
+function detectProjectDescription(projectRoot: string): string {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, "package.json"), "utf-8"));
+    if (pkg.description) return pkg.description;
+  } catch {}
+  return "";
+}
+
+function seedCerebrum(wolfDir: string, projectRoot: string): void {
+  const projectName = detectProjectName(projectRoot);
+  const projectDescription = detectProjectDescription(projectRoot);
+  if (!projectName && !projectDescription) return;
+
+  const cerebrumPath = path.join(wolfDir, "cerebrum.md");
+  let cerebrum = "";
+  try { cerebrum = fs.readFileSync(cerebrumPath, "utf-8"); } catch { return; }
+  const projectInfo = [
+    `- **Project:** ${projectName || path.basename(projectRoot)}`,
+    projectDescription ? `- **Description:** ${projectDescription}` : "",
+  ].filter(Boolean).join("\n");
+
+  if (!cerebrum.includes("**Project:**")) {
+    cerebrum = cerebrum.replace(
+      /## Key Learnings\n/,
+      `## Key Learnings\n\n${projectInfo}\n`
+    );
+  }
+  fs.writeFileSync(cerebrumPath, cerebrum, "utf-8");
 }
 
 export async function initCommand(): Promise<void> {
@@ -326,6 +387,16 @@ export async function initCommand(): Promise<void> {
   // --- Hooks ---
   writeHooks(wolfDir);
 
+  // --- Token ledger created_at ---
+  const ledgerPath = path.join(wolfDir, "token-ledger.json");
+  try {
+    const ledger = JSON.parse(fs.readFileSync(ledgerPath, "utf-8")) as Record<string, unknown>;
+    if (!ledger.created_at) {
+      ledger.created_at = new Date().toISOString();
+      fs.writeFileSync(ledgerPath, JSON.stringify(ledger, null, 2), "utf-8");
+    }
+  } catch {}
+
   // --- Settings (.claude/settings.json) ---
   writeSettings(projectRoot);
 
@@ -335,6 +406,7 @@ export async function initCommand(): Promise<void> {
   // --- Identity (only on fresh init, not upgrade) ---
   if (!isUpgrade) {
     writeIdentity(projectRoot, wolfDir);
+    seedCerebrum(wolfDir, projectRoot);
   }
 
   // --- Project files ---
@@ -342,25 +414,32 @@ export async function initCommand(): Promise<void> {
 
   // --- Scan ---
   let fileCount = 0;
-  try {
-    console.log("\nScanning project files...");
-    fileCount = await scanProject(wolfDir, projectRoot);
-    console.log(`  Scanned ${fileCount} files`);
-  } catch {
-    console.log("  Anatomy scan deferred — will run on first session.");
+  if (!isUpgrade) {
+    try {
+      console.log("\nScanning project files...");
+      fileCount = await scanProject(wolfDir, projectRoot);
+      console.log(`  Scanned ${fileCount} files`);
+    } catch (err) {
+      console.log("  Anatomy scan deferred — will run on first session.");
+      console.warn(`  (Reason: ${err instanceof Error ? err.message : String(err)})`);
+    }
   }
 
   // --- Registry ---
   try {
-    await registerProject(projectRoot, path.basename(projectRoot), getVersion());
-  } catch (err) {
-    console.warn("\n⚠️  Could not register project:", err instanceof Error ? err.message : String(err));
+    const projectName = detectProjectName(projectRoot);
+    if (projectName !== "openwolf") {
+      registerProject(projectRoot, projectName, version);
+    }
+  } catch {
+    // Non-fatal — registry is a convenience feature
   }
 
   // --- Summary ---
   console.log("\n" + "=".repeat(60));
   console.log(`OpenWolf v${version} initialized at: ${wolfDir}`);
   console.log("=".repeat(60));
+  console.log(`  Daemon: start manually with 'openwolf daemon start' (requires pm2)`);
   console.log("\nNext steps:");
   console.log(`  1. Add .wolf/ to .gitignore (already done)`);
   console.log(`  2. Commit the changes: git add .gitignore .claude/ CLAUDE.md`);
