@@ -18,8 +18,9 @@ describe("detectWorktreeContext", () => {
 
   it("returns non-worktree context when in the main checkout", () => {
     vi.spyOn(gitWrapper, "execGit")
-      .mockReturnValueOnce("/path/to/project/.git")
-      .mockReturnValueOnce("main");
+      .mockReturnValueOnce("/path/to/project/.git")   // --git-dir
+      .mockReturnValueOnce("/path/to/project/.git")   // --git-common-dir
+      .mockReturnValueOnce("main");                    // --abbrev-ref HEAD
     const result = detectWorktreeContext("/path/to/project");
     expect(result.isWorktree).toBe(false);
     expect(result.mainRepoRoot).toBe("/path/to/project");
@@ -29,8 +30,9 @@ describe("detectWorktreeContext", () => {
 
   it("returns worktree context when in a linked worktree", () => {
     vi.spyOn(gitWrapper, "execGit")
-      .mockReturnValueOnce("/path/to/project/.git")
-      .mockReturnValueOnce("feature/25-git-worktree-support");
+      .mockReturnValueOnce("/path/to/project/.git/worktrees/feature-25")  // --git-dir
+      .mockReturnValueOnce("/path/to/project/.git")                       // --git-common-dir
+      .mockReturnValueOnce("feature/25-git-worktree-support");            // --abbrev-ref HEAD
     const result = detectWorktreeContext("/path/to/project/.worktrees/feature-25");
     expect(result.isWorktree).toBe(true);
     expect(result.mainRepoRoot).toBe("/path/to/project");
@@ -40,27 +42,57 @@ describe("detectWorktreeContext", () => {
   });
 
   it("produces consistent sessionId for the same worktree path", () => {
-    vi.spyOn(gitWrapper, "execGit").mockReturnValue("/path/to/project/.git");
+    const mock = vi.spyOn(gitWrapper, "execGit");
+    mock.mockReturnValueOnce("/path/to/project/.git/worktrees/feat")  // --git-dir (call 1)
+      .mockReturnValueOnce("/path/to/project/.git")                   // --git-common-dir (call 1)
+      .mockReturnValueOnce("feat");                                   // branch (call 1)
     const r1 = detectWorktreeContext("/path/to/project/.worktrees/feat");
-    vi.spyOn(gitWrapper, "execGit").mockReturnValue("/path/to/project/.git");
+    mock.mockReturnValueOnce("/path/to/project/.git/worktrees/feat")  // --git-dir (call 2)
+      .mockReturnValueOnce("/path/to/project/.git")                   // --git-common-dir (call 2)
+      .mockReturnValueOnce("feat");                                   // branch (call 2)
     const r2 = detectWorktreeContext("/path/to/project/.worktrees/feat");
     expect(r1.sessionId).toBe(r2.sessionId);
   });
 
   it("produces different sessionIds for different worktree paths", () => {
-    vi.spyOn(gitWrapper, "execGit").mockReturnValue("/path/to/project/.git");
+    const mock = vi.spyOn(gitWrapper, "execGit");
+    mock.mockReturnValueOnce("/path/to/project/.git/worktrees/feat-a")
+      .mockReturnValueOnce("/path/to/project/.git")
+      .mockReturnValueOnce("feat-a");
     const r1 = detectWorktreeContext("/path/to/project/.worktrees/feat-a");
-    vi.spyOn(gitWrapper, "execGit").mockReturnValue("/path/to/project/.git");
+    mock.mockReturnValueOnce("/path/to/project/.git/worktrees/feat-b")
+      .mockReturnValueOnce("/path/to/project/.git")
+      .mockReturnValueOnce("feat-b");
     const r2 = detectWorktreeContext("/path/to/project/.worktrees/feat-b");
     expect(r1.sessionId).not.toBe(r2.sessionId);
   });
 
   it("returns empty branch when branch detection fails (e.g., detached HEAD)", () => {
     vi.spyOn(gitWrapper, "execGit")
-      .mockReturnValueOnce("/path/to/project/.git")
+      .mockReturnValueOnce("/path/to/project/.git")   // --git-dir
+      .mockReturnValueOnce("/path/to/project/.git")   // --git-common-dir
       .mockImplementationOnce(() => { throw new Error("detached HEAD"); });
     const result = detectWorktreeContext("/path/to/project");
     expect(result.isWorktree).toBe(false);
     expect(result.branch).toBe("");
+  });
+
+  it("does not false-positive on git submodules", () => {
+    vi.spyOn(gitWrapper, "execGit")
+      .mockReturnValueOnce("/parent/.git/modules/sub")  // --git-dir (submodule's git dir)
+      .mockReturnValueOnce("/parent/.git/modules/sub")  // --git-common-dir (same for submodules)
+      .mockReturnValueOnce("main");
+    const result = detectWorktreeContext("/parent/sub");
+    expect(result.isWorktree).toBe(false);
+    expect(result.branch).toBe("main");
+  });
+
+  it("warns on unexpected git errors but does not throw", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(gitWrapper, "execGit").mockImplementation(() => { throw new Error("permission denied"); });
+    const result = detectWorktreeContext("/some/path");
+    expect(result.isWorktree).toBe(false);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("permission denied"));
+    warnSpy.mockRestore();
   });
 });

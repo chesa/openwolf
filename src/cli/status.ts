@@ -6,7 +6,10 @@ import { detectWorktreeContext } from "../utils/worktree.js";
 
 export async function statusCommand(): Promise<void> {
   const projectRoot = findProjectRoot();
-  const wolfDir = path.join(projectRoot, ".wolf");
+  const wtCtx = detectWorktreeContext(projectRoot);
+  const wolfDir = wtCtx.isWorktree
+    ? path.join(wtCtx.mainRepoRoot, ".wolf")
+    : path.join(projectRoot, ".wolf");
 
   if (!fs.existsSync(wolfDir)) {
     console.log("OpenWolf not initialized. Run: openwolf init");
@@ -16,7 +19,6 @@ export async function statusCommand(): Promise<void> {
   console.log("OpenWolf Status");
   console.log("===============\n");
 
-  const wtCtx = detectWorktreeContext(projectRoot);
   const sessionFileDir = wtCtx.isWorktree
     ? path.join(wolfDir, "sessions", wtCtx.sessionId)
     : wolfDir;

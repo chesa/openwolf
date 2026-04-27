@@ -1,12 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { execSync } from "node:child_process";
 import { findProjectRoot } from "../scanner/project-root.js";
 import { scanProject } from "../scanner/anatomy-scanner.js";
-import { readJSON, writeJSON, readText, writeText } from "../utils/fs-safe.js";
+import { readJSON, writeJSON } from "../utils/fs-safe.js";
 import { ensureDir } from "../utils/paths.js";
-import { isWindows } from "../utils/platform.js";
 import { registerProject } from "./registry.js";
 import { detectWorktreeContext } from "../utils/worktree.js";
 
@@ -86,10 +84,10 @@ function writeTemplateFile(templatesDir: string, wolfDir: string, file: string):
   }
 }
 
-function writeHooks(templatesDir: string, wolfDir: string): void {
+function writeHooks(wolfDir: string): void {
   const hooksDir = path.join(wolfDir, "hooks");
   ensureDir(hooksDir);
-  
+
   const hookFiles = [
     "session-start.js",
     "pre-read.js",
@@ -97,15 +95,48 @@ function writeHooks(templatesDir: string, wolfDir: string): void {
     "pre-write.js",
     "post-write.js",
     "stop.js",
+    "shared.js",
   ];
-  
+
+  // Find compiled hooks — check multiple locations relative to __dirname (dist/cli/)
+  const candidates = [
+    path.resolve(__dirname, "../hooks"),
+    path.resolve(__dirname, "../../dist/hooks"),
+  ];
+  let sourceDir = "";
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate) && fs.existsSync(path.join(candidate, "shared.js"))) {
+      sourceDir = candidate;
+      break;
+    }
+  }
+
+  if (!sourceDir) {
+    console.warn("  ⚠ No compiled hooks found. Run 'pnpm build:hooks' and re-run init.");
+    return;
+  }
+
+  let copiedCount = 0;
   for (const file of hookFiles) {
-    const srcPath = path.join(templatesDir, "..", "hooks", file);
+    const srcPath = path.join(sourceDir, file);
     const destPath = path.join(hooksDir, file);
     if (fs.existsSync(srcPath)) {
-      const content = fs.readFileSync(srcPath, "utf-8");
-      fs.writeFileSync(destPath, content, "utf-8");
+      fs.copyFileSync(srcPath, destPath);
+      copiedCount++;
+    } else {
+      console.warn(`  ⚠ Hook not found: ${file}`);
     }
+  }
+
+  // ESM hooks need type:module to work in CJS projects
+  fs.writeFileSync(
+    path.join(hooksDir, "package.json"),
+    JSON.stringify({ type: "module" }, null, 2) + "\n",
+    "utf-8"
+  );
+
+  if (copiedCount < hookFiles.length) {
+    console.warn(`  ⚠ Only ${copiedCount}/${hookFiles.length} hooks copied.`);
   }
 }
 
@@ -156,11 +187,16 @@ function writeSettings(projectRoot: string): void {
   ensureDir(claudeDir);
   const settingsPath = path.join(claudeDir, "settings.json");
 
-  // Read existing settings to merge (preserve non-OpenWolf hooks)
   let existing: Record<string, unknown> = {};
-  try {
-    existing = JSON.parse(fs.readFileSync(settingsPath, "utf-8")) as Record<string, unknown>;
-  } catch {}
+  if (fs.existsSync(settingsPath)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(settingsPath, "utf-8")) as Record<string, unknown>;
+    } catch (err) {
+      const backupPath = settingsPath + ".bak";
+      fs.copyFileSync(settingsPath, backupPath);
+      console.warn(`  ⚠ settings.json is corrupted (${err instanceof Error ? err.message : String(err)}). Backed up to ${backupPath}.`);
+    }
+  }
 
   const merged = replaceOpenWolfHooks(existing, HOOK_SETTINGS);
   writeJSON(settingsPath, merged);
@@ -283,7 +319,7 @@ export async function initCommand(): Promise<void> {
   }
 
   // --- Hooks ---
-  writeHooks(actualTemplatesDir, wolfDir);
+  writeHooks(wolfDir);
 
   // --- Settings (.claude/settings.json) ---
   writeSettings(projectRoot);
@@ -300,9 +336,14 @@ export async function initCommand(): Promise<void> {
   writeGitIgnore(projectRoot);
 
   // --- Scan ---
-  console.log("\nScanning project files...");
-  const fileCount = await scanProject(wolfDir, projectRoot);
-  console.log(`  Scanned ${fileCount} files`);
+  let fileCount = 0;
+  try {
+    console.log("\nScanning project files...");
+    fileCount = await scanProject(wolfDir, projectRoot);
+    console.log(`  Scanned ${fileCount} files`);
+  } catch {
+    console.log("  Anatomy scan deferred — will run on first session.");
+  }
 
   // --- Registry ---
   try {

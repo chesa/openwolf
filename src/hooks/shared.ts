@@ -17,25 +17,25 @@ function detectWorktreeContext(): WorktreeContext {
   if (_cachedWorktreeCtx) return _cachedWorktreeCtx;
   const dir = path.resolve(process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
   try {
-    const commonGitDir = execFileSync(
-      "git", ["rev-parse", "--path-format=absolute", "--git-common-dir"],
-      { cwd: dir, stdio: ["pipe", "pipe", "ignore"], encoding: "utf-8", timeout: 500 }
-    ).trim();
+    const gitOpts = { cwd: dir, stdio: ["pipe", "pipe", "ignore"] as ["pipe", "pipe", "ignore"], encoding: "utf-8" as const, timeout: 500 };
+    const gitDir = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-dir"], gitOpts).toString().trim();
+    const commonGitDir = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], gitOpts).toString().trim();
     const mainRepoRoot = path.resolve(path.dirname(commonGitDir));
     let branch = "";
     try {
-      branch = execFileSync(
-        "git", ["rev-parse", "--abbrev-ref", "HEAD"],
-        { cwd: dir, stdio: ["pipe", "pipe", "ignore"], encoding: "utf-8", timeout: 500 }
-      ).trim();
+      branch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], gitOpts).toString().trim();
     } catch {}
-    if (mainRepoRoot === dir) {
-      _cachedWorktreeCtx = { isWorktree: false, mainRepoRoot: dir, worktreePath: dir, sessionId: "", branch };
+    if (gitDir === commonGitDir) {
+      _cachedWorktreeCtx = { isWorktree: false, mainRepoRoot, worktreePath: dir, sessionId: "", branch };
     } else {
       const sessionId = crypto.createHash("sha256").update(dir).digest("hex").slice(0, 8);
       _cachedWorktreeCtx = { isWorktree: true, mainRepoRoot, worktreePath: dir, sessionId, branch };
     }
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("not a git repository") && !msg.includes("ENOENT")) {
+      process.stderr.write(`OpenWolf: worktree detection failed (${msg}). Falling back to non-worktree mode.\n`);
+    }
     _cachedWorktreeCtx = { isWorktree: false, mainRepoRoot: dir, worktreePath: dir, sessionId: "", branch: "" };
   }
   return _cachedWorktreeCtx;
@@ -241,7 +241,7 @@ export function extractDescription(filePath: string): string {
   if (ext === ".rs") {
     const lines = content.split("\n");
     for (const line of lines.slice(0, 20)) {
-      const m = line.match(/^\s*(?:\/\/|\/\/!)\s*(.+)/);
+      const m = line.match(/^\s*(?:\/\/\/|\/\/!)\s*(.+)/);
       if (m && m[1].length > 5) return cap(m[1].trim());
     }
   }
