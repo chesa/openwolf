@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, readMarkdown, parseAnatomy, estimateTokens, readStdin, normalizePath } from "./shared.js";
+import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, readMarkdown, parseAnatomy, estimateTokens, readStdin, normalizePath, isWolfFile } from "./shared.js";
 
 interface SessionData {
   files_read: Record<string, { count: number; tokens: number; first_read: string }>;
@@ -27,15 +27,6 @@ async function main(): Promise<void> {
   const normalizedFile = normalizePath(filePath);
 
   // Skip tracking for .wolf/ internal files — consistent with pre-read.
-  // In worktree mode, .wolf/ lives at mainRepoRoot, not projectDir — check both.
-  const projectDir = normalizePath(process.env.CLAUDE_PROJECT_DIR || process.cwd());
-  const normalizedWolfDir = normalizePath(wolfDir);
-  const isWolfFile = (f: string): boolean => {
-    const relToProject = f.startsWith(projectDir) ? f.slice(projectDir.length).replace(/^\//, "") : "";
-    if (relToProject.startsWith(".wolf/") || relToProject.startsWith(".wolf\\")) return true;
-    if (f.startsWith(normalizedWolfDir + "/") || f.startsWith(normalizedWolfDir + "\\") || f === normalizedWolfDir) return true;
-    return false;
-  };
   if (isWolfFile(normalizedFile)) {
     process.exit(0);
     return;

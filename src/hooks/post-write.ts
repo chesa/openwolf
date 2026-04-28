@@ -3,7 +3,7 @@ import * as path from "node:path";
 import * as crypto from "node:crypto";
 import {
   getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, readMarkdown, parseAnatomy, serializeAnatomy,
-  extractDescription, estimateTokens, appendMarkdown, timeShort, readStdin, normalizePath
+  extractDescription, estimateTokens, appendMarkdown, timeShort, readStdin, normalizePath, isWolfFile
 } from "./shared.js";
 
 interface SessionData {
@@ -53,13 +53,9 @@ async function main(): Promise<void> {
   const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(projectRoot, filePath);
 
   // Skip processing for .wolf/ internal files to avoid slow self-referential updates.
-  // In worktree mode, .wolf/ lives at mainRepoRoot, not projectRoot — check both.
-  const relPath = normalizePath(path.relative(projectRoot, absolutePath));
-  if (relPath.startsWith(".wolf/")) { process.exit(0); return; }
-  const wolfParent = path.dirname(wolfDir);
-  if (wolfParent !== projectRoot) {
-    const relToMain = normalizePath(path.relative(wolfParent, absolutePath));
-    if (relToMain.startsWith(".wolf/")) { process.exit(0); return; }
+  if (isWolfFile(absolutePath)) {
+    process.exit(0);
+    return;
   }
 
   // Never track .env files in anatomy — they contain secrets
