@@ -46,7 +46,7 @@ const CREATE_IF_MISSING = [
 // Resolve the main repo root at invocation time so hooks work in git worktrees.
 // In a worktree, $CLAUDE_PROJECT_DIR points to the worktree where .wolf/ doesn't exist.
 // git rev-parse --git-common-dir returns the main repo's .git, whose parent is the main root.
-const WOLF_ROOT = 'WOLF_ROOT="$(cd "$CLAUDE_PROJECT_DIR" && dirname "$(git rev-parse --path-format=absolute --git-common-dir)" || echo "$CLAUDE_PROJECT_DIR")"';
+const WOLF_ROOT = 'WOLF_ROOT="$(cd "$CLAUDE_PROJECT_DIR" && dirname "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null || echo "$CLAUDE_PROJECT_DIR")"';
 const hookCmd = (script: string) => `${WOLF_ROOT} && node "$WOLF_ROOT/.wolf/hooks/${script}"`;
 
 export const HOOK_SETTINGS = {

@@ -2,18 +2,16 @@ import * as path from "node:path";
 import * as crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 
-export interface WorktreeContext {
-  isWorktree: boolean;
-  mainRepoRoot: string;
-  worktreePath: string;
-  sessionId: string;
-  branch: string;
-}
+export type WorktreeContext =
+  | { isWorktree: false; mainRepoRoot: string; worktreePath: string; branch: string }
+  | { isWorktree: true; mainRepoRoot: string; worktreePath: string; worktreeId: string; branch: string };
 
 export function detectWorktreeContextRaw(dir: string): WorktreeContext {
-  const opts = { cwd: dir, stdio: ["pipe", "pipe", "ignore"] as ["pipe", "pipe", "ignore"], encoding: "utf-8" as const, timeout: 500 };
-  const gitDir = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-dir"], opts).toString().trim();
-  const commonGitDir = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], opts).toString().trim();
+  const opts = { cwd: dir, stdio: ["pipe", "pipe", "ignore"] as ["pipe", "pipe", "ignore"], encoding: "utf-8" as const, timeout: 2000 };
+  const gitDirRaw = execFileSync("git", ["rev-parse", "--git-dir"], opts).toString().trim();
+  const commonGitDirRaw = execFileSync("git", ["rev-parse", "--git-common-dir"], opts).toString().trim();
+  const gitDir = path.resolve(dir, gitDirRaw);
+  const commonGitDir = path.resolve(dir, commonGitDirRaw);
   const mainRepoRoot = path.resolve(path.dirname(commonGitDir));
   let branch = "";
   try {
@@ -25,8 +23,8 @@ export function detectWorktreeContextRaw(dir: string): WorktreeContext {
     }
   }
   if (gitDir === commonGitDir) {
-    return { isWorktree: false, mainRepoRoot, worktreePath: dir, sessionId: "", branch };
+    return { isWorktree: false, mainRepoRoot, worktreePath: dir, branch };
   }
-  const sessionId = crypto.createHash("sha256").update(dir).digest("hex").slice(0, 8);
-  return { isWorktree: true, mainRepoRoot, worktreePath: dir, sessionId, branch };
+  const worktreeId = crypto.createHash("sha256").update(dir).digest("hex").slice(0, 8);
+  return { isWorktree: true, mainRepoRoot, worktreePath: dir, worktreeId, branch };
 }

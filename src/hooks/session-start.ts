@@ -12,7 +12,7 @@ async function main(): Promise<void> {
   const wtCtx = getWorktreeContext();
   if (wtCtx.isWorktree) {
     process.stderr.write(
-      `🐺 OpenWolf: Worktree mode (${wtCtx.branch || wtCtx.sessionId}) — shared state from ${wtCtx.mainRepoRoot}\n`
+      `🐺 OpenWolf: Worktree mode (${wtCtx.branch || wtCtx.worktreeId}) — shared state from ${wtCtx.mainRepoRoot}\n`
     );
   }
 

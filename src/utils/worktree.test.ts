@@ -16,7 +16,6 @@ describe("detectWorktreeContext", () => {
     vi.mocked(execFileSync).mockImplementation(() => { throw new Error("not a git repository"); });
     const result = detectWorktreeContext("/nonexistent/path");
     expect(result.isWorktree).toBe(false);
-    expect(result.sessionId).toBe("");
     expect(result.mainRepoRoot).toBe("/nonexistent/path");
     expect(result.branch).toBe("");
   });
@@ -30,7 +29,6 @@ describe("detectWorktreeContext", () => {
     expect(result.isWorktree).toBe(false);
     expect(result.mainRepoRoot).toBe("/path/to/project");
     expect(result.branch).toBe("main");
-    expect(result.sessionId).toBe("");
   });
 
   it("returns worktree context when in a linked worktree", () => {
@@ -42,11 +40,12 @@ describe("detectWorktreeContext", () => {
     expect(result.isWorktree).toBe(true);
     expect(result.mainRepoRoot).toBe("/path/to/project");
     expect(result.worktreePath).toBe("/path/to/project/.worktrees/feature-25");
-    expect(result.sessionId).toHaveLength(8);
+    if (!result.isWorktree) throw new Error("expected worktree");
+    expect(result.worktreeId).toHaveLength(8);
     expect(result.branch).toBe("feature/25-git-worktree-support");
   });
 
-  it("produces consistent sessionId for the same worktree path", () => {
+  it("produces consistent worktreeId for the same worktree path", () => {
     const mock = vi.mocked(execFileSync);
     mock.mockReturnValueOnce("/path/to/project/.git/worktrees/feat")  // --git-dir (call 1)
       .mockReturnValueOnce("/path/to/project/.git")                   // --git-common-dir (call 1)
@@ -56,10 +55,11 @@ describe("detectWorktreeContext", () => {
       .mockReturnValueOnce("/path/to/project/.git")                   // --git-common-dir (call 2)
       .mockReturnValueOnce("feat");                                   // branch (call 2)
     const r2 = detectWorktreeContext("/path/to/project/.worktrees/feat");
-    expect(r1.sessionId).toBe(r2.sessionId);
+    if (!r1.isWorktree || !r2.isWorktree) throw new Error("expected worktree");
+    expect(r1.worktreeId).toBe(r2.worktreeId);
   });
 
-  it("produces different sessionIds for different worktree paths", () => {
+  it("produces different worktreeIds for different worktree paths", () => {
     const mock = vi.mocked(execFileSync);
     mock.mockReturnValueOnce("/path/to/project/.git/worktrees/feat-a")
       .mockReturnValueOnce("/path/to/project/.git")
@@ -69,7 +69,8 @@ describe("detectWorktreeContext", () => {
       .mockReturnValueOnce("/path/to/project/.git")
       .mockReturnValueOnce("feat-b");
     const r2 = detectWorktreeContext("/path/to/project/.worktrees/feat-b");
-    expect(r1.sessionId).not.toBe(r2.sessionId);
+    if (!r1.isWorktree || !r2.isWorktree) throw new Error("expected worktree");
+    expect(r1.worktreeId).not.toBe(r2.worktreeId);
   });
 
   it("returns empty branch when branch detection fails (e.g., detached HEAD)", () => {

@@ -270,7 +270,7 @@ describe("initCommand worktree guard", () => {
       isWorktree: true,
       mainRepoRoot: "/fake/main",
       worktreePath: "/fake/project",
-      sessionId: "abc123",
+      worktreeId: "abc123",
       branch: "feature/test",
     });
     vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) => {
@@ -293,7 +293,7 @@ describe("initCommand worktree guard", () => {
       isWorktree: true,
       mainRepoRoot: "/fake/main",
       worktreePath: "/fake/project",
-      sessionId: "abc123",
+      worktreeId: "abc123",
       branch: "feature/test",
     });
     vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) => {

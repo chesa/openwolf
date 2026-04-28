@@ -10,7 +10,7 @@ export function detectWorktreeContext(projectDir?: string): WorktreeContext {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("not a git repository") || msg.includes("ENOENT")) {
-      return { isWorktree: false, mainRepoRoot: dir, worktreePath: dir, sessionId: "", branch: "" };
+      return { isWorktree: false, mainRepoRoot: dir, worktreePath: dir, branch: "" };
     }
     throw err;
   }

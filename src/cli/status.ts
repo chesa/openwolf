@@ -20,13 +20,13 @@ export async function statusCommand(): Promise<void> {
   console.log("===============\n");
 
   const sessionFileDir = wtCtx.isWorktree
-    ? path.join(wolfDir, "sessions", wtCtx.sessionId)
+    ? path.join(wolfDir, "sessions", wtCtx.worktreeId)
     : wolfDir;
 
   if (wtCtx.isWorktree) {
-    console.log(`  Mode: Worktree  (${wtCtx.branch || wtCtx.sessionId})`);
+    console.log(`  Mode: Worktree  (${wtCtx.branch || wtCtx.worktreeId})`);
     console.log(`  Main repo: ${wtCtx.mainRepoRoot}`);
-    console.log(`  Session: .wolf/sessions/${wtCtx.sessionId}/`);
+    console.log(`  Session: .wolf/sessions/${wtCtx.worktreeId}/`);
   } else {
     console.log(`  Mode: Main checkout`);
   }
@@ -50,7 +50,7 @@ export async function statusCommand(): Promise<void> {
   for (const file of sessionFiles) {
     if (!fs.existsSync(path.join(sessionFileDir, file))) {
       const loc = wtCtx.isWorktree
-        ? `.wolf/sessions/${wtCtx.sessionId}/${file}`
+        ? `.wolf/sessions/${wtCtx.worktreeId}/${file}`
         : `.wolf/${file}`;
       console.log(`  - Not yet created: ${loc} (appears after first session)`);
     }

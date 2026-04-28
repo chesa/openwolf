@@ -16,7 +16,7 @@ function detectWorktreeContext(): WorktreeContext {
       const hint = msg.includes("TIMEOUT") || msg.includes("timed out") ? " (slow filesystem? hooks will be disabled if .wolf/ is not at this path)" : "";
       process.stderr.write(`OpenWolf: worktree detection failed (${msg}).${hint} Falling back to non-worktree mode.\n`);
     }
-    _cachedWorktreeCtx = { isWorktree: false, mainRepoRoot: dir, worktreePath: dir, sessionId: "", branch: "" };
+    _cachedWorktreeCtx = { isWorktree: false, mainRepoRoot: dir, worktreePath: dir, branch: "" };
   }
   return _cachedWorktreeCtx;
 }
@@ -28,7 +28,7 @@ export function getWolfDir(): string {
 export function getSessionDir(): string {
   const ctx = detectWorktreeContext();
   if (!ctx.isWorktree) return getWolfDir();
-  return path.join(getWolfDir(), "sessions", ctx.sessionId);
+  return path.join(getWolfDir(), "sessions", ctx.worktreeId);
 }
 
 export function getWorktreeContext(): WorktreeContext {
