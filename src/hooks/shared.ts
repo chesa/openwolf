@@ -18,16 +18,27 @@ function detectWorktreeContext(): WorktreeContext {
     _cachedWorktreeCtx = detectWorktreeContextRaw(dir);
     return _cachedWorktreeCtx;
   } catch (err) {
-    if (!isNotARepoError(err) && !isMissingGitError(err) && !isTimeoutError(err)) {
+    const classified =
+      isNotARepoError(err) || isMissingGitError(err) || isTimeoutError(err);
+    if (!classified) {
       const e = err as { stderr?: string | Buffer; message?: string };
       const detail = (e.stderr ? e.stderr.toString() : e.message ?? String(err)).trim();
       process.stderr.write(
         `OpenWolf: worktree detection failed (${detail}). Falling back to non-worktree mode.\n`,
       );
     }
-    // Do NOT cache the failure — let the next call retry. A transient slow-fs
-    // timeout shouldn't poison the cache for the rest of the hook process.
-    return { isWorktree: false, mainRepoRoot: dir, worktreePath: dir, branch: "" };
+    const fallback: WorktreeContext = {
+      isWorktree: false,
+      mainRepoRoot: dir,
+      worktreePath: dir,
+      branch: "",
+    };
+    // Cache classified failures so a broken-git project doesn't re-pay the
+    // 2s timeout on every getWolfDir/getSessionDir call inside a single hook.
+    // Unclassified errors stay uncached so a transient mid-process problem
+    // can recover.
+    if (classified) _cachedWorktreeCtx = fallback;
+    return fallback;
   }
 }
 

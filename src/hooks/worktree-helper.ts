@@ -13,10 +13,10 @@ export type WorktreeContext =
 // "not a repo" (status 128) from a missing binary (code ENOENT) from a
 // transient failure.
 const GIT_OPTS = {
-  stdio: ["pipe", "pipe", "pipe"] as ["pipe", "pipe", "pipe"],
+  stdio: "pipe",
   encoding: "utf-8" as const,
   timeout: 2000,
-};
+} as const;
 
 interface GitExecError extends Error {
   status?: number | null;
