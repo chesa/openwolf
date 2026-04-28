@@ -67,10 +67,45 @@ export function ensureWolfDir(): void {
   }
 }
 
+export function isWolfFile(filePath: string): boolean {
+  const wolfDir = getWolfDir();
+  const normalizedFile = normalizePath(filePath);
+  const normalizedWolfDir = normalizePath(wolfDir);
+  const projectDir = normalizePath(
+    process.env.CLAUDE_PROJECT_DIR || process.cwd()
+  );
+
+  const relToProject = normalizedFile.startsWith(projectDir)
+    ? normalizedFile.slice(projectDir.length).replace(/^\//, "")
+    : "";
+
+  if (
+    relToProject.startsWith(".wolf/") ||
+    relToProject.startsWith(".wolf\\")
+  )
+    return true;
+  if (
+    normalizedFile.startsWith(normalizedWolfDir + "/") ||
+    normalizedFile.startsWith(normalizedWolfDir + "\\") ||
+    normalizedFile === normalizedWolfDir
+  )
+    return true;
+
+  return false;
+}
+
 export function readJSON<T = unknown>(filePath: string, fallback: T): T {
   try {
+    if (!fs.existsSync(filePath)) return fallback;
     return JSON.parse(fs.readFileSync(filePath, "utf-8")) as T;
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      process.stderr.write(
+        `OpenWolf: failed to read ${filePath} (${
+          err instanceof Error ? err.message : String(err)
+        })\n`
+      );
+    }
     return fallback;
   }
 }
