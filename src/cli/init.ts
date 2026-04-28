@@ -174,7 +174,11 @@ function writeSettings(projectRoot: string): void {
     } catch (err) {
       const backupPath = settingsPath + ".bak";
       fs.copyFileSync(settingsPath, backupPath);
-      console.warn(`  ⚠ settings.json is corrupted (${err instanceof Error ? err.message : String(err)}). Backed up to ${backupPath}.`);
+      console.warn(
+        `  ⚠ settings.json could not be parsed (${err instanceof Error ? err.message : String(err)}).\n` +
+        `    The original was backed up to ${backupPath}.\n` +
+        `    Any user-installed hooks were NOT preserved — restore from .bak if you need them.`,
+      );
     }
   }
 
