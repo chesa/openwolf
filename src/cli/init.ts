@@ -83,6 +83,7 @@ function writeHooks(wolfDir: string): void {
     "post-write.js",
     "stop.js",
     "shared.js",
+    "worktree-helper.js",
   ];
 
   // Find compiled hooks — check multiple locations relative to __dirname (dist/cli/)

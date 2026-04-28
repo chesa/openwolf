@@ -323,6 +323,7 @@ function copyHookScripts(wolfDir: string): void {
   const hookFiles = [
     "session-start.js", "pre-read.js", "pre-write.js",
     "post-read.js", "post-write.js", "stop.js", "shared.js",
+    "worktree-helper.js",
   ];
 
   if (sourceDir) {

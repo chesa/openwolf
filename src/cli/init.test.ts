@@ -255,6 +255,19 @@ describe("replaceOpenWolfHooks", () => {
 });
 
 // ---------------------------------------------------------------------------
+// hook-file copy list
+// ---------------------------------------------------------------------------
+describe("hook-file copy list", () => {
+  it("includes worktree-helper.js so dist/hooks/shared.js can resolve its sibling import", () => {
+    const initSource = fs.readFileSync(
+      require("node:path").resolve(process.cwd(), "src/cli/init.ts"),
+      "utf-8"
+    );
+    expect(initSource).toMatch(/"worktree-helper\.js"/);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // initCommand worktree guard
 // ---------------------------------------------------------------------------
 describe("initCommand worktree guard", () => {
