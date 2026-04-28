@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import * as fs from "node:fs";
 import { findProjectRoot } from "../scanner/project-root.js";
 import { detectWorktreeContext } from "../utils/worktree.js";
+import type { WorktreeId } from "../hooks/worktree-helper.js";
 import {
   isOpenWolfHook,
   replaceOpenWolfHooks,
@@ -289,7 +290,7 @@ describe("initCommand worktree guard", () => {
       isWorktree: true,
       mainRepoRoot: "/fake/main",
       worktreePath: "/fake/project",
-      worktreeId: "abc123",
+      worktreeId: "abc123" as WorktreeId,
       branch: "feature/test",
     });
     vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) => {
@@ -312,7 +313,7 @@ describe("initCommand worktree guard", () => {
       isWorktree: true,
       mainRepoRoot: "/fake/main",
       worktreePath: "/fake/project",
-      worktreeId: "abc123",
+      worktreeId: "abc123" as WorktreeId,
       branch: "feature/test",
     });
     vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) => {

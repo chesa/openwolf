@@ -1,7 +1,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
-import { detectWorktreeContextRaw, type WorktreeContext } from "./worktree-helper.js";
+import {
+  detectWorktreeContextRaw,
+  isMissingGitError,
+  isNotARepoError,
+  isTimeoutError,
+  type WorktreeContext,
+} from "./worktree-helper.js";
 
 let _cachedWorktreeCtx: WorktreeContext | null = null;
 
@@ -10,15 +16,19 @@ function detectWorktreeContext(): WorktreeContext {
   const dir = path.resolve(process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
   try {
     _cachedWorktreeCtx = detectWorktreeContextRaw(dir);
+    return _cachedWorktreeCtx;
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("not a git repository") && !msg.includes("ENOENT")) {
-      const hint = msg.includes("TIMEOUT") || msg.includes("timed out") ? " (slow filesystem? hooks will be disabled if .wolf/ is not at this path)" : "";
-      process.stderr.write(`OpenWolf: worktree detection failed (${msg}).${hint} Falling back to non-worktree mode.\n`);
+    if (!isNotARepoError(err) && !isMissingGitError(err) && !isTimeoutError(err)) {
+      const e = err as { stderr?: string | Buffer; message?: string };
+      const detail = (e.stderr ? e.stderr.toString() : e.message ?? String(err)).trim();
+      process.stderr.write(
+        `OpenWolf: worktree detection failed (${detail}). Falling back to non-worktree mode.\n`,
+      );
     }
-    _cachedWorktreeCtx = { isWorktree: false, mainRepoRoot: dir, worktreePath: dir, branch: "" };
+    // Do NOT cache the failure — let the next call retry. A transient slow-fs
+    // timeout shouldn't poison the cache for the rest of the hook process.
+    return { isWorktree: false, mainRepoRoot: dir, worktreePath: dir, branch: "" };
   }
-  return _cachedWorktreeCtx;
 }
 
 export function getWolfDir(): string {

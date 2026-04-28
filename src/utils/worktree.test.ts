@@ -15,8 +15,10 @@ function mockGitContext(opts: {
 }) {
   vi.mocked(execFileSync).mockImplementation((cmd: string, args?: readonly string[]) => {
     const arg = (args ?? []).join(" ");
-    if (arg.includes("--git-dir")) return opts.gitDir;
-    if (arg.includes("--git-common-dir")) return opts.commonDir;
+    // Combined call: git rev-parse --git-dir --git-common-dir
+    if (arg.includes("--git-dir") && arg.includes("--git-common-dir")) {
+      return `${opts.gitDir}\n${opts.commonDir}\n`;
+    }
     if (arg.includes("--abbrev-ref")) {
       if (opts.branchError) throw opts.branchError;
       return opts.branch ?? "";
@@ -31,7 +33,12 @@ describe("detectWorktreeContext", () => {
   });
 
   it("returns non-worktree context when git command fails (non-git dir)", () => {
-    vi.mocked(execFileSync).mockImplementation(() => { throw new Error("not a git repository"); });
+    vi.mocked(execFileSync).mockImplementation(() => {
+      const err = new Error("Command failed: git rev-parse --git-dir") as Error & { status?: number; stderr?: string };
+      err.status = 128;
+      err.stderr = "fatal: not a git repository (or any of the parent directories): .git\n";
+      throw err;
+    });
     const result = detectWorktreeContext("/nonexistent/path");
     expect(result.isWorktree).toBe(false);
     expect(result.mainRepoRoot).toBe("/nonexistent/path");
@@ -100,10 +107,12 @@ describe("detectWorktreeContext", () => {
   });
 
   it("returns empty branch when branch detection fails (e.g., detached HEAD)", () => {
+    const branchErr = new Error("Command failed: git rev-parse --abbrev-ref HEAD") as Error & { status?: number };
+    branchErr.status = 128;
     mockGitContext({
       gitDir: "/path/to/project/.git",
       commonDir: "/path/to/project/.git",
-      branchError: new Error("detached HEAD"),
+      branchError: branchErr,
     });
     const result = detectWorktreeContext("/path/to/project");
     expect(result.isWorktree).toBe(false);
@@ -121,9 +130,13 @@ describe("detectWorktreeContext", () => {
     expect(result.branch).toBe("main");
   });
 
-  it("throws on unexpected git errors", () => {
-    vi.mocked(execFileSync).mockImplementation(() => { throw new Error("permission denied"); });
-    expect(() => detectWorktreeContext("/some/path")).toThrow("permission denied");
+  it("throws on unexpected git errors (non-128 exit, non-ENOENT)", () => {
+    vi.mocked(execFileSync).mockImplementation(() => {
+      const err = new Error("Command failed: git rev-parse --git-dir") as Error & { status?: number };
+      err.status = 1;
+      throw err;
+    });
+    expect(() => detectWorktreeContext("/some/path")).toThrow();
   });
 
   it("handles bare repositories correctly", () => {
