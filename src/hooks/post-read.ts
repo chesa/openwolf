@@ -26,7 +26,6 @@ async function main(): Promise<void> {
 
   const normalizedFile = normalizePath(filePath);
 
-  // Skip tracking for .wolf/ internal files — consistent with pre-read.
   if (isWolfFile(normalizedFile)) {
     process.exit(0);
     return;

@@ -329,7 +329,6 @@ export async function initCommand(): Promise<void> {
     process.exit(1);
   }
 
-  // Detect project root first — used consistently for worktree check and init
   const projectRoot = findProjectRoot();
 
   // Worktree guard — init must run from the main checkout

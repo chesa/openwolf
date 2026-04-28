@@ -8,7 +8,6 @@ async function main(): Promise<void> {
   const wolfDir = getWolfDir();
   const sessionDir = getSessionDir();
 
-  // Announce worktree mode in the Claude transcript
   const wtCtx = getWorktreeContext();
   if (wtCtx.isWorktree) {
     process.stderr.write(
