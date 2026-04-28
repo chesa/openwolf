@@ -43,20 +43,7 @@ const BACKUP_FILES = [
   ...USER_DATA_FILES,
 ];
 
-const HOOK_SETTINGS = {
-  hooks: {
-    SessionStart: [{ matcher: "", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/session-start.js"', timeout: 5 }] }],
-    PreToolUse: [
-      { matcher: "Read", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/pre-read.js"', timeout: 5 }] },
-      { matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/pre-write.js"', timeout: 5 }] },
-    ],
-    PostToolUse: [
-      { matcher: "Read", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/post-read.js"', timeout: 5 }] },
-      { matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/post-write.js"', timeout: 10 }] },
-    ],
-    Stop: [{ matcher: "", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/stop.js"', timeout: 10 }] }],
-  },
-};
+import { HOOK_SETTINGS } from "./hook-settings.js";
 
 interface UpdateResult {
   project: RegisteredProject;
@@ -188,7 +175,7 @@ async function updateProject(
       const merged = replaceOpenWolfHooks(existing, HOOK_SETTINGS);
       writeJSON(settingsPath, merged);
     } else {
-      writeJSON(settingsPath, HOOK_SETTINGS);
+      writeJSON(settingsPath, { hooks: HOOK_SETTINGS });
     }
     console.log(`    ✓ Claude settings updated`);
 
@@ -360,7 +347,7 @@ function replaceOpenWolfHooks(
   if (!merged.hooks) merged.hooks = {};
   const hooks = merged.hooks as Record<string, Array<{ matcher: string; hooks: Array<{ command?: string; type: string }> }>>;
 
-  for (const [event, newMatchers] of Object.entries(hookSettings.hooks)) {
+  for (const [event, newMatchers] of Object.entries(hookSettings)) {
     if (!hooks[event]) hooks[event] = [];
 
     // Remove existing OpenWolf hook entries

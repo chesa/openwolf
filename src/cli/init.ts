@@ -43,28 +43,8 @@ const CREATE_IF_MISSING = [
   "suggestions.json",
 ];
 
-// Resolve the main repo root at invocation time so hooks work in git worktrees.
-// In a worktree, $CLAUDE_PROJECT_DIR points to the worktree where .wolf/ doesn't exist.
-// git rev-parse --git-common-dir returns the main repo's .git, whose parent is the main root.
-const WOLF_ROOT = 'WOLF_ROOT="$(cd "$CLAUDE_PROJECT_DIR" && dirname "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null || echo "$CLAUDE_PROJECT_DIR")"';
-const hookCmd = (script: string) => `${WOLF_ROOT} && node "$WOLF_ROOT/.wolf/hooks/${script}"`;
-
-export const HOOK_SETTINGS = {
-  SessionStart: [
-    { matcher: "", hooks: [{ type: "command", command: hookCmd("session-start.js"), timeout: 5 }] },
-  ],
-  PreToolUse: [
-    { matcher: "Read", hooks: [{ type: "command", command: hookCmd("pre-read.js"), timeout: 5 }] },
-    { matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: hookCmd("pre-write.js"), timeout: 5 }] },
-  ],
-  PostToolUse: [
-    { matcher: "Read", hooks: [{ type: "command", command: hookCmd("post-read.js"), timeout: 5 }] },
-    { matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: hookCmd("post-write.js"), timeout: 10 }] },
-  ],
-  Stop: [
-    { matcher: "", hooks: [{ type: "command", command: hookCmd("stop.js"), timeout: 10 }] },
-  ],
-};
+import { HOOK_SETTINGS } from "./hook-settings.js";
+export { HOOK_SETTINGS };
 
 // Find the templates directory (either src/templates or dist/templates)
 function findTemplatesDir(): string {
