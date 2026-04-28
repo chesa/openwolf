@@ -139,6 +139,18 @@ describe("detectWorktreeContext", () => {
     expect(() => detectWorktreeContext("/some/path")).toThrow();
   });
 
+  it("worktreeId is the first 8 hex chars of sha256(worktreePath)", () => {
+    mockGitContext({
+      gitDir: "/repo/.git/worktrees/feat",
+      commonDir: "/repo/.git",
+      branch: "feat",
+    });
+    const result = detectWorktreeContext("/repo/.worktrees/feat");
+    if (!result.isWorktree) throw new Error("expected worktree");
+    expect(result.worktreeId).toBe("3ec0f41f");
+    expect(result.worktreeId).toMatch(/^[0-9a-f]{8}$/);
+  });
+
   it("handles bare repositories correctly", () => {
     mockGitContext({
       gitDir: "/bare/repo.git",
