@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { findProjectRoot } from "../scanner/project-root.js";
 import { readJSON, readText } from "../utils/fs-safe.js";
 import { detectWorktreeContext } from "../utils/worktree.js";
+import { HOOK_FILES } from "./hook-settings.js";
 
 export async function statusCommand(): Promise<void> {
   const projectRoot = findProjectRoot();
@@ -60,18 +61,13 @@ export async function statusCommand(): Promise<void> {
   }
 
   // Hook scripts check
-  const hookFiles = [
-    "session-start.js", "pre-read.js", "pre-write.js",
-    "post-read.js", "post-write.js", "stop.js", "shared.js",
-    "worktree-helper.js",
-  ];
   const hooksDir = path.join(wolfDir, "hooks");
   let hooksMissing = 0;
-  for (const file of hookFiles) {
+  for (const file of HOOK_FILES) {
     if (!fs.existsSync(path.join(hooksDir, file))) hooksMissing++;
   }
   if (hooksMissing === 0) {
-    console.log(`  ✓ All ${hookFiles.length} hook scripts present`);
+    console.log(`  ✓ All ${HOOK_FILES.length} hook scripts present`);
   } else {
     console.log(`  ✗ Missing ${hooksMissing} hook scripts`);
   }

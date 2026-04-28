@@ -43,7 +43,7 @@ const CREATE_IF_MISSING = [
   "suggestions.json",
 ];
 
-import { HOOK_SETTINGS } from "./hook-settings.js";
+import { HOOK_SETTINGS, HOOK_FILES } from "./hook-settings.js";
 export { HOOK_SETTINGS };
 
 // Find the templates directory (either src/templates or dist/templates)
@@ -75,17 +75,6 @@ function writeHooks(wolfDir: string): void {
   const hooksDir = path.join(wolfDir, "hooks");
   ensureDir(hooksDir);
 
-  const hookFiles = [
-    "session-start.js",
-    "pre-read.js",
-    "post-read.js",
-    "pre-write.js",
-    "post-write.js",
-    "stop.js",
-    "shared.js",
-    "worktree-helper.js",
-  ];
-
   // Find compiled hooks — check multiple locations relative to __dirname (dist/cli/)
   const candidates = [
     path.resolve(__dirname, "../hooks"),
@@ -105,7 +94,7 @@ function writeHooks(wolfDir: string): void {
   }
 
   let copiedCount = 0;
-  for (const file of hookFiles) {
+  for (const file of HOOK_FILES) {
     const srcPath = path.join(sourceDir, file);
     const destPath = path.join(hooksDir, file);
     if (fs.existsSync(srcPath)) {
@@ -123,8 +112,8 @@ function writeHooks(wolfDir: string): void {
     "utf-8"
   );
 
-  if (copiedCount < hookFiles.length) {
-    console.warn(`  ⚠ Only ${copiedCount}/${hookFiles.length} hooks copied.`);
+  if (copiedCount < HOOK_FILES.length) {
+    console.warn(`  ⚠ Only ${copiedCount}/${HOOK_FILES.length} hooks copied.`);
   }
 }
 

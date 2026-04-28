@@ -38,3 +38,17 @@ export const HOOK_SETTINGS = {
     { matcher: "", hooks: [{ type: "command", command: hookCmd("stop.js"), timeout: 10 }] },
   ],
 };
+
+// Hook script basenames that get copied from dist/hooks/ into .wolf/hooks/.
+// Single source of truth — duplication across init/update/status caused the
+// worktree-helper.js bug surfaced in PR #25 review.
+export const HOOK_FILES = [
+  "session-start.js",
+  "pre-read.js",
+  "post-read.js",
+  "pre-write.js",
+  "post-write.js",
+  "stop.js",
+  "shared.js",
+  "worktree-helper.js",
+] as const;

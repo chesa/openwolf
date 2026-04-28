@@ -258,12 +258,18 @@ describe("replaceOpenWolfHooks", () => {
 // hook-file copy list
 // ---------------------------------------------------------------------------
 describe("hook-file copy list", () => {
-  it("includes worktree-helper.js so dist/hooks/shared.js can resolve its sibling import", () => {
-    const initSource = fs.readFileSync(
-      require("node:path").resolve(process.cwd(), "src/cli/init.ts"),
-      "utf-8"
-    );
-    expect(initSource).toMatch(/"worktree-helper\.js"/);
+  it("includes worktree-helper.js so dist/hooks/shared.js can resolve its sibling import", async () => {
+    const { HOOK_FILES } = await import("./hook-settings.js");
+    expect(HOOK_FILES).toContain("worktree-helper.js");
+  });
+
+  it("covers all seven OpenWolf hook scripts plus the worktree-helper", async () => {
+    const { HOOK_FILES } = await import("./hook-settings.js");
+    // Exact list — if this changes, update both this test and the constant.
+    expect([...HOOK_FILES].sort()).toEqual([
+      "post-read.js", "post-write.js", "pre-read.js", "pre-write.js",
+      "session-start.js", "shared.js", "stop.js", "worktree-helper.js",
+    ]);
   });
 });
 

@@ -43,7 +43,7 @@ const BACKUP_FILES = [
   ...USER_DATA_FILES,
 ];
 
-import { HOOK_SETTINGS } from "./hook-settings.js";
+import { HOOK_SETTINGS, HOOK_FILES } from "./hook-settings.js";
 
 interface UpdateResult {
   project: RegisteredProject;
@@ -320,14 +320,8 @@ function copyHookScripts(wolfDir: string): void {
     }
   }
 
-  const hookFiles = [
-    "session-start.js", "pre-read.js", "pre-write.js",
-    "post-read.js", "post-write.js", "stop.js", "shared.js",
-    "worktree-helper.js",
-  ];
-
   if (sourceDir) {
-    for (const file of hookFiles) {
+    for (const file of HOOK_FILES) {
       const src = path.join(sourceDir, file);
       if (fs.existsSync(src)) {
         fs.copyFileSync(src, path.join(hooksDir, file));
