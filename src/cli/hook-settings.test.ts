@@ -5,6 +5,15 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { HOOK_SETTINGS, WOLF_ROOT_SHELL } from "./hook-settings.js";
 
+const HAS_GIT = (() => {
+  try {
+    execFileSync("git", ["--version"], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 describe("WOLF_ROOT_SHELL", () => {
   it("contains the absolute-path resolution sequence", () => {
     expect(WOLF_ROOT_SHELL).toContain('cd "$CLAUDE_PROJECT_DIR"');
@@ -13,7 +22,7 @@ describe("WOLF_ROOT_SHELL", () => {
     expect(WOLF_ROOT_SHELL).toContain('|| echo "$CLAUDE_PROJECT_DIR"');
   });
 
-  it("resolves to an absolute path in a real main checkout", () => {
+  it.skipIf(!HAS_GIT)("resolves to an absolute path in a real main checkout", () => {
     // Resolve symlinks up front so that both the shell `pwd -P` and the
     // Node.js path agree on the canonical form (macOS /var → /private/var).
     const dir = realpathSync(
