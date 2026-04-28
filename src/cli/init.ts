@@ -17,7 +17,10 @@ function getVersion(): string {
     const pkgPath = path.resolve(__dirname, "../../../package.json");
     const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
     return pkg.version || "unknown";
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`  ⚠ Could not read package.json for version: ${(err as Error).message}`);
+    }
     return "unknown";
   }
 }
@@ -247,17 +250,29 @@ function detectProjectName(projectRoot: string): string {
   try {
     const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
     if (pkg.name) return pkg.name;
-  } catch {}
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`  ⚠ Could not read package.json: ${(err as Error).message}`);
+    }
+  }
   try {
     const cargo = fs.readFileSync(path.join(projectRoot, "Cargo.toml"), "utf-8");
     const m = cargo.match(/^name\s*=\s*"([^"]+)"/m);
     if (m) return m[1];
-  } catch {}
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`  ⚠ Could not read Cargo.toml: ${(err as Error).message}`);
+    }
+  }
   try {
     const py = fs.readFileSync(path.join(projectRoot, "pyproject.toml"), "utf-8");
     const m = py.match(/^name\s*=\s*"([^"]+)"/m);
     if (m) return m[1];
-  } catch {}
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`  ⚠ Could not read pyproject.toml: ${(err as Error).message}`);
+    }
+  }
   return path.basename(projectRoot);
 }
 
@@ -265,7 +280,11 @@ function detectProjectDescription(projectRoot: string): string {
   try {
     const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, "package.json"), "utf-8"));
     if (pkg.description) return pkg.description;
-  } catch {}
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`  ⚠ Could not read package.json: ${(err as Error).message}`);
+    }
+  }
   return "";
 }
 
@@ -276,7 +295,14 @@ function seedCerebrum(wolfDir: string, projectRoot: string): void {
 
   const cerebrumPath = path.join(wolfDir, "cerebrum.md");
   let cerebrum = "";
-  try { cerebrum = fs.readFileSync(cerebrumPath, "utf-8"); } catch { return; }
+  try {
+    cerebrum = fs.readFileSync(cerebrumPath, "utf-8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`  ⚠ Could not read cerebrum.md: ${(err as Error).message}`);
+    }
+    return;
+  }
   const projectInfo = [
     `- **Project:** ${projectName || path.basename(projectRoot)}`,
     projectDescription ? `- **Description:** ${projectDescription}` : "",
@@ -365,7 +391,11 @@ export async function initCommand(): Promise<void> {
       ledger.created_at = new Date().toISOString();
       fs.writeFileSync(ledgerPath, JSON.stringify(ledger, null, 2), "utf-8");
     }
-  } catch {}
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`  ⚠ Could not update token-ledger created_at: ${(err as Error).message}`);
+    }
+  }
 
   // --- Settings (.claude/settings.json) ---
   writeSettings(projectRoot);
@@ -401,8 +431,10 @@ export async function initCommand(): Promise<void> {
     if (projectName !== "openwolf") {
       registerProject(projectRoot, projectName, version);
     }
-  } catch {
-    // Non-fatal — registry is a convenience feature
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`  ⚠ Could not update project registry: ${(err as Error).message}`);
+    }
   }
 
   // --- Summary ---
