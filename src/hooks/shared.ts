@@ -60,12 +60,10 @@ export function ensureSessionDir(): void {
   const ctx = detectWorktreeContext();
   if (!ctx.isWorktree) return;
   const sessionDir = getSessionDir();
-  try {
-    fs.mkdirSync(sessionDir, { recursive: true });
-  } catch (err) {
-    process.stderr.write(`OpenWolf: failed to create session dir ${sessionDir} (${err instanceof Error ? err.message : String(err)})\n`);
-    return;
-  }
+  // Throw on mkdir failure rather than logging-and-returning. The caller
+  // (each hook's main()) already has a top-level catch that logs + exits 0;
+  // throwing puts a single, accurate error there instead of a cascade.
+  fs.mkdirSync(sessionDir, { recursive: true });
   const metaPath = path.join(sessionDir, "worktree.json");
   if (!fs.existsSync(metaPath)) {
     writeJSON(metaPath, {
