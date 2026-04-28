@@ -1,9 +1,28 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import * as fs from "node:fs";
+import { findProjectRoot } from "../scanner/project-root.js";
+import { detectWorktreeContext } from "../utils/worktree.js";
 import {
   isOpenWolfHook,
   replaceOpenWolfHooks,
   HOOK_SETTINGS,
+  initCommand,
 } from "./init.js";
+
+vi.mock("../scanner/project-root.js", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("../scanner/project-root.js")>();
+  return { ...mod, findProjectRoot: vi.fn() };
+});
+
+vi.mock("../utils/worktree.js", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("../utils/worktree.js")>();
+  return { ...mod, detectWorktreeContext: vi.fn() };
+});
+
+vi.mock("node:fs", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("node:fs")>();
+  return { ...mod, existsSync: vi.fn() };
+});
 
 // ---------------------------------------------------------------------------
 // isOpenWolfHook
@@ -232,5 +251,62 @@ describe("replaceOpenWolfHooks", () => {
     const before = JSON.stringify(existing);
     replaceOpenWolfHooks(existing, HOOK_SETTINGS);
     expect(JSON.stringify(existing)).toBe(before);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// initCommand worktree guard
+// ---------------------------------------------------------------------------
+describe("initCommand worktree guard", () => {
+  const setupExitSpy = () => {
+    return vi.spyOn(process, "exit").mockImplementation((code?: number | string | null) => {
+      throw new Error(`exit:${code}`);
+    });
+  };
+
+  it("exits gracefully when running in a worktree with existing .wolf", async () => {
+    vi.mocked(findProjectRoot).mockReturnValue("/fake/project");
+    vi.mocked(detectWorktreeContext).mockReturnValue({
+      isWorktree: true,
+      mainRepoRoot: "/fake/main",
+      worktreePath: "/fake/project",
+      sessionId: "abc123",
+      branch: "feature/test",
+    });
+    vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) => {
+      if (p === "/fake/main/.wolf") return true;
+      return false;
+    });
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const exitSpy = setupExitSpy();
+
+    await expect(initCommand()).rejects.toThrow("exit:0");
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("already initialized"));
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it("errors when running in a worktree without existing .wolf", async () => {
+    vi.mocked(findProjectRoot).mockReturnValue("/fake/project");
+    vi.mocked(detectWorktreeContext).mockReturnValue({
+      isWorktree: true,
+      mainRepoRoot: "/fake/main",
+      worktreePath: "/fake/project",
+      sessionId: "abc123",
+      branch: "feature/test",
+    });
+    vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) => {
+      if (p === "/fake/main/.wolf") return false;
+      return false;
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const exitSpy = setupExitSpy();
+
+    await expect(initCommand()).rejects.toThrow("exit:1");
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("main checkout"));
+
+    errorSpy.mockRestore();
+    exitSpy.mockRestore();
   });
 });

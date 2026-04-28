@@ -1,17 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
-import { execFileSync } from "node:child_process";
-
-// Intentionally duplicated from src/utils/worktree.ts — hooks run in isolation
-// and cannot import from src/utils/ at runtime. Keep both in sync manually.
-interface WorktreeContext {
-  isWorktree: boolean;
-  mainRepoRoot: string;
-  worktreePath: string;
-  sessionId: string;
-  branch: string;
-}
+import { detectWorktreeContextRaw, type WorktreeContext } from "./worktree-helper.js";
 
 let _cachedWorktreeCtx: WorktreeContext | null = null;
 
@@ -19,25 +9,7 @@ function detectWorktreeContext(): WorktreeContext {
   if (_cachedWorktreeCtx) return _cachedWorktreeCtx;
   const dir = path.resolve(process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
   try {
-    const gitOpts = { cwd: dir, stdio: ["pipe", "pipe", "ignore"] as ["pipe", "pipe", "ignore"], encoding: "utf-8" as const, timeout: 500 };
-    const gitDir = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-dir"], gitOpts).toString().trim();
-    const commonGitDir = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], gitOpts).toString().trim();
-    const mainRepoRoot = path.resolve(path.dirname(commonGitDir));
-    let branch = "";
-    try {
-      branch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], gitOpts).toString().trim();
-    } catch (branchErr) {
-      const msg = branchErr instanceof Error ? branchErr.message : String(branchErr);
-      if (!msg.includes("HEAD") && !msg.includes("unknown revision")) {
-        process.stderr.write(`OpenWolf: branch detection failed (${msg})\n`);
-      }
-    }
-    if (gitDir === commonGitDir) {
-      _cachedWorktreeCtx = { isWorktree: false, mainRepoRoot, worktreePath: dir, sessionId: "", branch };
-    } else {
-      const sessionId = crypto.createHash("sha256").update(dir).digest("hex").slice(0, 8);
-      _cachedWorktreeCtx = { isWorktree: true, mainRepoRoot, worktreePath: dir, sessionId, branch };
-    }
+    _cachedWorktreeCtx = detectWorktreeContextRaw(dir);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (!msg.includes("not a git repository") && !msg.includes("ENOENT")) {
@@ -566,7 +538,7 @@ export function extractDescription(filePath: string): string {
 
   // ─── SQL ─────────────────────────────────────────────────
   if (ext === ".sql") {
-    const creates = (content.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`'\"](\w+)/gi) || [])
+    const creates = (content.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`'\"]?(\w+)/gi) || [])
       .map(m => m.match(/(?:TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?)([`'\"]?\w+)/i)?.[1]?.replace(/[`'\"]/g, "")).filter(Boolean);
     if (creates.length) return cap(`SQL: tables: ${creates.slice(0, 4).join(", ")}`);
   }

@@ -36,9 +36,9 @@ export async function statusCommand(): Promise<void> {
   const sharedFiles = [
     "OPENWOLF.md", "identity.md", "cerebrum.md",
     "anatomy.md", "config.json", "buglog.json",
-    "cron-manifest.json", "cron-state.json",
+    "cron-manifest.json", "cron-state.json", "memory.md",
   ];
-  const sessionFiles = ["memory.md", "token-ledger.json"];
+  const sessionFiles = ["token-ledger.json"];
 
   let missingCount = 0;
   for (const file of sharedFiles) {
