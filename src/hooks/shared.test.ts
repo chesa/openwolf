@@ -246,4 +246,22 @@ describe("shared.ts (hot path)", () => {
             }
         },
     );
+
+    it("writeJSON falls back to direct write only for handle-busy errors and reports the original cause if the fallback fails", async () => {
+        const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "openwolf-write-")));
+        try {
+            vi.mocked(detectWorktreeContextRaw).mockReturnValue({
+                isWorktree: false, mainRepoRoot: dir, worktreePath: dir, branch: "main",
+            });
+            process.env.CLAUDE_PROJECT_DIR = dir;
+            const { writeJSON } = await freshShared();
+
+            const target = path.join(dir, "ok.json");
+            writeJSON(target, { a: 1 });
+            expect(JSON.parse(readFileSync(target, "utf-8"))).toEqual({ a: 1 });
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            delete process.env.CLAUDE_PROJECT_DIR;
+        }
+    });
 });
