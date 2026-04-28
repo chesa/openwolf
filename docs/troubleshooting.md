@@ -259,7 +259,7 @@ When Claude Code launches inside a linked worktree, OpenWolf automatically:
 You will see a confirmation in the Claude transcript at session start:
 
 ```
-🐺 OpenWolf: Worktree mode (feature/my-branch) — shared state from /path/to/main-repo
+🐺 OpenWolf: Worktree mode (feature/my-branch) — sharing knowledge from /path/to/main-repo
 ```
 
 ### Limitations
@@ -298,3 +298,10 @@ Run `openwolf status` from inside a worktree to confirm instrumentation is activ
 ```
 
 Token stats shown are for this worktree session only. Run `openwolf status` from the main checkout to see lifetime totals.
+
+### Windows users
+
+The hook command uses bash-only syntax (`$()` and `&&`). On Windows, this
+requires Claude Code to run hooks via Git Bash (not `cmd.exe` or PowerShell).
+Most Claude Code installations on Windows already do this; if your hooks fire
+silently, check that `bash` is on `PATH`.
