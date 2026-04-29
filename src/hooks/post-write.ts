@@ -304,7 +304,7 @@ function autoDetectBugFix(wolfDir: string, absolutePath: string, projectRoot: st
   const ext = path.extname(basename).toLowerCase();
 
   // Detect what kind of fix this is
-  const detection = detectFixPattern(oldStr, newStr, ext);
+  const detection = detectFixPattern(oldStr, newStr, ext, basename);
   if (!detection) return;
 
   // Check for recent duplicate (same file + same category within 5 min)
@@ -353,7 +353,7 @@ interface FixDetection {
   context?: string;
 }
 
-function detectFixPattern(oldStr: string, newStr: string, ext: string): FixDetection | null {
+function detectFixPattern(oldStr: string, newStr: string, ext: string, filename: string): FixDetection | null {
   const oldLines = oldStr.split("\n");
   const newLines = newStr.split("\n");
 
@@ -375,7 +375,7 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string): FixDetec
       (/!==?\s*(null|undefined)/.test(newStr) && !/!==?\s*(null|undefined)/.test(oldStr))) {
     return {
       category: "null-safety",
-      summary: `Null/undefined access in ${path.basename(path.basename(""))}`,
+      summary: `Null/undefined access in ${filename}`,
       rootCause: "Property access on potentially null/undefined value",
       fix: `Added null safety (optional chaining or null check)`,
       context: extractChangedLines(oldStr, newStr),
@@ -539,7 +539,7 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string): FixDetec
     if (removedLines.length >= 2) {
       return {
         category: "refactor",
-        summary: `Significant refactor of ${path.basename("")}`,
+        summary: `Significant refactor of ${filename}`,
         rootCause: `${removedLines.length} lines replaced/restructured`,
         fix: `Rewrote ${oldLines.length}→${newLines.length} lines (${removedLines.length} removed)`,
         context: removedLines.slice(0, 2).map(l => l.trim().slice(0, 50)).join("; "),

@@ -266,6 +266,8 @@ You will see a confirmation in the Claude transcript at session start:
 
 **Bare-repo worktrees are not supported.** OpenWolf derives the main repo root via `path.dirname(git rev-parse --git-common-dir)`, which produces the wrong path for worktrees checked out from a bare repository. If you use bare repos, file an issue.
 
+**Anatomy may reflect branch-only files.** Since all worktrees share the same `anatomy.md`, files created in one worktree will appear there even if the main checkout doesn't contain them.
+
 ### Requirements
 
 **`openwolf init` must be run from the main checkout**, not from inside a worktree. If you accidentally run it in a worktree:

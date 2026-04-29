@@ -3,11 +3,6 @@ import { mkdtempSync, rmSync, readFileSync, realpathSync, writeFileSync, mkdirSy
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 
-// Mock process.exit to prevent the module from exiting when imported
-vi.spyOn(process, "exit").mockImplementation((code?: number | string | null) => {
-    throw new Error(`process.exit called with ${code}`);
-});
-
 async function freshSessionStart() {
     vi.resetModules();
     return import("./session-start.js");

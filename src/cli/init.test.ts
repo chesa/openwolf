@@ -3,12 +3,8 @@ import * as fs from "node:fs";
 import { findProjectRoot } from "../scanner/project-root.js";
 import { detectWorktreeContext } from "../utils/worktree.js";
 import type { WorktreeId } from "../hooks/worktree-helper.js";
-import {
-  isOpenWolfHook,
-  replaceOpenWolfHooks,
-  HOOK_SETTINGS,
-  initCommand,
-} from "./init.js";
+import { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks } from "./hook-settings.js";
+import { initCommand } from "./init.js";
 
 vi.mock("../scanner/project-root.js", async (importOriginal) => {
   const mod = await importOriginal<typeof import("../scanner/project-root.js")>();

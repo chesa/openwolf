@@ -46,23 +46,9 @@ const CREATE_IF_MISSING = [
   "suggestions.json",
 ];
 
-import { HOOK_SETTINGS, HOOK_FILES } from "./hook-settings.js";
-export { HOOK_SETTINGS };
-
-// Find the templates directory (either src/templates or dist/templates)
-function findTemplatesDir(): string {
-  const candidates = [
-    path.resolve(__dirname, "../../templates"),
-    path.resolve(__dirname, "../../src/templates"),
-    path.resolve(__dirname, "../../dist/templates"),
-    path.resolve(__dirname, "../templates"),
-    path.resolve(__dirname, "templates"),
-  ];
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  throw new Error("Templates directory not found");
-}
+import { HOOK_SETTINGS, HOOK_FILES, isOpenWolfHook, replaceOpenWolfHooks } from "./hook-settings.js";
+import { findTemplatesDir } from "./templates.js";
+export { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks };
 
 function writeTemplateFile(templatesDir: string, wolfDir: string, file: string): void {
   const srcPath = path.join(templatesDir, file);
@@ -119,48 +105,6 @@ function writeHooks(wolfDir: string): void {
   if (copiedCount < HOOK_FILES.length) {
     console.warn(`  ⚠ Only ${copiedCount}/${HOOK_FILES.length} hooks copied.`);
   }
-}
-
-/**
- * Returns true if a hook entry was registered by OpenWolf
- * (i.e., its command references .wolf/hooks/).
- */
-export function isOpenWolfHook(hook: unknown): boolean {
-  if (typeof hook !== "object" || hook === null) return false;
-  const h = hook as Record<string, unknown>;
-  if (typeof h.command === "string" && h.command.includes(".wolf/hooks/")) return true;
-  return false;
-}
-
-/**
- * Replace OpenWolf hooks in an existing settings object while preserving
- * any user-added hooks that are NOT OpenWolf hooks.
- */
-export function replaceOpenWolfHooks(
-  existing: Record<string, unknown>,
-  newHooks: typeof HOOK_SETTINGS
-): Record<string, unknown> {
-  const merged: Record<string, unknown> = { ...existing };
-  const existingHooks = (typeof existing.hooks === "object" && existing.hooks !== null)
-    ? { ...(existing.hooks as Record<string, unknown>) }
-    : {};
-
-  for (const event of Object.keys(newHooks) as Array<keyof typeof HOOK_SETTINGS>) {
-    const existing_entries = Array.isArray(existingHooks[event])
-      ? (existingHooks[event] as unknown[])
-      : [];
-    // Keep non-OpenWolf entries the user may have added
-    const userEntries = existing_entries.filter((entry) => {
-      if (typeof entry !== "object" || entry === null) return true;
-      const e = entry as Record<string, unknown>;
-      const hooks = Array.isArray(e.hooks) ? e.hooks : [];
-      return !hooks.some(isOpenWolfHook);
-    });
-    existingHooks[event] = [...newHooks[event], ...userEntries];
-  }
-
-  merged.hooks = existingHooks;
-  return merged;
 }
 
 function writeSettings(projectRoot: string): void {
