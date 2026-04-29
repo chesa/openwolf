@@ -101,16 +101,32 @@ async function main(): Promise<void> {
   }
 
   // Increment total_sessions in token-ledger
+  initializeSessionLedger(sessionDir);
+
+  process.exit(0);
+}
+
+export function initializeSessionLedger(sessionDir: string): void {
   const ledgerPath = path.join(sessionDir, "token-ledger.json");
-  const ledger = readJSON(ledgerPath, { version: 1, lifetime: { total_sessions: 0 } }) as {
+  const ledger = readJSON(ledgerPath, {
+    version: 1,
+    lifetime: {
+      total_sessions: 0,
+      total_reads: 0,
+      total_writes: 0,
+      total_tokens_estimated: 0,
+      anatomy_hits: 0,
+      anatomy_misses: 0,
+      repeated_reads_blocked: 0,
+      estimated_savings_vs_bare_cli: 0,
+    },
+  }) as {
     version: number;
-    lifetime: { total_sessions: number };
+    lifetime: Record<string, number>;
     [key: string]: unknown;
   };
   ledger.lifetime.total_sessions++;
   writeJSON(ledgerPath, ledger);
-
-  process.exit(0);
 }
 
 main().catch((err) => { process.stderr.write(`OpenWolf session-start: ${err instanceof Error ? err.message : String(err)}\n`); process.exit(0); });
