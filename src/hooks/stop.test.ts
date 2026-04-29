@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 
@@ -105,11 +105,10 @@ describe("stop.ts robustness", () => {
     });
 
     it("writes ledger to sessionDir, not wolfDir, in worktree mode", () => {
-        const fs = require("node:fs");
         const wolfDir = path.join(dir, "main-wolf");
         const sessionDir = path.join(dir, "sessions", "abc12345");
-        fs.mkdirSync(wolfDir, { recursive: true });
-        fs.mkdirSync(sessionDir, { recursive: true });
+        mkdirSync(wolfDir, { recursive: true });
+        mkdirSync(sessionDir, { recursive: true });
 
         const session: SessionData = {
             session_id: "wt-test",
@@ -128,10 +127,10 @@ describe("stop.ts robustness", () => {
 
         const ledgerPath = path.join(sessionDir, "token-ledger.json");
         const wolfLedgerPath = path.join(wolfDir, "token-ledger.json");
-        expect(fs.existsSync(ledgerPath)).toBe(true);
-        expect(fs.existsSync(wolfLedgerPath)).toBe(false);
+        expect(existsSync(ledgerPath)).toBe(true);
+        expect(existsSync(wolfLedgerPath)).toBe(false);
 
-        const ledger = JSON.parse(fs.readFileSync(ledgerPath, "utf-8"));
+        const ledger = JSON.parse(readFileSync(ledgerPath, "utf-8"));
         expect(ledger.sessions).toHaveLength(1);
         expect(ledger.sessions[0].id).toBe("wt-test");
     });
