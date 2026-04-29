@@ -155,9 +155,8 @@ export function finalizeSession(wolfDir: string, sessionDir: string, session: Se
       process.stderr.write(`OpenWolf stop: memory summary failed (${err instanceof Error ? err.message : String(err)})\n`);
     }
   }
-
-  const sessionFile = path.join(sessionDir, "_session.json");
-  writeJSON(sessionFile, session);
+  // Note: sessionFile write is handled by the finally block in main() to ensure
+  // stop_count is always persisted even if an error occurs during ledger updates.
 }
 
 async function main(): Promise<void> {
