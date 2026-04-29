@@ -59,14 +59,13 @@ describe("shared.ts (hot path)", () => {
     );
 
     it(
-        "getWolfDir resolves to main repo root when OPENWOLF_WRITE_MAIN=1",
+        "getWolfDir always resolves to mainRepoRoot/.wolf in worktree mode",
         async () => {
             const main = realpathSync(
                 mkdtempSync(path.join(tmpdir(), "openwolf-main-")),
             );
             const wt = main + "-wt";
             try {
-                process.env.OPENWOLF_WRITE_MAIN = "1";
                 vi.mocked(detectWorktreeContextRaw).mockReturnValue({
                     isWorktree: true,
                     mainRepoRoot: main,
@@ -77,33 +76,6 @@ describe("shared.ts (hot path)", () => {
                 process.env.CLAUDE_PROJECT_DIR = wt;
                 const { getWolfDir } = await freshShared();
                 expect(getWolfDir()).toBe(path.join(main, ".wolf"));
-            } finally {
-                rmSync(main, { recursive: true, force: true });
-                delete process.env.CLAUDE_PROJECT_DIR;
-                delete process.env.OPENWOLF_WRITE_MAIN;
-            }
-        },
-    );
-
-    it(
-        "getWolfDir returns worktreePath/.wolf when isWorktree and OPENWOLF_WRITE_MAIN is unset",
-        async () => {
-            const main = realpathSync(
-                mkdtempSync(path.join(tmpdir(), "openwolf-main-")),
-            );
-            const wt = main + "-wt";
-            try {
-                delete process.env.OPENWOLF_WRITE_MAIN;
-                vi.mocked(detectWorktreeContextRaw).mockReturnValue({
-                    isWorktree: true,
-                    mainRepoRoot: main,
-                    worktreePath: wt,
-                    worktreeId: "abcd1234" as WorktreeId,
-                    branch: "feat",
-                });
-                process.env.CLAUDE_PROJECT_DIR = wt;
-                const { getWolfDir } = await freshShared();
-                expect(getWolfDir()).toBe(path.join(wt, ".wolf"));
             } finally {
                 rmSync(main, { recursive: true, force: true });
                 delete process.env.CLAUDE_PROJECT_DIR;
@@ -152,7 +124,7 @@ describe("shared.ts (hot path)", () => {
                 process.env.CLAUDE_PROJECT_DIR = wt;
                 const { getSessionDir } = await freshShared();
                 expect(getSessionDir()).toBe(
-                    path.join(wt, ".wolf", "sessions", "abcd1234"),
+                    path.join(main, ".wolf", "sessions", "abcd1234"),
                 );
             } finally {
                 rmSync(main, { recursive: true, force: true });
@@ -181,7 +153,7 @@ describe("shared.ts (hot path)", () => {
 
                 ensureSessionDir();
                 const metaPath = path.join(
-                    wt,
+                    main,
                     ".wolf",
                     "sessions",
                     "abcd1234",

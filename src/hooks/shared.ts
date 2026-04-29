@@ -44,9 +44,6 @@ function detectWorktreeContext(): WorktreeContext {
 
 export function getWolfDir(): string {
   const ctx = detectWorktreeContext();
-  if (ctx.isWorktree && process.env.OPENWOLF_WRITE_MAIN !== "1") {
-    return path.join(ctx.worktreePath, ".wolf");
-  }
   return path.join(ctx.mainRepoRoot, ".wolf");
 }
 
