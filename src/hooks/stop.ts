@@ -49,25 +49,7 @@ interface SessionEntry {
   };
 }
 
-async function main(): Promise<void> {
-  ensureWolfDir();
-  const wolfDir = getWolfDir();
-  const sessionDir = getSessionDir();
-  const sessionFile = path.join(sessionDir, "_session.json");
-
-  const session = readJSON<SessionData>(sessionFile, {
-    session_id: "",
-    started: "",
-    files_read: {},
-    files_written: [],
-    edit_counts: {},
-    anatomy_hits: 0,
-    anatomy_misses: 0,
-    repeated_reads_warned: 0,
-    cerebrum_warnings: 0,
-    stop_count: 0,
-  });
-
+export function finalizeSession(wolfDir: string, sessionDir: string, session: SessionData): void {
   session.stop_count++;
 
   // Only write to ledger if there's been activity
@@ -75,8 +57,8 @@ async function main(): Promise<void> {
   const writeCount = session.files_written.length;
 
   if (readCount === 0 && writeCount === 0) {
+    const sessionFile = path.join(sessionDir, "_session.json");
     writeJSON(sessionFile, session);
-    process.exit(0);
     return;
   }
 
@@ -174,7 +156,41 @@ async function main(): Promise<void> {
     }
   }
 
+  const sessionFile = path.join(sessionDir, "_session.json");
   writeJSON(sessionFile, session);
+}
+
+async function main(): Promise<void> {
+  ensureWolfDir();
+  const wolfDir = getWolfDir();
+  const sessionDir = getSessionDir();
+  const sessionFile = path.join(sessionDir, "_session.json");
+
+  process.stderr.write(`OpenWolf: stop hook starting (session=${sessionDir})\n`);
+
+  const session = readJSON<SessionData>(sessionFile, {
+    session_id: "",
+    started: "",
+    files_read: {},
+    files_written: [],
+    edit_counts: {},
+    anatomy_hits: 0,
+    anatomy_misses: 0,
+    repeated_reads_warned: 0,
+    cerebrum_warnings: 0,
+    stop_count: 0,
+  });
+
+  let error: Error | null = null;
+  try {
+    finalizeSession(wolfDir, sessionDir, session);
+  } catch (err) {
+    error = err instanceof Error ? err : new Error(String(err));
+    process.stderr.write(`OpenWolf: stop hook error — ${error.message}\n`);
+  } finally {
+    // Always persist stop_count increment
+    writeJSON(sessionFile, session);
+  }
 
   process.exit(0);
 }
