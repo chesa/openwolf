@@ -52,6 +52,7 @@ export { HOOK_SETTINGS };
 // Find the templates directory (either src/templates or dist/templates)
 function findTemplatesDir(): string {
   const candidates = [
+    path.resolve(__dirname, "../../templates"),
     path.resolve(__dirname, "../../src/templates"),
     path.resolve(__dirname, "../../dist/templates"),
     path.resolve(__dirname, "../templates"),

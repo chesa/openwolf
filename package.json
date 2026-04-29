@@ -1,6 +1,6 @@
 {
   "name": "openwolf",
-  "version": "1.0.4",
+  "version": "1.0.5-beta",
   "description": "Token-conscious AI brain for Claude Code projects",
   "type": "module",
   "bin": {
@@ -8,7 +8,8 @@
   },
   "scripts": {
     "prebuild": "node -e \"const fs=require('fs');if(fs.existsSync('dist'))fs.rmSync('dist',{recursive:true})\"",
-    "build": "tsc && pnpm build:hooks && pnpm build:dashboard",
+    "build": "tsc && pnpm build:hooks && pnpm build:dashboard && pnpm build:templates",
+    "build:templates": "cp -r src/templates dist/templates",
     "build:hooks": "tsc -p tsconfig.hooks.json",
     "build:dashboard": "cd src/dashboard/app && npx vite build --outDir ../../../dist/dashboard",
     "dev": "tsc --watch",
