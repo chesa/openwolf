@@ -3,6 +3,8 @@ import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 
+vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+
 vi.mock("./shared.js", async () => {
     return {
         getWolfDir: vi.fn(),
@@ -54,7 +56,7 @@ interface SessionData {
     stop_count: number;
 }
 
-import { finalizeSession } from "./stop.js";
+const { finalizeSession } = await import("./stop.js");
 
 describe("stop.ts robustness", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "ow-stop-"));
