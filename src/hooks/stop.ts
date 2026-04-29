@@ -57,8 +57,8 @@ export function finalizeSession(wolfDir: string, sessionDir: string, session: Se
   const writeCount = session.files_written.length;
 
   if (readCount === 0 && writeCount === 0) {
-    const sessionFile = path.join(sessionDir, "_session.json");
-    writeJSON(sessionFile, session);
+    // Session file write is handled by the finally block in main() to ensure
+    // stop_count is always persisted even if an error occurs.
     return;
   }
 
@@ -164,9 +164,6 @@ async function main(): Promise<void> {
   const wolfDir = getWolfDir();
   const sessionDir = getSessionDir();
   const sessionFile = path.join(sessionDir, "_session.json");
-
-  process.stderr.write(`OpenWolf: stop hook starting (session=${sessionDir})\n`);
-
   const session = readJSON<SessionData>(sessionFile, {
     session_id: "",
     started: "",
@@ -180,11 +177,10 @@ async function main(): Promise<void> {
     stop_count: 0,
   });
 
-  let error: Error | null = null;
   try {
     finalizeSession(wolfDir, sessionDir, session);
   } catch (err) {
-    error = err instanceof Error ? err : new Error(String(err));
+    const error = err instanceof Error ? err : new Error(String(err));
     process.stderr.write(`OpenWolf: stop hook error — ${error.message}\n`);
   } finally {
     // Always persist stop_count increment
