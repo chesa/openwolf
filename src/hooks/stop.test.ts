@@ -28,11 +28,24 @@ vi.mock("./shared.js", async () => {
 // Re-import after mock
 const { readJSON, writeJSON } = await import("./shared.js");
 
+interface FileRead {
+    count: number;
+    tokens: number;
+    first_read: string;
+}
+
+interface FileWrite {
+    file: string;
+    action: string;
+    tokens: number;
+    at: string;
+}
+
 interface SessionData {
     session_id: string;
     started: string;
-    files_read: Record<string, unknown>;
-    files_written: Array<{ file: string; action: string; tokens: number; at: string }>;
+    files_read: Record<string, FileRead>;
+    files_written: FileWrite[];
     edit_counts: Record<string, number>;
     anatomy_hits: number;
     anatomy_misses: number;

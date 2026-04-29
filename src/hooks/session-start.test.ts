@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 
 // Mock process.exit to prevent the module from exiting when imported
-vi.spyOn(process, "exit").mockImplementation((code?: number) => {
+vi.spyOn(process, "exit").mockImplementation((code?: number | string | null) => {
     throw new Error(`process.exit called with ${code}`);
 });
 
@@ -19,8 +19,9 @@ describe("session-start.ts ledger init", () => {
 
     beforeEach(() => {
         // Prevent main() from running by catching the exit
-        vi.spyOn(process, "exit").mockImplementation(() => {
+        vi.spyOn(process, "exit").mockImplementation((code?: number | string | null) => {
             // swallow exit calls
+            return undefined as never;
         });
     });
 
