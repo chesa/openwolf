@@ -92,7 +92,7 @@ export function isWolfFile(filePath: string): boolean {
   const normalizedFile = normalizePath(filePath);
   const normalizedWolfDir = normalizePath(wolfDir);
   const projectDir = normalizePath(
-    process.env.CLAUDE_PROJECT_DIR || process.cwd()
+    process.env.CLAUDE_PROJECT_DIR ?? process.cwd()
   );
 
   const relToProject = normalizedFile.startsWith(projectDir)

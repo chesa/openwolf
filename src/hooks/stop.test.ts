@@ -104,6 +104,38 @@ describe("stop.ts robustness", () => {
         expect(session.stop_count).toBeGreaterThanOrEqual(1);
     });
 
+    it("writes ledger to sessionDir, not wolfDir, in worktree mode", () => {
+        const fs = require("node:fs");
+        const wolfDir = path.join(dir, "main-wolf");
+        const sessionDir = path.join(dir, "sessions", "abc12345");
+        fs.mkdirSync(wolfDir, { recursive: true });
+        fs.mkdirSync(sessionDir, { recursive: true });
+
+        const session: SessionData = {
+            session_id: "wt-test",
+            started: "2026-04-28T00:00:00Z",
+            files_read: { "/tmp/bar.ts": { count: 1, tokens: 80, first_read: "2026-04-28T00:00:00Z" } },
+            files_written: [{ file: "/tmp/bar.ts", action: "edit", tokens: 40, at: "2026-04-28T00:00:00Z" }],
+            edit_counts: {},
+            anatomy_hits: 0,
+            anatomy_misses: 0,
+            repeated_reads_warned: 0,
+            cerebrum_warnings: 0,
+            stop_count: 0,
+        };
+
+        finalizeSession(wolfDir, sessionDir, session);
+
+        const ledgerPath = path.join(sessionDir, "token-ledger.json");
+        const wolfLedgerPath = path.join(wolfDir, "token-ledger.json");
+        expect(fs.existsSync(ledgerPath)).toBe(true);
+        expect(fs.existsSync(wolfLedgerPath)).toBe(false);
+
+        const ledger = JSON.parse(fs.readFileSync(ledgerPath, "utf-8"));
+        expect(ledger.sessions).toHaveLength(1);
+        expect(ledger.sessions[0].id).toBe("wt-test");
+    });
+
     it("increments stop_count when there is activity", () => {
         const session = readJSON<SessionData>(sessionFile, {
             session_id: "",

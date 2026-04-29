@@ -362,7 +362,7 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string, filename:
     const fn = newStr.match(/(?:function|def|async)\s+(\w+)/)?.[1] || "unknown";
     return {
       category: "error-handling",
-      summary: `Missing error handling in ${path.basename(fn)}`,
+      summary: `Missing error handling in ${fn}`,
       rootCause: "Code path had no error handling — exceptions would propagate uncaught",
       fix: `Added try/catch block`,
       context: extractChangedLines(oldStr, newStr),
