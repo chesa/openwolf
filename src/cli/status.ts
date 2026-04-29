@@ -100,10 +100,12 @@ export async function statusCommand(): Promise<void> {
 
   console.log(`\nToken Stats:`);
   console.log(`  Sessions: ${ledger.lifetime.total_sessions}`);
-  console.log(`  Total reads: ${ledger.lifetime.total_reads}`);
-  console.log(`  Total writes: ${ledger.lifetime.total_writes}`);
-  console.log(`  Tokens tracked: ~${ledger.lifetime.total_tokens_estimated.toLocaleString()}`);
-  console.log(`  Estimated savings: ~${ledger.lifetime.estimated_savings_vs_bare_cli.toLocaleString()} tokens`);
+  console.log(`  Total reads: ${ledger.lifetime.total_reads ?? 0}`);
+  console.log(`  Total writes: ${ledger.lifetime.total_writes ?? 0}`);
+  const totalTokens = ledger.lifetime.total_tokens_estimated ?? 0;
+  const savings = ledger.lifetime.estimated_savings_vs_bare_cli ?? 0;
+  console.log(`  Tokens tracked: ~${totalTokens.toLocaleString()}`);
+  console.log(`  Estimated savings: ~${savings.toLocaleString()} tokens`);
 
   if (wtCtx.isWorktree) {
     console.log(`  (This worktree session only — main checkout ledger: .wolf/token-ledger.json)`);
