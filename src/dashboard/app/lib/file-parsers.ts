@@ -28,9 +28,9 @@ export function parseAnatomy(content: string): { entries: AnatomyEntry[]; metada
     const line = raw.replace(/\r$/, "");
     const metaMatch = line.match(/Files:\s*(\d+).*hits:\s*(\d+).*Misses:\s*(\d+)/i);
     if (metaMatch) {
-      files = parseInt(metaMatch[1]);
-      hits = parseInt(metaMatch[2]);
-      misses = parseInt(metaMatch[3]);
+      files = parseInt(metaMatch[1], 10);
+      hits = parseInt(metaMatch[2], 10);
+      misses = parseInt(metaMatch[3], 10);
     }
 
     const sectionMatch = line.match(/^## (.+)/);
@@ -44,7 +44,7 @@ export function parseAnatomy(content: string): { entries: AnatomyEntry[]; metada
       entries.push({
         file: entryMatch[1],
         description: entryMatch[2] || "",
-        tokens: parseInt(entryMatch[3]),
+        tokens: parseInt(entryMatch[3], 10),
         section: currentSection,
       });
     }
@@ -57,7 +57,7 @@ export function parseMemory(content: string): MemorySession[] {
   const sessions: MemorySession[] = [];
   let current: MemorySession | null = null;
 
-  for (const line of content.split("\n")) {
+  for (const line of content.split(/\r?\n/)) {
     const sessionMatch = line.match(/^## Session: (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})/);
     if (sessionMatch) {
       if (current) sessions.push(current);
@@ -91,7 +91,7 @@ export function parseCerebrum(content: string): CerebrumData {
 
   const sections = content.split(/^## /m).slice(1);
   for (const section of sections) {
-    const [title, ...rest] = section.split("\n");
+    const [title, ...rest] = section.split(/\r?\n/);
     const items = rest
       .filter(l => l.trim().startsWith("-") || l.trim().startsWith("["))
       .map(l => l.replace(/^[-*]\s*/, "").trim())

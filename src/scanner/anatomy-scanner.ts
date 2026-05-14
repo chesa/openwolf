@@ -1,15 +1,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { extractDescription, capDescription } from "./description-extractor.js";
-import { readJSON } from "../utils/fs-safe.js";
-import { writeText } from "../utils/fs-safe.js";
+import { readJSON, writeText } from "../utils/fs-safe.js";
 import { normalizePath } from "../utils/paths.js";
-
-interface AnatomyEntry {
-  file: string;
-  description: string;
-  tokens: number;
-}
+import { parseAnatomy, type AnatomyEntry } from "../hooks/shared.js";
 
 interface WolfConfig {
   version: number;
@@ -177,36 +171,6 @@ export function serializeAnatomy(
   }
 
   return lines.join("\n");
-}
-
-export function parseAnatomy(content: string): Map<string, AnatomyEntry[]> {
-  const sections = new Map<string, AnatomyEntry[]>();
-  let currentSection = "";
-
-  for (const raw of content.split("\n")) {
-    const line = raw.replace(/\r$/, "");
-    const sectionMatch = line.match(/^## (.+)/);
-    if (sectionMatch) {
-      currentSection = sectionMatch[1].trim();
-      if (!sections.has(currentSection)) {
-        sections.set(currentSection, []);
-      }
-      continue;
-    }
-
-    if (!currentSection) continue;
-
-    const entryMatch = line.match(/^- `([^`]+)`(?:\s+—\s+(.+?))?\s*\(~(\d+)\s+tok\)$/);
-    if (entryMatch) {
-      sections.get(currentSection)!.push({
-        file: entryMatch[1],
-        description: entryMatch[2] || "",
-        tokens: parseInt(entryMatch[3], 10),
-      });
-    }
-  }
-
-  return sections;
 }
 
 /**
