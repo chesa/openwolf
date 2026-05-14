@@ -17,10 +17,10 @@ const projectRoot = process.env.OPENWOLF_PROJECT_ROOT || findProjectRoot();
 const wolfDir = path.join(projectRoot, ".wolf");
 
 interface WolfConfig {
-  openwolf: {
-    daemon: { port: number; log_level: string };
-    dashboard: { enabled: boolean; port: number };
-    cron: { enabled: boolean; heartbeat_interval_minutes: number };
+  openwolf?: {
+    daemon?: { port?: number; log_level?: string };
+    dashboard?: { enabled?: boolean; port?: number };
+    cron?: { enabled?: boolean; heartbeat_interval_minutes?: number };
   };
 }
 
@@ -279,6 +279,7 @@ function handleDashboardCommand(msg: { type: string; task_id?: string }): void {
 
 // Cron engine
 let cronEngine: CronEngine | null = null;
+// Default to enabled if key is absent (matches template default)
 if (config.openwolf?.cron?.enabled ?? true) {
   cronEngine = new CronEngine(wolfDir, projectRoot, logger, broadcast);
   cronEngine.start();
