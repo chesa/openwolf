@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { getRegisteredProjects, registerProject, type RegisteredProject } from "./registry.js";
 import { readJSON, writeJSON, readText, writeText, safeCopyFile } from "../utils/fs-safe.js";
 import { ensureDir } from "../utils/paths.js";
+import { detectWorktreeContext } from "../utils/worktree.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,20 +44,8 @@ const BACKUP_FILES = [
   ...USER_DATA_FILES,
 ];
 
-const HOOK_SETTINGS = {
-  hooks: {
-    SessionStart: [{ matcher: "", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/session-start.js"', timeout: 5 }] }],
-    PreToolUse: [
-      { matcher: "Read", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/pre-read.js"', timeout: 5 }] },
-      { matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/pre-write.js"', timeout: 5 }] },
-    ],
-    PostToolUse: [
-      { matcher: "Read", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/post-read.js"', timeout: 5 }] },
-      { matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/post-write.js"', timeout: 10 }] },
-    ],
-    Stop: [{ matcher: "", hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.wolf/hooks/stop.js"', timeout: 10 }] }],
-  },
-};
+import { HOOK_SETTINGS, HOOK_FILES, replaceOpenWolfHooks } from "./hook-settings.js";
+import { findTemplatesDir } from "./templates.js";
 
 interface UpdateResult {
   project: RegisteredProject;
@@ -67,6 +56,17 @@ interface UpdateResult {
 
 export async function updateCommand(options: { dryRun?: boolean; force?: boolean; project?: string }): Promise<void> {
   const version = getVersion();
+
+  // Worktree guard — update should run from the main checkout
+  const projectRoot = process.cwd();
+  const wtCtx = detectWorktreeContext(projectRoot);
+  if (wtCtx.isWorktree) {
+    console.error(`You're running in a git worktree: ${wtCtx.worktreePath}`);
+    console.error(`OpenWolf update must be run from the main checkout. Run:`);
+    console.error(`  cd ${wtCtx.mainRepoRoot} && openwolf update`);
+    process.exit(1);
+  }
+
   const projects = getRegisteredProjects(true);
 
   if (projects.length === 0) {
@@ -188,7 +188,7 @@ async function updateProject(
       const merged = replaceOpenWolfHooks(existing, HOOK_SETTINGS);
       writeJSON(settingsPath, merged);
     } else {
-      writeJSON(settingsPath, HOOK_SETTINGS);
+      writeJSON(settingsPath, { hooks: HOOK_SETTINGS });
     }
     console.log(`    ✓ Claude settings updated`);
 
@@ -288,21 +288,6 @@ function createBackup(wolfDir: string): string {
   return backupDir;
 }
 
-// ─── Shared helpers (extracted from init.ts patterns) ─────────────
-
-function findTemplatesDir(): string {
-  const candidates = [
-    path.resolve(__dirname, "..", "..", "..", "src", "templates"),
-    path.resolve(__dirname, "..", "..", "src", "templates"),
-    path.resolve(__dirname, "..", "templates"),
-    path.resolve(__dirname, "templates"),
-  ];
-  for (const dir of candidates) {
-    if (fs.existsSync(dir)) return dir;
-  }
-  return candidates[0];
-}
-
 function readTemplateContent(filename: string, templatesDir: string): string {
   const filePath = path.join(templatesDir, filename);
   if (fs.existsSync(filePath)) {
@@ -333,13 +318,8 @@ function copyHookScripts(wolfDir: string): void {
     }
   }
 
-  const hookFiles = [
-    "session-start.js", "pre-read.js", "pre-write.js",
-    "post-read.js", "post-write.js", "stop.js", "shared.js",
-  ];
-
   if (sourceDir) {
-    for (const file of hookFiles) {
+    for (const file of HOOK_FILES) {
       const src = path.join(sourceDir, file);
       if (fs.existsSync(src)) {
         safeCopyFile(src, path.join(hooksDir, file));
@@ -350,34 +330,6 @@ function copyHookScripts(wolfDir: string): void {
   // Always ensure package.json with type:module
   const hooksPkgPath = path.join(hooksDir, "package.json");
   fs.writeFileSync(hooksPkgPath, JSON.stringify({ type: "module" }, null, 2) + "\n", "utf-8");
-}
-
-function replaceOpenWolfHooks(
-  existing: Record<string, unknown>,
-  hookSettings: typeof HOOK_SETTINGS
-): Record<string, unknown> {
-  const merged = { ...existing };
-  if (!merged.hooks) merged.hooks = {};
-  const hooks = merged.hooks as Record<string, Array<{ matcher: string; hooks: Array<{ command?: string; type: string }> }>>;
-
-  for (const [event, newMatchers] of Object.entries(hookSettings.hooks)) {
-    if (!hooks[event]) hooks[event] = [];
-
-    // Remove existing OpenWolf hook entries
-    hooks[event] = hooks[event].filter((entry) => {
-      const isOpenWolfHook = entry.hooks?.some(
-        (h) => h.command && h.command.includes(".wolf/hooks/")
-      );
-      return !isOpenWolfHook;
-    });
-
-    // Add new OpenWolf hooks
-    for (const matcher of newMatchers) {
-      hooks[event].push(matcher);
-    }
-  }
-
-  return merged;
 }
 
 /**
