@@ -174,7 +174,7 @@ async function updateProject(
     const backupDir = createBackup(wolfDir);
     console.log(`    ✓ Backup: ${path.basename(backupDir)}`);
 
-    // 2. Update template files (OPENWOLF.md, config.json)
+    // 2. Update template files (OPENWOLF.md, reframe-frameworks.md)
     const templatesDir = findTemplatesDir();
     for (const file of ALWAYS_OVERWRITE) {
       const srcPath = path.join(templatesDir, file);
@@ -184,6 +184,14 @@ async function updateProject(
       }
     }
     console.log(`    ✓ Templates updated (${ALWAYS_OVERWRITE.join(", ")})`);
+
+    // Seed config.json if it doesn't exist yet (never overwrite — user data)
+    const configDest = path.join(wolfDir, "config.json");
+    const configSrc = path.join(templatesDir, "config.json");
+    if (!fs.existsSync(configDest) && fs.existsSync(configSrc)) {
+      fs.copyFileSync(configSrc, configDest);
+      console.log(`    ✓ config.json seeded (first time)`);
+    }
 
     // 3. Update hook scripts
     copyHookScripts(wolfDir);
