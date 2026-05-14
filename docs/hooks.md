@@ -43,7 +43,7 @@ All hooks are **pure Node.js file I/O**. No network calls, no AI, no external de
 **Fires:** When a Claude Code session begins.
 
 **What it does:**
-1. Creates a fresh `_session.json` in `.wolf/hooks/` with a unique session ID
+1. Creates a fresh `_session.json` in the session directory (`.wolf/` or `.wolf/sessions/<id>/` in worktree mode)
 2. Appends a session header to `.wolf/memory.md` with a table template
 3. Increments the `total_sessions` counter in `token-ledger.json`
 
@@ -137,7 +137,7 @@ All hooks are **pure Node.js file I/O**. No network calls, no AI, no external de
 
 ## Session State (`_session.json`)
 
-An ephemeral file in `.wolf/hooks/` that tracks the current session:
+An ephemeral file in the session directory (`.wolf/` normally, or `.wolf/sessions/<id>/` in worktree mode) that tracks the current session:
 
 ```json
 {
