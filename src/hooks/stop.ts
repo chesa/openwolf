@@ -226,7 +226,10 @@ function checkForMissingBugLogs(wolfDir: string, session: SessionData): void {
 function checkStatusFreshness(wolfDir: string, session: SessionData): void {
   const statusPath = path.join(wolfDir, "STATUS.md");
   const codeWrites = session.files_written.filter(
-    (w) => !w.file.includes("/.wolf/") && !w.file.endsWith(".tmp")
+    (w) =>
+      !w.file.includes(`${path.sep}.wolf${path.sep}`) &&
+      !w.file.includes("/.wolf/") &&
+      !w.file.endsWith(".tmp")
   );
 
   try {
@@ -239,13 +242,17 @@ function checkStatusFreshness(wolfDir: string, session: SessionData): void {
         `📌 OpenWolf: STATUS.md not updated this session despite ${codeWrites.length} code writes. Update .wolf/STATUS.md (✅ done / 🚀 next quest) before /clear so next session resumes in 1 read.\n`
       );
     }
-  } catch {
-    // STATUS.md doesn't exist — nudge to create it if there were code writes
-    if (codeWrites.length >= 3) {
-      process.stderr.write(
-        `📌 OpenWolf: .wolf/STATUS.md missing. Create it with current quest summary + next steps so /clear stays cheap.\n`
-      );
+  } catch (err: unknown) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      // STATUS.md doesn't exist — nudge to create it if there were code writes
+      if (codeWrites.length >= 3) {
+        process.stderr.write(
+          `📌 OpenWolf: .wolf/STATUS.md missing. Create it with current quest summary + next steps so /clear stays cheap.\n`
+        );
+      }
     }
+    // Non-ENOENT errors: silently skip (don't disrupt the stop hook)
   }
 }
 

@@ -6,50 +6,50 @@
 
 ---
 
-## ✅ Concluído
+## ✅ Done
 
-<!-- Move items here from "🚀 Próxima fase" when finished. Group by area. -->
+<!-- Move items here from "🚀 Next Phase" when finished. Group by area. -->
 
 - (nothing yet — fill in as quests complete)
 
 ---
 
-## 🚀 Próxima fase
+## 🚀 Next Phase
 
-**Objetivo:** _<what we're building next, in 1 sentence>_
+**Objective:** _<what we're building next, in 1 sentence>_
 
-### Critérios de aceitação
+### Acceptance Criteria
 1. _<concrete user-visible outcome>_
 2. _<...>_
 
-### Arquivos a criar / editar
-| Tipo | Arquivo | Conteúdo |
+### Files to Create / Edit
+| Type | File | Contents |
 |---|---|---|
-| novo | `path/to/file.ts` | _what it does_ |
+| new | `path/to/file.ts` | _what it does_ |
 
-### Decisões fechadas
+### Decisions Made
 - _<choice + reasoning>_
 
-### Decisões pendentes
+### Open Decisions
 - _<question to ask the user before coding>_
 
 ---
 
-## 📁 Arquitetura ativa
+## 📁 Active Architecture
 
 - **Stack:** _<frameworks, libraries, runtime>_
-- **Tabelas / módulos chave:** _<list>_
-- **Padrões:** _<conventions enforced project-wide>_
+- **Key tables / modules:** _<list>_
+- **Conventions:** _<conventions enforced project-wide>_
 
 ---
 
-## ⚠️ Pendências externas (não bloqueia coding)
+## ⚠️ External Dependencies (non-blocking)
 
 - _<env vars, secrets, external accounts, manual steps>_
 
 ---
 
-## 🔧 Comandos úteis
+## 🔧 Useful Commands
 
 ```bash
 # add the most-used commands here so the next session has them ready
@@ -57,7 +57,7 @@
 
 ---
 
-## 📚 Referências (leia SE precisar)
+## 📚 References (read only if needed)
 
 - `.wolf/cerebrum.md` — User Preferences + Do-Not-Repeat + Decision Log
 - `.wolf/anatomy.md` — token-efficient file index

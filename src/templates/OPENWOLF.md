@@ -8,15 +8,15 @@ You are working in an OpenWolf-managed project. These rules apply every turn.
 - ✅ What is concluded (current quest finished)
 - 🚀 Next quest (objective, files to create, decisions fixed/pending)
 - 📁 Active architecture (stack, tables, patterns)
-- ⚠️ External pendencies
+- ⚠️ External dependencies
 - 🔧 Useful commands
 
 **At session start:** read `.wolf/STATUS.md` first. It replaces re-reading memory.md, plans, and code to reconstruct context.
 
 **MANDATORY — keep STATUS.md fresh:**
 1. When the user signals a quest is done ("done", "complete", "ship it", "next phase", "/clear", "wrap up"):
-   - Move just-finished items from `🚀 Próxima fase` → `✅ Concluído`.
-   - Replace `🚀 Próxima fase` with the next planned quest (objective, files, decisions).
+   - Move just-finished items from `🚀 Next Phase` → `✅ Done`.
+   - Replace `🚀 Next Phase` with the next planned quest (objective, files, decisions).
    - Bump "Last updated" date.
 2. After applying a migration, scaffolding a feature, or finishing a multi-file task: update STATUS.md before responding "done".
 3. Before suggesting `/clear` to the user, ensure STATUS.md reflects the current state.
