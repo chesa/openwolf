@@ -4,6 +4,7 @@ import { extractDescription, capDescription } from "./description-extractor.js";
 import { readJSON } from "../utils/fs-safe.js";
 import { writeText } from "../utils/fs-safe.js";
 import { normalizePath } from "../utils/paths.js";
+import { CODE_EXTENSIONS, PROSE_EXTENSIONS } from "../utils/extensions.js";
 
 interface AnatomyEntry {
   file: string;
@@ -37,21 +38,6 @@ const BINARY_EXTENSIONS = new Set([
   ".wasm",
   ".lock",
 ]);
-
-// Keep in sync with CODE_EXTS in src/tracker/token-estimator.ts
-const CODE_EXTENSIONS = new Set([
-  ".ts", ".js", ".tsx", ".jsx", ".py", ".rs", ".go", ".java",
-  ".c", ".cpp", ".h", ".css", ".scss", ".sql", ".sh", ".yaml",
-  ".yml", ".json", ".toml", ".xml", ".dart",
-  ".kt", ".kts", ".swift", ".m", ".mm",
-  ".hpp", ".hh", ".cc", ".cxx",
-  ".cs", ".rb", ".php", ".lua",
-  ".vue", ".svelte", ".html", ".htm",
-  ".proto", ".graphql", ".gql", ".tf",
-  ".bash", ".zsh", ".fish",
-]);
-
-const PROSE_EXTENSIONS = new Set([".md", ".txt", ".rst", ".adoc"]);
 
 function estimateTokens(text: string, filePath: string): number {
   const ext = path.extname(filePath).toLowerCase();
