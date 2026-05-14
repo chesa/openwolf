@@ -4,6 +4,7 @@ import { extractDescription, capDescription } from "./description-extractor.js";
 import { readJSON, writeText } from "../utils/fs-safe.js";
 import { normalizePath } from "../utils/paths.js";
 import { parseAnatomy, type AnatomyEntry } from "../hooks/shared.js";
+import { CODE_EXTENSIONS, PROSE_EXTENSIONS } from "../utils/extensions.js";
 
 interface WolfConfig {
   version: number;
@@ -31,14 +32,6 @@ const BINARY_EXTENSIONS = new Set([
   ".wasm",
   ".lock",
 ]);
-
-const CODE_EXTENSIONS = new Set([
-  ".ts", ".js", ".tsx", ".jsx", ".py", ".rs", ".go", ".java",
-  ".c", ".cpp", ".h", ".css", ".scss", ".sql", ".sh", ".yaml",
-  ".yml", ".json", ".toml", ".xml", ".dart",
-]);
-
-const PROSE_EXTENSIONS = new Set([".md", ".txt", ".rst", ".adoc"]);
 
 function estimateTokens(text: string, filePath: string): number {
   const ext = path.extname(filePath).toLowerCase();
