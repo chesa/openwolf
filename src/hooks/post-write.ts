@@ -2,8 +2,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
 import {
-  getWolfDir, ensureWolfDir, readJSON, writeJSON, readMarkdown, parseAnatomy, serializeAnatomy,
-  extractDescription, estimateTokens, appendMarkdown, timeShort, readStdin, normalizePath
+  getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, readMarkdown, parseAnatomy, serializeAnatomy,
+  extractDescription, estimateTokens, appendMarkdown, timeShort, readStdin, normalizePath, isWolfFile
 } from "./shared.js";
 
 interface SessionData {
@@ -33,9 +33,9 @@ interface BugLog {
 async function main(): Promise<void> {
   ensureWolfDir();
   const wolfDir = getWolfDir();
-  const hooksDir = path.join(wolfDir, "hooks");
-  const sessionFile = path.join(hooksDir, "_session.json");
-  const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const sessionDir = getSessionDir();
+  const sessionFile = path.join(sessionDir, "_session.json");
+  const projectRoot = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 
   const raw = await readStdin();
   let input: { tool_name?: string; tool_input?: { file_path?: string; path?: string; content?: string; old_string?: string; new_string?: string } };
@@ -52,9 +52,11 @@ async function main(): Promise<void> {
 
   const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(projectRoot, filePath);
 
-  // Skip processing for .wolf/ internal files to avoid slow self-referential updates
-  const relPath = normalizePath(path.relative(projectRoot, absolutePath));
-  if (relPath.startsWith(".wolf/")) { process.exit(0); return; }
+  // Skip processing for .wolf/ internal files to avoid slow self-referential updates.
+  if (isWolfFile(absolutePath)) {
+    process.exit(0);
+    return;
+  }
 
   // Never track .env files in anatomy — they contain secrets
   const baseName = path.basename(absolutePath);
@@ -70,7 +72,7 @@ async function main(): Promise<void> {
     try {
       anatomyContent = fs.readFileSync(anatomyPath, "utf-8");
     } catch {
-      anatomyContent = "# anatomy.md\n\n> Auto-maintained by OpenWolf.\n";
+      anatomyContent = "# anatomy.md\n\n> Auto-maintained by OpenWolf.";
     }
 
     const sections = parseAnatomy(anatomyContent);
@@ -117,10 +119,15 @@ async function main(): Promise<void> {
       fs.writeFileSync(tmp, serialized, "utf-8");
       fs.renameSync(tmp, anatomyPath);
     } catch {
-      try { fs.writeFileSync(anatomyPath, serialized, "utf-8"); } catch {}
+      try { fs.writeFileSync(anatomyPath, serialized, "utf-8"); }
+      catch (fallbackErr) {
+        process.stderr.write(`OpenWolf post-write: failed to write anatomy.md (${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)})\n`);
+      }
       try { fs.unlinkSync(tmp); } catch {}
     }
-  } catch {}
+  } catch (err) {
+    process.stderr.write(`OpenWolf post-write: anatomy update failed (${err instanceof Error ? err.message : String(err)})\n`);
+  }
 
   // 2. Append richer entry to memory.md
   try {
@@ -140,7 +147,9 @@ async function main(): Promise<void> {
     const memoryPath = path.join(wolfDir, "memory.md");
     const outcome = changeDesc || "—";
     appendMarkdown(memoryPath, `| ${timeShort()} | ${action} ${relFile} | ${outcome} | ~${writeTokens} |\n`);
-  } catch {}
+  } catch (err) {
+    process.stderr.write(`OpenWolf post-write: memory append failed (${err instanceof Error ? err.message : String(err)})\n`);
+  }
 
   // 3. Record in session tracker + track edit counts
   try {
@@ -169,14 +178,18 @@ async function main(): Promise<void> {
         `⚠️ OpenWolf: ${baseName} has been edited ${session.edit_counts[editKey]} times this session. If you're fixing a bug, remember to log it to .wolf/buglog.json.\n`
       );
     }
-  } catch {}
+  } catch (err) {
+    process.stderr.write(`OpenWolf post-write: session update failed (${err instanceof Error ? err.message : String(err)})\n`);
+  }
 
   // 4. Auto-detect bug-fix patterns and log them
   try {
     if (oldStr && newStr) {
       autoDetectBugFix(wolfDir, absolutePath, projectRoot, oldStr, newStr);
     }
-  } catch {}
+  } catch (err) {
+    process.stderr.write(`OpenWolf post-write: bug detection failed (${err instanceof Error ? err.message : String(err)})\n`);
+  }
 
   process.exit(0);
 }
@@ -291,7 +304,7 @@ function autoDetectBugFix(wolfDir: string, absolutePath: string, projectRoot: st
   const ext = path.extname(basename).toLowerCase();
 
   // Detect what kind of fix this is
-  const detection = detectFixPattern(oldStr, newStr, ext);
+  const detection = detectFixPattern(oldStr, newStr, ext, basename);
   if (!detection) return;
 
   // Check for recent duplicate (same file + same category within 5 min)
@@ -340,7 +353,7 @@ interface FixDetection {
   context?: string;
 }
 
-function detectFixPattern(oldStr: string, newStr: string, ext: string): FixDetection | null {
+function detectFixPattern(oldStr: string, newStr: string, ext: string, filename: string): FixDetection | null {
   const oldLines = oldStr.split("\n");
   const newLines = newStr.split("\n");
 
@@ -349,7 +362,7 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string): FixDetec
     const fn = newStr.match(/(?:function|def|async)\s+(\w+)/)?.[1] || "unknown";
     return {
       category: "error-handling",
-      summary: `Missing error handling in ${path.basename(fn)}`,
+      summary: `Missing error handling in ${fn}`,
       rootCause: "Code path had no error handling — exceptions would propagate uncaught",
       fix: `Added try/catch block`,
       context: extractChangedLines(oldStr, newStr),
@@ -362,7 +375,7 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string): FixDetec
       (/!==?\s*(null|undefined)/.test(newStr) && !/!==?\s*(null|undefined)/.test(oldStr))) {
     return {
       category: "null-safety",
-      summary: `Null/undefined access in ${path.basename(path.basename(""))}`,
+      summary: `Null/undefined access in ${filename}`,
       rootCause: "Property access on potentially null/undefined value",
       fix: `Added null safety (optional chaining or null check)`,
       context: extractChangedLines(oldStr, newStr),
@@ -526,7 +539,7 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string): FixDetec
     if (removedLines.length >= 2) {
       return {
         category: "refactor",
-        summary: `Significant refactor of ${path.basename("")}`,
+        summary: `Significant refactor of ${filename}`,
         rootCause: `${removedLines.length} lines replaced/restructured`,
         fix: `Rewrote ${oldLines.length}→${newLines.length} lines (${removedLines.length} removed)`,
         context: removedLines.slice(0, 2).map(l => l.trim().slice(0, 50)).join("; "),
@@ -571,4 +584,4 @@ function extractCSSProps(code: string): Map<string, string> {
   return props;
 }
 
-main().catch(() => process.exit(0));
+main().catch((err) => { process.stderr.write(`OpenWolf post-write: ${err instanceof Error ? err.message : String(err)}\n`); process.exit(0); });

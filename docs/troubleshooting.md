@@ -242,3 +242,68 @@ openwolf init
 ```
 
 This creates the `.wolf/` directory with `anatomy.md`, `cerebrum.md`, `memory.md`, `buglog.json`, and other required files.
+
+## Git Worktrees
+
+OpenWolf supports git worktrees (created via `git worktree add`, `claude --worktree`, or the Superpowers `using-git-worktrees` skill). No special setup is required.
+
+### How it works
+
+When Claude Code launches inside a linked worktree, OpenWolf automatically:
+
+- Resolves `.wolf/` to the main checkout using `git rev-parse --git-common-dir`
+- Reads shared knowledge files (`cerebrum.md`, `anatomy.md`, `buglog.json`) from the main checkout — all worktrees contribute to and benefit from the same brain
+- Writes session-scoped state (`token-ledger.json`, `_session.json`) to an isolated namespace at `.wolf/sessions/<worktree-id>/` to prevent context leakage between parallel sessions
+- Keeps `memory.md` shared so all worktrees contribute to the same chronological log
+
+You will see a confirmation in the Claude transcript at session start:
+
+```
+🐺 OpenWolf: Worktree mode (feature/my-branch) — sharing knowledge from /path/to/main-repo
+```
+
+### Limitations
+
+**Bare-repo worktrees are not supported.** OpenWolf derives the main repo root via `path.dirname(git rev-parse --git-common-dir)`, which produces the wrong path for worktrees checked out from a bare repository. If you use bare repos, file an issue.
+
+**Anatomy may reflect branch-only files.** Since all worktrees share the same `anatomy.md`, files created in one worktree will appear there even if the main checkout doesn't contain them.
+
+### Requirements
+
+**`openwolf init` must be run from the main checkout**, not from inside a worktree. If you accidentally run it in a worktree:
+
+- If the main checkout already has `.wolf/`: OpenWolf prints a message and exits cleanly.
+- If the main checkout has no `.wolf/`: OpenWolf prints the correct command to run.
+
+### Cleaning up worktree session data
+
+When you remove a worktree (`git worktree remove <name>`), the session data in `.wolf/sessions/<id>/` remains in the main checkout. To identify which session belongs to which worktree, read its metadata:
+
+```bash
+cat .wolf/sessions/*/worktree.json
+```
+
+To remove orphaned session directories manually:
+
+```bash
+rm -rf .wolf/sessions/<id>
+```
+
+### Confirming worktree mode with `openwolf status`
+
+Run `openwolf status` from inside a worktree to confirm instrumentation is active:
+
+```
+  Mode: Worktree  (feature/my-branch)
+  Main repo: /path/to/main-repo
+  Session: .wolf/sessions/a3f8c2d1/
+```
+
+Token stats shown are for this worktree session only. Run `openwolf status` from the main checkout to see lifetime totals.
+
+### Windows users
+
+The hook command uses bash-only syntax (`$()` and `&&`). On Windows, this
+requires Claude Code to run hooks via Git Bash (not `cmd.exe` or PowerShell).
+Most Claude Code installations on Windows already do this; if your hooks fire
+silently, check that `bash` is on `PATH`.
