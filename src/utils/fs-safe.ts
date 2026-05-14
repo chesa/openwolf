@@ -18,7 +18,9 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
  */
 function deepMergeDefaults<T>(defaults: T, loaded: T): T {
   if (!isPlainObject(defaults) || !isPlainObject(loaded)) return loaded;
-  const result: Record<string, unknown> = { ...(defaults as Record<string, unknown>) };
+  const result: Record<string, unknown> = structuredClone(
+    defaults
+  ) as Record<string, unknown>;
   for (const key of Object.keys(loaded as Record<string, unknown>)) {
     const lv = (loaded as Record<string, unknown>)[key];
     const dv = (defaults as Record<string, unknown>)[key];
