@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, readJSON, writeJSON, readMarkdown, parseAnatomy, estimateTokens, readStdin, normalizePath } from "./shared.js";
+import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, readMarkdown, parseAnatomy, estimateTokens, readStdin, normalizePath, isWolfFile } from "./shared.js";
 
 interface SessionData {
   files_read: Record<string, { count: number; tokens: number; first_read: string }>;
@@ -9,8 +9,7 @@ interface SessionData {
 async function main(): Promise<void> {
   ensureWolfDir();
   const wolfDir = getWolfDir();
-  const hooksDir = path.join(wolfDir, "hooks");
-  const sessionFile = path.join(hooksDir, "_session.json");
+  const sessionFile = path.join(getSessionDir(), "_session.json");
 
   const raw = await readStdin();
   let input: { tool_input?: { file_path?: string; path?: string }; tool_output?: { content?: string } };
@@ -27,12 +26,7 @@ async function main(): Promise<void> {
 
   const normalizedFile = normalizePath(filePath);
 
-  // Skip tracking for .wolf/ internal files — consistent with pre-read
-  const projectDir = normalizePath(process.env.CLAUDE_PROJECT_DIR || process.cwd());
-  const relToProject = normalizedFile.startsWith(projectDir)
-    ? normalizedFile.slice(projectDir.length).replace(/^\//, "")
-    : "";
-  if (relToProject.startsWith(".wolf/") || relToProject.startsWith(".wolf\\")) {
+  if (isWolfFile(normalizedFile)) {
     process.exit(0);
     return;
   }
@@ -75,4 +69,4 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-main().catch(() => process.exit(0));
+main().catch((err) => { process.stderr.write(`OpenWolf post-read: ${err instanceof Error ? err.message : String(err)}\n`); process.exit(0); });
