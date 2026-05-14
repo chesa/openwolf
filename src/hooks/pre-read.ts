@@ -1,7 +1,7 @@
 import * as path from "node:path";
 import {
-  getWolfDir, ensureWolfDir, readJSON, writeJSON, readMarkdown, parseAnatomy,
-  estimateTokens, readStdin, normalizePath
+  getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, readMarkdown, parseAnatomy,
+  estimateTokens, readStdin, normalizePath, isWolfFile
 } from "./shared.js";
 
 interface SessionData {
@@ -16,8 +16,7 @@ interface SessionData {
 async function main(): Promise<void> {
   ensureWolfDir();
   const wolfDir = getWolfDir();
-  const hooksDir = path.join(wolfDir, "hooks");
-  const sessionFile = path.join(hooksDir, "_session.json");
+  const sessionFile = path.join(getSessionDir(), "_session.json");
 
   const raw = await readStdin();
   let input: { tool_input?: { file_path?: string; path?: string } };
@@ -35,11 +34,7 @@ async function main(): Promise<void> {
 
   // Skip tracking for .wolf/ internal files — they're infrastructure, not project files.
   // Counting them inflates anatomy miss rates since .wolf/ is excluded from anatomy scanning.
-  const projectDir = normalizePath(process.env.CLAUDE_PROJECT_DIR || process.cwd());
-  const relToProject = normalizedFile.startsWith(projectDir)
-    ? normalizedFile.slice(projectDir.length).replace(/^\//, "")
-    : "";
-  if (relToProject.startsWith(".wolf/") || relToProject.startsWith(".wolf\\")) {
+  if (isWolfFile(normalizedFile)) {
     process.exit(0);
     return;
   }
@@ -99,4 +94,4 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-main().catch(() => process.exit(0));
+main().catch((err) => { process.stderr.write(`OpenWolf pre-read: ${err instanceof Error ? err.message : String(err)}\n`); process.exit(0); });
