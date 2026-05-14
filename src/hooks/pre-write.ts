@@ -153,4 +153,4 @@ function tokenize(text: string): Set<string> {
   );
 }
 
-main().catch(() => process.exit(0));
+main().catch((err) => { process.stderr.write(`OpenWolf pre-write: ${err instanceof Error ? err.message : String(err)}\n`); process.exit(0); });
