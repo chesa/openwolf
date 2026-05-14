@@ -1,11 +1,79 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import {
+  detectWorktreeContextRaw,
+  isMissingGitError,
+  isNotARepoError,
+  isTimeoutError,
+  type WorktreeContext,
+} from "./worktree-helper.js";
+
+let _cachedWorktreeCtx: WorktreeContext | null = null;
+
+function detectWorktreeContext(): WorktreeContext {
+  if (_cachedWorktreeCtx) return _cachedWorktreeCtx;
+  const dir = path.resolve(process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
+  try {
+    _cachedWorktreeCtx = detectWorktreeContextRaw(dir);
+    return _cachedWorktreeCtx;
+  } catch (err) {
+    const classified =
+      isNotARepoError(err) || isMissingGitError(err) || isTimeoutError(err);
+    if (!classified) {
+      const e = err as { stderr?: string | Buffer; message?: string };
+      const detail = (e.stderr ? e.stderr.toString() : e.message ?? String(err)).trim();
+      process.stderr.write(
+        `OpenWolf: worktree detection failed (${detail}). Falling back to non-worktree mode.\n`,
+      );
+    }
+    const fallback: WorktreeContext = {
+      isWorktree: false,
+      mainRepoRoot: dir,
+      worktreePath: dir,
+      branch: "",
+    };
+    // Cache classified failures so a broken-git project doesn't re-pay the
+    // 2s timeout on every getWolfDir/getSessionDir call inside a single hook.
+    // Unclassified errors stay uncached so a transient mid-process problem
+    // can recover.
+    if (classified) _cachedWorktreeCtx = fallback;
+    return fallback;
+  }
+}
 
 export function getWolfDir(): string {
-  // Prefer CLAUDE_PROJECT_DIR so hooks work even if CWD changes during a session
-  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-  return path.join(projectDir, ".wolf");
+  const ctx = detectWorktreeContext();
+  return path.join(ctx.mainRepoRoot, ".wolf");
+}
+
+export function getSessionDir(): string {
+  const ctx = detectWorktreeContext();
+  if (!ctx.isWorktree) return getWolfDir();
+  return path.join(getWolfDir(), "sessions", ctx.worktreeId);
+}
+
+export function getWorktreeContext(): WorktreeContext {
+  return detectWorktreeContext();
+}
+
+export function ensureSessionDir(): void {
+  const ctx = detectWorktreeContext();
+  if (!ctx.isWorktree) return;
+  const sessionDir = getSessionDir();
+  // Throw on mkdir failure rather than logging-and-returning. The caller
+  // (each hook's main()) already has a top-level catch that logs + exits 0;
+  // throwing puts a single, accurate error there instead of a cascade.
+  fs.mkdirSync(sessionDir, { recursive: true });
+  const metaPath = path.join(sessionDir, "worktree.json");
+  if (!fs.existsSync(metaPath)) {
+    writeJSON(metaPath, {
+      worktreePath: ctx.worktreePath,
+      branch: ctx.branch,
+      mainRepo: ctx.mainRepoRoot,
+      created: new Date().toISOString(),
+    });
+  }
 }
 
 /**
@@ -19,10 +87,45 @@ export function ensureWolfDir(): void {
   }
 }
 
+export function isWolfFile(filePath: string): boolean {
+  const wolfDir = getWolfDir();
+  const normalizedFile = normalizePath(filePath);
+  const normalizedWolfDir = normalizePath(wolfDir);
+  const projectDir = normalizePath(
+    process.env.CLAUDE_PROJECT_DIR ?? process.cwd()
+  );
+
+  const relToProject = normalizedFile.startsWith(projectDir)
+    ? normalizedFile.slice(projectDir.length).replace(/^\//, "")
+    : "";
+
+  if (
+    relToProject.startsWith(".wolf/") ||
+    relToProject.startsWith(".wolf\\")
+  )
+    return true;
+  if (
+    normalizedFile.startsWith(normalizedWolfDir + "/") ||
+    normalizedFile.startsWith(normalizedWolfDir + "\\") ||
+    normalizedFile === normalizedWolfDir
+  )
+    return true;
+
+  return false;
+}
+
 export function readJSON<T = unknown>(filePath: string, fallback: T): T {
   try {
+    if (!fs.existsSync(filePath)) return fallback;
     return JSON.parse(fs.readFileSync(filePath, "utf-8")) as T;
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      process.stderr.write(
+        `OpenWolf: failed to read ${filePath} (${
+          err instanceof Error ? err.message : String(err)
+        })\n`
+      );
+    }
     return fallback;
   }
 }
@@ -31,14 +134,31 @@ export function writeJSON(filePath: string, data: unknown): void {
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   const tmp = filePath + "." + crypto.randomBytes(4).toString("hex") + ".tmp";
+  const payload = JSON.stringify(data, null, 2);
   try {
-    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
+    fs.writeFileSync(tmp, payload, "utf-8");
     fs.renameSync(tmp, filePath);
-  } catch {
-    // On Windows, rename can fail if another process holds a handle.
-    // Fall back to direct write and clean up the tmp file.
-    try { fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8"); } catch {}
-    try { fs.unlinkSync(tmp); } catch {}
+    return;
+  } catch (renameErr) {
+    // Only fall back for cases where another process (Windows) holds a handle
+    // or the move crosses devices. Any other failure is structural and should
+    // surface, not be silently retried.
+    const code = (renameErr as NodeJS.ErrnoException).code;
+    if (code !== "EBUSY" && code !== "EACCES" && code !== "EPERM" && code !== "EXDEV") {
+      try { fs.unlinkSync(tmp); } catch { /* tmp may not exist */ }
+      throw renameErr;
+    }
+    try {
+      fs.writeFileSync(filePath, payload, "utf-8");
+    } catch (fallbackErr) {
+      const orig = renameErr instanceof Error ? renameErr.message : String(renameErr);
+      const after = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+      process.stderr.write(
+        `OpenWolf: failed to write ${filePath} (rename: ${orig}; fallback: ${after})\n`,
+      );
+    } finally {
+      try { fs.unlinkSync(tmp); } catch { /* tmp may not exist */ }
+    }
   }
 }
 
@@ -222,8 +342,8 @@ export function extractDescription(filePath: string): string {
   // ─── PHP / Laravel ───────────────────────────────────────
   if (ext === ".php") {
     if (basename.endsWith(".blade.php")) {
-      const ext2 = content.match(/@extends\(\s*['"]([^'"]+)['"]\s*\)/);
-      const sections = (content.match(/@section\(\s*['"](\w+)['"]/g) || []).map(s => s.match(/['"](\w+)['"]/)?.[1]).filter(Boolean);
+      const ext2 = content.match(/@extends\(\s*['\"]([^'\"]+)[\'\"]\s*\)/);
+      const sections = (content.match(/@section\(\s*['\"](\w+)['\"]/g) || []).map(s => s.match(/['\"](\w+)['\"]/)?.[1]).filter(Boolean);
       const parts: string[] = [];
       if (ext2) parts.push(`extends ${ext2[1]}`);
       if (sections.length) parts.push(`sections: ${sections.join(", ")}`);
@@ -246,19 +366,19 @@ export function extractDescription(filePath: string): string {
 
     if (parent === "Model" || parent === "Authenticatable") {
       const parts: string[] = [];
-      const tbl = content.match(/\$table\s*=\s*['"]([^'"]+)['"]/);
+      const tbl = content.match(/\$table\s*=\s*['\"]([^'\"]+)['\"]/);
       if (tbl) parts.push(`table: ${tbl[1]}`);
       const fill = content.match(/\$fillable\s*=\s*\[([^\]]*)\]/s);
-      if (fill) { const c = (fill[1].match(/['"]/g) || []).length / 2; parts.push(`${Math.floor(c)} fields`); }
+      if (fill) { const c = (fill[1].match(/['\"]/g) || []).length / 2; parts.push(`${Math.floor(c)} fields`); }
       const rels = (content.match(/\$this->(hasMany|hasOne|belongsTo|belongsToMany|morphMany|morphTo)\(/g) || []).length;
       if (rels) parts.push(`${rels} rels`);
       return cap(parts.length ? `Model — ${parts.join(", ")}` : `Model: ${className}`);
     }
 
     if (basename.match(/^\d{4}_\d{2}_\d{2}/)) {
-      const create = content.match(/Schema::create\(\s*['"]([^'"]+)['"]/);
+      const create = content.match(/Schema::create\(\s*['\"]([^'\"]+)['\"]/);
       if (create) return `Migration: create ${create[1]} table`;
-      const alter = content.match(/Schema::table\(\s*['"]([^'"]+)['"]/);
+      const alter = content.match(/Schema::table\(\s*['\"]([^'\"]+)['\"]/);
       if (alter) return `Migration: alter ${alter[1]} table`;
       return "Database migration";
     }
@@ -294,7 +414,7 @@ export function extractDescription(filePath: string): string {
     }
 
     // Express/Fastify routes
-    const routeHits = content.match(/\.(get|post|put|patch|delete)\s*\(\s*['"`]/g);
+    const routeHits = content.match(/\.(get|post|put|patch|delete)\s*\(\s*['`"]/g);
     if (routeHits && routeHits.length > 0) {
       const methods = [...new Set(routeHits.map(r => r.match(/\.(get|post|put|patch|delete)/)?.[1]?.toUpperCase()))];
       return cap(`API routes: ${methods.join(", ")} (${routeHits.length} endpoints)`);
@@ -464,7 +584,7 @@ export function extractDescription(filePath: string): string {
 
   // ─── Vue / Svelte / Astro ────────────────────────────────
   if (ext === ".vue") {
-    const name = content.match(/name:\s*['"]([^'"]+)['"]/);
+    const name = content.match(/name:\s*['\"]([^'\"]+)['\"]/);
     const setup = content.includes("<script setup");
     const parts: string[] = [];
     if (name) parts.push(name[1]);
@@ -486,8 +606,8 @@ export function extractDescription(filePath: string): string {
 
   // ─── SQL ─────────────────────────────────────────────────
   if (ext === ".sql") {
-    const creates = (content.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"']?(\w+)/gi) || [])
-      .map(m => m.match(/(?:TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?)([`"']?\w+)/i)?.[1]?.replace(/[`"']/g, "")).filter(Boolean);
+    const creates = (content.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`'\"]?(\w+)/gi) || [])
+      .map(m => m.match(/(?:TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?)([`'\"]?\w+)/i)?.[1]?.replace(/[`'\"]/g, "")).filter(Boolean);
     if (creates.length) return cap(`SQL: tables: ${creates.slice(0, 4).join(", ")}`);
   }
 
