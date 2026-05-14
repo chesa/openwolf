@@ -1,22 +1,38 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, writeJSON, appendMarkdown, readJSON, timestamp, timeShort } from "./shared.js";
+import { getWolfDir, ensureWolfDir, getSessionDir, ensureSessionDir, getWorktreeContext, writeJSON, appendMarkdown, readJSON, timestamp, timeShort } from "./shared.js";
 
 async function main(): Promise<void> {
   ensureWolfDir();
+  ensureSessionDir();
   const wolfDir = getWolfDir();
+  const sessionDir = getSessionDir();
+
+  const wtCtx = getWorktreeContext();
+  if (wtCtx.isWorktree) {
+    process.stderr.write(
+      `🐺 OpenWolf: Worktree mode (${wtCtx.branch || wtCtx.worktreeId}) — sharing knowledge from ${wtCtx.mainRepoRoot}\n`
+    );
+  }
 
   // Clean up stale .tmp files left from failed atomic writes
-  try {
-    const files = fs.readdirSync(wolfDir);
-    for (const f of files) {
-      if (f.endsWith(".tmp")) {
-        try { fs.unlinkSync(path.join(wolfDir, f)); } catch {}
+  const dirsToClean = [wolfDir];
+  if (sessionDir !== wolfDir) dirsToClean.push(sessionDir);
+  for (const dir of dirsToClean) {
+    try {
+      const files = fs.readdirSync(dir);
+      for (const f of files) {
+        if (f.endsWith(".tmp")) {
+          try { fs.unlinkSync(path.join(dir, f)); } catch {}
+        }
+      }
+    } catch (dirErr) {
+      if ((dirErr as NodeJS.ErrnoException).code !== "ENOENT") {
+        process.stderr.write(`OpenWolf: failed to clean tmp files in ${dir} (${(dirErr as Error).message})\n`);
       }
     }
-  } catch {}
-  const hooksDir = path.join(wolfDir, "hooks");
-  const sessionFile = path.join(hooksDir, "_session.json");
+  }
+  const sessionFile = path.join(sessionDir, "_session.json");
   const now = new Date();
   const sessionId = `session-${now.toISOString().slice(0, 10)}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
 
@@ -34,9 +50,15 @@ async function main(): Promise<void> {
     stop_count: 0,
   });
 
-  // Append session header to memory.md
+  // Append session header to shared memory.md (not session-scoped) so hooks and
+  // Claude write to the same file. Session-specific state lives in _session.json.
   const memoryPath = path.join(wolfDir, "memory.md");
-  const header = `\n## Session: ${now.toISOString().slice(0, 10)} ${timeShort()}\n\n| Time | Action | File(s) | Outcome | ~Tokens |\n|------|--------|---------|---------|--------|\n`;
+  const header = `
+## Session: ${now.toISOString().slice(0, 10)} ${timeShort()}
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+`;
   appendMarkdown(memoryPath, header);
 
   // Check cerebrum freshness — remind Claude to learn
@@ -61,7 +83,9 @@ async function main(): Promise<void> {
         `💡 OpenWolf: cerebrum.md hasn't been updated in ${Math.floor(daysSinceUpdate)} days. Look for opportunities to add learnings this session.\n`
       );
     }
-  } catch {}
+  } catch (err) {
+    process.stderr.write(`OpenWolf: cerebrum freshness check failed (${err instanceof Error ? err.message : String(err)})\n`);
+  }
 
   // Check buglog — remind if empty
   try {
@@ -72,19 +96,37 @@ async function main(): Promise<void> {
         `📋 OpenWolf: buglog.json is empty. If you encounter or fix any bugs, errors, or failed tests this session, log them to .wolf/buglog.json.\n`
       );
     }
-  } catch {}
+  } catch (err) {
+    process.stderr.write(`OpenWolf: buglog check failed (${err instanceof Error ? err.message : String(err)})\n`);
+  }
 
   // Increment total_sessions in token-ledger
-  const ledgerPath = path.join(wolfDir, "token-ledger.json");
-  const ledger = readJSON(ledgerPath, { version: 1, lifetime: { total_sessions: 0 } }) as {
-    version: number;
-    lifetime: { total_sessions: number };
-    [key: string]: unknown;
-  };
-  ledger.lifetime.total_sessions++;
-  writeJSON(ledgerPath, ledger);
+  initializeSessionLedger(sessionDir);
 
   process.exit(0);
 }
 
-main().catch(() => process.exit(0));
+export function initializeSessionLedger(sessionDir: string): void {
+  const ledgerPath = path.join(sessionDir, "token-ledger.json");
+  const ledger = readJSON(ledgerPath, {
+    version: 1,
+    lifetime: {
+      total_sessions: 0,
+      total_reads: 0,
+      total_writes: 0,
+      total_tokens_estimated: 0,
+      anatomy_hits: 0,
+      anatomy_misses: 0,
+      repeated_reads_blocked: 0,
+      estimated_savings_vs_bare_cli: 0,
+    },
+  }) as {
+    version: number;
+    lifetime: Record<string, number>;
+    [key: string]: unknown;
+  };
+  ledger.lifetime.total_sessions++;
+  writeJSON(ledgerPath, ledger);
+}
+
+main().catch((err) => { process.stderr.write(`OpenWolf session-start: ${err instanceof Error ? err.message : String(err)}\n`); process.exit(0); });

@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, readJSON, writeJSON, appendMarkdown, timeShort } from "./shared.js";
+import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, appendMarkdown, timeShort } from "./shared.js";
 
 interface FileRead {
   count: number;
@@ -49,25 +49,7 @@ interface SessionEntry {
   };
 }
 
-async function main(): Promise<void> {
-  ensureWolfDir();
-  const wolfDir = getWolfDir();
-  const hooksDir = path.join(wolfDir, "hooks");
-  const sessionFile = path.join(hooksDir, "_session.json");
-
-  const session = readJSON<SessionData>(sessionFile, {
-    session_id: "",
-    started: "",
-    files_read: {},
-    files_written: [],
-    edit_counts: {},
-    anatomy_hits: 0,
-    anatomy_misses: 0,
-    repeated_reads_warned: 0,
-    cerebrum_warnings: 0,
-    stop_count: 0,
-  });
-
+export function finalizeSession(wolfDir: string, sessionDir: string, session: SessionData): void {
   session.stop_count++;
 
   // Only write to ledger if there's been activity
@@ -75,8 +57,8 @@ async function main(): Promise<void> {
   const writeCount = session.files_written.length;
 
   if (readCount === 0 && writeCount === 0) {
-    writeJSON(sessionFile, session);
-    process.exit(0);
+    // Session file write is handled by the finally block in main() to ensure
+    // stop_count is always persisted even if an error occurs.
     return;
   }
 
@@ -123,7 +105,7 @@ async function main(): Promise<void> {
   };
 
   // Update token-ledger.json
-  const ledgerPath = path.join(wolfDir, "token-ledger.json");
+  const ledgerPath = path.join(sessionDir, "token-ledger.json");
   const ledger = readJSON(ledgerPath, {
     version: 1,
     created_at: "",
@@ -172,10 +154,41 @@ async function main(): Promise<void> {
       const fileList = [...uniqueFiles].slice(0, 5).join(", ");
       const memoryPath = path.join(wolfDir, "memory.md");
       appendMarkdown(memoryPath, `| ${timeShort()} | Session end: ${writeCount} writes across ${uniqueFiles.size} files (${fileList}) | ${readCount} reads | ~${inputTokens + outputTokens} tok |\n`);
-    } catch {}
+    } catch (err) {
+      process.stderr.write(`OpenWolf stop: memory summary failed (${err instanceof Error ? err.message : String(err)})\n`);
+    }
   }
+  // Note: sessionFile write is handled by the finally block in main() to ensure
+  // stop_count is always persisted even if an error occurs during ledger updates.
+}
 
-  writeJSON(sessionFile, session);
+async function main(): Promise<void> {
+  ensureWolfDir();
+  const wolfDir = getWolfDir();
+  const sessionDir = getSessionDir();
+  const sessionFile = path.join(sessionDir, "_session.json");
+  const session = readJSON<SessionData>(sessionFile, {
+    session_id: "",
+    started: "",
+    files_read: {},
+    files_written: [],
+    edit_counts: {},
+    anatomy_hits: 0,
+    anatomy_misses: 0,
+    repeated_reads_warned: 0,
+    cerebrum_warnings: 0,
+    stop_count: 0,
+  });
+
+  try {
+    finalizeSession(wolfDir, sessionDir, session);
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    process.stderr.write(`OpenWolf: stop hook error — ${error.message}\n`);
+  } finally {
+    // Always persist stop_count increment
+    writeJSON(sessionFile, session);
+  }
 
   process.exit(0);
 }
@@ -257,4 +270,4 @@ function checkCerebrumFreshness(wolfDir: string, session: SessionData): void {
   }
 }
 
-main().catch(() => process.exit(0));
+main().catch((err) => { process.stderr.write(`OpenWolf stop: ${err instanceof Error ? err.message : String(err)}\n`); process.exit(0); });
