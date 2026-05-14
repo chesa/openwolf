@@ -61,18 +61,29 @@ export function appendText(filePath: string, content: string): void {
   fs.appendFileSync(filePath, content, "utf-8");
 }
 
-// Drop-in replacement for fs.copyFileSync that works around a libuv/9P
-// limitation: fs.copyFileSync uses the copy_file_range syscall on Linux,
-// which fails with EPERM when writing to EFS-encrypted directories on
-// Windows volumes mounted via WSL2 9P. Plain read+write bypasses
-// copy_file_range and works in all cases.
+// Drop-in replacement for fs.copyFileSync, with two differences:
+// 1. Uses plain read+write to bypass copy_file_range (EFS/WSL2 EPERM workaround):
+//    fs.copyFileSync uses the copy_file_range syscall on Linux, which fails with
+//    EPERM when writing to EFS-encrypted directories on Windows volumes mounted
+//    via WSL2 9P. Plain read+write bypasses copy_file_range and works in all cases.
+// 2. Silently creates the destination directory if it doesn't exist.
 export function safeCopyFile(src: string, dest: string): void {
   const dir = path.dirname(dest);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-  fs.writeFileSync(dest, fs.readFileSync(src));
+  // Use temp+rename for atomicity (matches writeJSON/writeText pattern in this file).
+  // readFileSync without encoding returns a Buffer — correct for binary files.
+  const tmp = dest + "." + crypto.randomBytes(4).toString("hex") + ".tmp";
+  try {
+    fs.writeFileSync(tmp, fs.readFileSync(src));
+    fs.renameSync(tmp, dest);
+  } catch (err) {
+    try { fs.unlinkSync(tmp); } catch {}
+    throw err;
+  }
   try {
     fs.chmodSync(dest, fs.statSync(src).mode);
+    // chmod may fail on Windows (permissions model differs) or on WSL2 9P mounts — non-fatal
   } catch {}
 }
