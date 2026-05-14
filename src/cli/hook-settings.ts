@@ -22,31 +22,93 @@ export const WOLF_ROOT_SHELL =
 const hookCmd = (script: string): string =>
   `${WOLF_ROOT_SHELL} && node "$WOLF_ROOT/.wolf/hooks/${script}"`;
 
+// NOTE: `_managedBy` is NOT a documented Claude Code field. It is an
+// empirically observed passthrough — Claude Code preserves unknown fields
+// in settings.json during its own read/write cycles as of the versions
+// tested. If a future Claude Code release performs schema-validated
+// serialization and strips unknown fields, `_managedBy` will silently
+// disappear and identification will fall back to the `.wolf/hooks/`
+// substring match in `isOpenWolfHook`. Monitor for unexpected hook
+// re-registration or spurious duplicate entries as a symptom of this.
 export const HOOK_SETTINGS = {
   SessionStart: [
-    { matcher: "", hooks: [{ type: "command", command: hookCmd("session-start.js"), timeout: 5, _managedBy: "openwolf" }] },
+    {
+      matcher: "",
+      hooks: [{
+        type: "command",
+        command: hookCmd("session-start.js"),
+        timeout: 5,
+        _managedBy: "openwolf",
+      }],
+    },
   ],
   PreToolUse: [
-    { matcher: "Read", hooks: [{ type: "command", command: hookCmd("pre-read.js"), timeout: 5, _managedBy: "openwolf" }] },
-    { matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: hookCmd("pre-write.js"), timeout: 5, _managedBy: "openwolf" }] },
+    {
+      matcher: "Read",
+      hooks: [{
+        type: "command",
+        command: hookCmd("pre-read.js"),
+        timeout: 5,
+        _managedBy: "openwolf",
+      }],
+    },
+    {
+      matcher: "Write|Edit|MultiEdit",
+      hooks: [{
+        type: "command",
+        command: hookCmd("pre-write.js"),
+        timeout: 5,
+        _managedBy: "openwolf",
+      }],
+    },
   ],
   PostToolUse: [
-    { matcher: "Read", hooks: [{ type: "command", command: hookCmd("post-read.js"), timeout: 5, _managedBy: "openwolf" }] },
-    { matcher: "Write|Edit|MultiEdit", hooks: [{ type: "command", command: hookCmd("post-write.js"), timeout: 10, _managedBy: "openwolf" }] },
+    {
+      matcher: "Read",
+      hooks: [{
+        type: "command",
+        command: hookCmd("post-read.js"),
+        timeout: 5,
+        _managedBy: "openwolf",
+      }],
+    },
+    {
+      matcher: "Write|Edit|MultiEdit",
+      hooks: [{
+        type: "command",
+        command: hookCmd("post-write.js"),
+        timeout: 10,
+        _managedBy: "openwolf",
+      }],
+    },
   ],
   Stop: [
-    { matcher: "", hooks: [{ type: "command", command: hookCmd("stop.js"), timeout: 10, _managedBy: "openwolf" }] },
+    {
+      matcher: "",
+      hooks: [{
+        type: "command",
+        command: hookCmd("stop.js"),
+        timeout: 10,
+        _managedBy: "openwolf",
+      }],
+    },
   ],
 };
 
 /**
- * Returns true if a hook entry was registered by OpenWolf
- * (i.e., its command references .wolf/hooks/).
+ * Returns true if a hook entry was registered by OpenWolf.
+ *
+ * Primary check: `_managedBy === "openwolf"` (set on every hook object
+ * written by this module). Fallback: `.wolf/hooks/` path substring, for
+ * backward compatibility with pre-tag installs that predate this field.
  */
 export function isOpenWolfHook(hook: unknown): boolean {
   if (typeof hook !== "object" || hook === null) return false;
   const h = hook as Record<string, unknown>;
-  if (typeof h.command === "string" && h.command.includes(".wolf/hooks/")) return true;
+  if (h._managedBy === "openwolf") return true;
+  if (typeof h.command === "string" && h.command.includes(".wolf/hooks/")) {
+    return true;
+  }
   return false;
 }
 
@@ -67,7 +129,14 @@ export function replaceOpenWolfHooks(
     const existing_entries = Array.isArray(existingHooks[event])
       ? (existingHooks[event] as unknown[])
       : [];
-    // Keep non-OpenWolf entries the user may have added
+    // Keep non-OpenWolf entries the user may have added.
+    //
+    // ASSUMPTION: OpenWolf writes exactly one inner hook per outer matcher
+    // entry. Co-locating a user-defined command inside the same outer entry
+    // as an OpenWolf hook is unsupported — the entire outer entry is dropped
+    // and replaced if *any* inner hook matches `isOpenWolfHook`. Users who
+    // need custom hooks for the same event should add a separate outer
+    // matcher entry in settings.json.
     const userEntries = existing_entries.filter((entry) => {
       if (typeof entry !== "object" || entry === null) return true;
       const e = entry as Record<string, unknown>;
