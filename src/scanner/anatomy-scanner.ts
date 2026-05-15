@@ -7,19 +7,27 @@ import { parseAnatomy, type AnatomyEntry } from "../hooks/shared.js";
 import { CODE_EXTENSIONS, PROSE_EXTENSIONS } from "../utils/extensions.js";
 
 interface WolfConfig {
-  version: number;
-  openwolf: {
-    anatomy: {
-      max_description_length: number;
-      max_files: number;
-      exclude_patterns: string[];
+  version?: number;
+  openwolf?: {
+    anatomy?: {
+      max_description_length?: number;
+      max_files?: number;
+      exclude_patterns?: string[];
     };
-    token_audit: {
-      chars_per_token_code: number;
-      chars_per_token_prose: number;
+    token_audit?: {
+      chars_per_token_code?: number;
+      chars_per_token_prose?: number;
     };
   };
 }
+
+const DEFAULT_MAX_FILES = 500;
+const DEFAULT_EXCLUDE_PATTERNS = [
+  "node_modules", ".git", "dist", "build", ".wolf",
+  ".next", ".nuxt", "coverage", "__pycache__", ".cache",
+  "target", ".vscode", ".idea", ".turbo", ".vercel",
+  ".netlify", ".output", "*.min.js", "*.min.css",
+];
 
 const BINARY_EXTENSIONS = new Set([
   ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".svg",
@@ -176,8 +184,8 @@ export function buildAnatomy(wolfDir: string, projectRoot: string): { content: s
     openwolf: {
       anatomy: {
         max_description_length: 100,
-        max_files: 500,
-        exclude_patterns: ["node_modules", ".git", "dist", "build", ".wolf"],
+        max_files: DEFAULT_MAX_FILES,
+        exclude_patterns: DEFAULT_EXCLUDE_PATTERNS,
       },
       token_audit: { chars_per_token_code: 3.5, chars_per_token_prose: 4.0 },
     },
@@ -187,8 +195,8 @@ export function buildAnatomy(wolfDir: string, projectRoot: string): { content: s
   walkDir(
     projectRoot,
     projectRoot,
-    config.openwolf.anatomy.exclude_patterns,
-    config.openwolf.anatomy.max_files,
+    config.openwolf?.anatomy?.exclude_patterns ?? DEFAULT_EXCLUDE_PATTERNS,
+    config.openwolf?.anatomy?.max_files ?? DEFAULT_MAX_FILES,
     entries
   );
 

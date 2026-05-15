@@ -18,10 +18,10 @@ const projectRoot = process.env.OPENWOLF_PROJECT_ROOT || findProjectRoot();
 const wolfDir = path.join(projectRoot, ".wolf");
 
 interface WolfConfig {
-  openwolf: {
-    daemon: { port: number; log_level: string };
-    dashboard: { enabled: boolean; port: number; bind?: string };
-    cron: { enabled: boolean; heartbeat_interval_minutes: number };
+  openwolf?: {
+    daemon?: { port?: number; log_level?: string };
+    dashboard?: { enabled?: boolean; port?: number; bind?: string };
+    cron?: { enabled?: boolean; heartbeat_interval_minutes?: number };
   };
 }
 
@@ -36,11 +36,11 @@ const config = readJSON<WolfConfig>(path.join(wolfDir, "config.json"), {
 // Dashboard bind address. Defaults to loopback so the unauthenticated API
 // and WebSocket endpoints are not exposed to the LAN. Set to "0.0.0.0" in
 // .wolf/config.json only if you explicitly need network access.
-const bind = config.openwolf.dashboard.bind ?? "127.0.0.1";
+const bind = config.openwolf?.dashboard?.bind ?? "127.0.0.1";
 
 const logger = new Logger(
   path.join(wolfDir, "daemon.log"),
-  config.openwolf.daemon.log_level as "debug" | "info" | "warn" | "error"
+  (config.openwolf?.daemon?.log_level ?? "info") as "debug" | "info" | "warn" | "error"
 );
 
 const startTime = Date.now();
@@ -196,15 +196,9 @@ const isLoopback = (addr: string): boolean =>
   addr === "127.0.0.1" || addr === "localhost" || addr === "::1";
 
 // Start HTTP server
-const port = config.openwolf.dashboard.port;
-const server = app.listen(port, bind, () => {
-  logger.info(`Dashboard server listening on ${bind}:${port}`);
-  if (!isLoopback(bind)) {
-    logger.warn(
-      `Dashboard bound to ${bind} — HTTP and WebSocket endpoints are reachable from the network. ` +
-        `None of these endpoints require authentication.`
-    );
-  }
+const port = config.openwolf?.dashboard?.port ?? 18791;
+const server = app.listen(port, () => {
+  logger.info(`Dashboard server listening on port ${port}`);
 });
 
 // Allow same-origin WebSocket connections (dashboard loaded from
@@ -344,7 +338,8 @@ function handleDashboardCommand(msg: { type: string; task_id?: string }): void {
 
 // Cron engine
 let cronEngine: CronEngine | null = null;
-if (config.openwolf.cron.enabled) {
+// Default to enabled if key is absent (matches template default)
+if (config.openwolf?.cron?.enabled ?? true) {
   cronEngine = new CronEngine(wolfDir, projectRoot, logger, broadcast);
   cronEngine.start();
 }
@@ -353,7 +348,7 @@ if (config.openwolf.cron.enabled) {
 startFileWatcher(wolfDir, logger, broadcast);
 
 // Health heartbeat
-const heartbeatInterval = config.openwolf.cron.heartbeat_interval_minutes * 60 * 1000;
+const heartbeatInterval = (config.openwolf?.cron?.heartbeat_interval_minutes ?? 30) * 60 * 1000;
 const heartbeatTimer = setInterval(() => {
   const statePath = path.join(wolfDir, "cron-state.json");
   const state = readJSON<Record<string, unknown>>(statePath, {});
