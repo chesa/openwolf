@@ -125,7 +125,11 @@ export async function dashboardCommand(): Promise<void> {
       ? error.message
       : 'Unknown error';
 
-    logger.error(`Failed to open browser at ${url}. Error: ${errorMessage}. Hint: Try opening the URL manually in your browser`);
+    // Strip the token query param before logging — the URL includes ?token=<hex>
+    // and writing it to dashboard.log would expose the live auth token to
+    // anyone who can read the log file.
+    const safeUrl = url.includes("?") ? url.slice(0, url.indexOf("?")) : url;
+    logger.error(`Failed to open browser at ${safeUrl}. Error: ${errorMessage}. Hint: Try opening the URL manually in your browser`);
 
     // User-friendly message
     console.log(`
