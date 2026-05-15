@@ -100,7 +100,14 @@ export function writeJSON(filePath: string, data: unknown, logger?: Logger): voi
 export function readText(filePath: string, fallback: string = ""): string {
   try {
     return fs.readFileSync(filePath, "utf-8");
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      // Permission denied, I/O error, etc. — the file exists but can't be read.
+      // Log so users know their data file is inaccessible, matching readJSON behavior.
+      process.stderr.write(
+        `[openwolf] readText: failed to read ${filePath}: ${err instanceof Error ? err.message : String(err)}\n`
+      );
+    }
     return fallback;
   }
 }
@@ -157,11 +164,25 @@ export function safeCopyFile(src: string, dest: string): void {
     fs.writeFileSync(tmp, fs.readFileSync(src));
     fs.renameSync(tmp, dest);
   } catch (err) {
-    try { fs.unlinkSync(tmp); } catch {}
+    try { fs.unlinkSync(tmp); } catch (unlinkErr) {
+      // Temp file cleanup failed — log so the user knows a .tmp file was leaked.
+      // This can happen on EACCES or if the write itself never created the file.
+      process.stderr.write(
+        `[openwolf] safeCopyFile: failed to clean up temp file ${tmp}: ${unlinkErr instanceof Error ? unlinkErr.message : String(unlinkErr)}\n`
+      );
+    }
     throw err;
   }
   try {
     fs.chmodSync(dest, fs.statSync(src).mode);
-    // chmod may fail on Windows (permissions model differs) or on WSL2 9P mounts — non-fatal
-  } catch {}
+  } catch (chmodErr) {
+    const code = (chmodErr as NodeJS.ErrnoException).code;
+    // EPERM/ENOTSUP: expected on Windows and WSL2 9P mounts — non-fatal, skip silently.
+    // Any other error (ENOENT on src statSync, ENOSPC, etc.) is unexpected — log it.
+    if (code !== "EPERM" && code !== "ENOTSUP") {
+      process.stderr.write(
+        `[openwolf] safeCopyFile: chmod failed for ${dest}: ${chmodErr instanceof Error ? chmodErr.message : String(chmodErr)}\n`
+      );
+    }
+  }
 }
