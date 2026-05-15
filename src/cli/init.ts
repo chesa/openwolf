@@ -333,6 +333,9 @@ export async function initCommand(): Promise<void> {
   // --- Template files ---
   let createdCount = 0;
   let skippedCount = 0;
+  // Track which CREATE_IF_MISSING files were newly written so we can seed
+  // their placeholders even when isUpgrade is true.
+  const newlyCreated = new Set<string>();
 
   for (const file of ALWAYS_OVERWRITE) {
     writeTemplateFile(actualTemplatesDir, wolfDir, file);
@@ -345,6 +348,7 @@ export async function initCommand(): Promise<void> {
       skippedCount++;
     } else {
       writeTemplateFile(actualTemplatesDir, wolfDir, file);
+      newlyCreated.add(file);
       createdCount++;
     }
   }
@@ -376,6 +380,11 @@ export async function initCommand(): Promise<void> {
   if (!isUpgrade) {
     writeIdentity(projectRoot, wolfDir);
     seedCerebrum(wolfDir, projectRoot);
+    seedStatus(wolfDir, projectRoot);
+  } else if (newlyCreated.has("STATUS.md")) {
+    // STATUS.md was just created for the first time during an upgrade
+    // (e.g. upgrading from a version that predated STATUS.md). Seed its
+    // {{PROJECT_NAME}}/{{DATE}} placeholders now, just as a fresh init does.
     seedStatus(wolfDir, projectRoot);
   }
 
