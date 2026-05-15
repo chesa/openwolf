@@ -198,7 +198,14 @@ export function writeJSON(filePath: string, data: unknown): void {
 export function readMarkdown(filePath: string): string {
   try {
     return fs.readFileSync(filePath, "utf-8");
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      // Permission denied, I/O error, etc. — ENOENT (file not yet created)
+      // is expected and silent, but other errors indicate a real problem.
+      process.stderr.write(
+        `OpenWolf: failed to read ${filePath}: ${err instanceof Error ? err.message : String(err)}\n`
+      );
+    }
     return "";
   }
 }

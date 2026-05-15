@@ -272,8 +272,15 @@ function checkCerebrumFreshness(wolfDir: string, session: SessionData): void {
         `💡 OpenWolf: cerebrum.md hasn't been updated in ${Math.floor(hoursSinceUpdate)}h. Did you learn any user preferences, conventions, or gotchas this session? Consider updating .wolf/cerebrum.md.\n`
       );
     }
-  } catch {
-    // cerebrum.md doesn't exist, that's ok
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      // ENOENT: cerebrum.md doesn't exist yet — expected on first init, skip silently.
+      // Other errors (EACCES, I/O) indicate a real problem worth surfacing,
+      // matching the pattern checkStatusFreshness uses in this same file.
+      process.stderr.write(
+        `OpenWolf: could not check cerebrum.md freshness: ${err instanceof Error ? err.message : String(err)}\n`
+      );
+    }
   }
 }
 
