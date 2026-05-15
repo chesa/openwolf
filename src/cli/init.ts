@@ -38,6 +38,7 @@ const CREATE_IF_MISSING = [
   "cerebrum.md",
   "memory.md",
   "anatomy.md",
+  "STATUS.md",
   "token-ledger.json",
   "buglog.json",
   "cron-manifest.json",
@@ -237,6 +238,23 @@ function detectProjectDescription(projectRoot: string): string {
   return "";
 }
 
+function seedStatus(wolfDir: string, projectRoot: string): void {
+  const statusPath = path.join(wolfDir, "STATUS.md");
+  const projectName = detectProjectName(projectRoot);
+  let content: string;
+  try {
+    content = fs.readFileSync(statusPath, "utf-8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`  ⚠ Could not read STATUS.md: ${(err as Error).message}`);
+    }
+    return;
+  }
+  content = content.replace(/\{\{PROJECT_NAME\}\}/g, projectName);
+  content = content.replace(/\{\{DATE\}\}/g, new Date().toISOString().slice(0, 10));
+  fs.writeFileSync(statusPath, content, "utf-8");
+}
+
 function seedCerebrum(wolfDir: string, projectRoot: string): void {
   const projectName = detectProjectName(projectRoot);
   const projectDescription = detectProjectDescription(projectRoot);
@@ -355,6 +373,7 @@ export async function initCommand(): Promise<void> {
   if (!isUpgrade) {
     writeIdentity(projectRoot, wolfDir);
     seedCerebrum(wolfDir, projectRoot);
+    seedStatus(wolfDir, projectRoot);
   }
 
   // --- Project files ---
