@@ -20,12 +20,19 @@ const wolfDir = path.join(projectRoot, ".wolf");
 
 // Generate a session token for authentication
 const authToken = crypto.randomBytes(32).toString("hex");
-fs.mkdirSync(wolfDir, { recursive: true }); // ensure .wolf/ exists before write
-fs.writeFileSync(
-  path.join(wolfDir, "daemon-token.tmp"),
-  authToken,
-  { encoding: "utf-8", mode: 0o600 }  // owner-only read/write
-);
+try {
+  fs.mkdirSync(wolfDir, { recursive: true }); // ensure .wolf/ exists before write
+  fs.writeFileSync(
+    path.join(wolfDir, "daemon-token.tmp"),
+    authToken,
+    { encoding: "utf-8", mode: 0o600 }  // owner-only read/write
+  );
+} catch (err) {
+  process.stderr.write(
+    `[openwolf] Failed to write auth token to ${wolfDir}: ${err instanceof Error ? err.message : String(err)}\n`
+  );
+  process.exit(1);
+}
 
 interface WolfConfig {
   openwolf?: {
@@ -230,8 +237,20 @@ const isLoopback = (addr: string): boolean =>
 
 // Start HTTP server
 const port = config.openwolf?.dashboard?.port ?? 18791;
-const server = app.listen(port, () => {
-  logger.info(`Dashboard server listening on port ${port}`);
+const server = app.listen(port, bind, () => {
+  logger.info(`Dashboard server listening on ${bind}:${port}`);
+});
+
+server.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code === "EADDRINUSE") {
+    logger.error(
+      `Port ${port} is already in use. Is another daemon running? ` +
+      `Change dashboard.port in .wolf/config.json to use a different port.`
+    );
+  } else {
+    logger.error(`Server error: ${err.message}`);
+  }
+  process.exit(1);
 });
 
 // Allow same-origin WebSocket connections (dashboard loaded from

@@ -37,18 +37,36 @@ function deepMergeDefaults<T>(defaults: T, loaded: T): T {
 /**
  * Reads JSON from `filePath`. If the file exists and parses, its values are
  * deep-merged over `fallback` so that missing nested keys fall back to the
- * provided defaults (loaded values always win). If the file is missing or
- * unparseable, `fallback` is returned as-is.
+ * provided defaults (loaded values always win). If the file is missing,
+ * `fallback` is returned silently. If the file exists but cannot be read
+ * (permission error, I/O error) or is malformed JSON, a warning is written
+ * to stderr and `fallback` is returned so the caller can continue.
  *
  * This prevents `TypeError: Cannot read properties of undefined` when a
  * user's config file predates a section a newer release reads.
  */
 export function readJSON<T = unknown>(filePath: string, fallback: T): T {
+  let raw: string;
   try {
-    const raw = fs.readFileSync(filePath, "utf-8");
+    raw = fs.readFileSync(filePath, "utf-8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      // Permission denied, I/O error, etc. — the file exists but can't be read.
+      // Log so users know their config/data file is inaccessible.
+      process.stderr.write(
+        `[openwolf] readJSON: failed to read ${filePath}: ${err instanceof Error ? err.message : String(err)}\n`
+      );
+    }
+    return fallback;
+  }
+  try {
     const parsed = JSON.parse(raw) as T;
     return deepMergeDefaults(fallback, parsed);
-  } catch {
+  } catch (err) {
+    // Malformed JSON — always log so users know their file is broken.
+    process.stderr.write(
+      `[openwolf] readJSON: failed to parse ${filePath}: ${err instanceof Error ? err.message : String(err)}\n`
+    );
     return fallback;
   }
 }

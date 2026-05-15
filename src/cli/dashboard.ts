@@ -75,6 +75,14 @@ export async function dashboardCommand(): Promise<void> {
       detached: true,
       stdio: "ignore",
     });
+    child.on("error", (err) => {
+      console.error(`  Daemon process error: ${err.message}`);
+    });
+    child.on("exit", (code) => {
+      if (code !== null && code !== 0) {
+        console.error(`  Daemon exited unexpectedly with code ${code}. Check .wolf/daemon.log for details.`);
+      }
+    });
     child.unref();
 
     // Wait for the port to open (up to 5 seconds)
@@ -95,13 +103,12 @@ export async function dashboardCommand(): Promise<void> {
     console.log(`  ✓ Dashboard server running on port ${port}`);
   }
 
-  // Append auth token to URL for initial page load.
-  // SECURITY NOTE (WR-06): The token appears in the browser URL bar,
-  // browser history, and any HTTP Referer headers on outbound links.
-  // Future improvement: have the dashboard JS store the token in
-  // sessionStorage after the first load and send it via X-Api-Token
-  // header on subsequent API calls, removing the need for ?token= in
-  // the URL.
+  // Append auth token to URL for initial page load bootstrap.
+  // The dashboard JS reads the token from the URL param on first load,
+  // stores it in sessionStorage, and immediately strips it from the URL
+  // via history.replaceState — so it does not appear in browser history
+  // entries or outbound Referer headers. Subsequent API calls send the
+  // token via the X-Api-Token header rather than the URL.
   const tokenPath = path.join(wolfDir, "daemon-token.tmp");
   if (fs.existsSync(tokenPath)) {
     const token = fs.readFileSync(tokenPath, "utf-8").trim();

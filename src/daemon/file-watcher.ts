@@ -43,8 +43,12 @@ export function startFileWatcher(
         content,
         timestamp: new Date().toISOString(),
       });
-    } catch {
-      // File might be in process of being written
+    } catch (err) {
+      // File might be in process of being written — log at debug so it's
+      // visible in verbose mode without spamming normal output.
+      logger.debug(
+        `Could not read/broadcast ${relativePath}: ${err instanceof Error ? err.message : String(err)}`
+      );
     }
 
     // Hot-reload config

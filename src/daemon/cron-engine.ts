@@ -160,7 +160,11 @@ export class CronEngine {
         const delay = this.calculateDelay(task.retry.backoff, task.retry.base_delay_seconds, failures);
         this.logger.info(`Retrying ${task.name} in ${delay}ms`);
         setTimeout(() => {
-          this.executeTask(task).catch(() => {});
+          this.executeTask(task).catch((retryErr) => {
+            this.logger.error(
+              `Task ${task.name} retry failed: ${retryErr instanceof Error ? retryErr.message : String(retryErr)}`
+            );
+          });
         }, delay);
       } else {
         // Dead letter or skip
@@ -327,7 +331,15 @@ export class CronEngine {
 
       try {
         contextParts.push(`--- ${file} ---\n${fs.readFileSync(filePath, "utf-8")}`);
-      } catch {
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code !== "ENOENT") {
+          // Permission errors and I/O errors should be visible — only ENOENT
+          // is expected for optional context files.
+          this.logger.warn(
+            `Could not read context file ${file}: ${err instanceof Error ? err.message : String(err)}`
+          );
+        }
         contextParts.push(`--- ${file} --- (not found)`);
       }
     }

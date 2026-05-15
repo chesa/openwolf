@@ -25,15 +25,18 @@ function getVersion(): string {
   }
 }
 
-// Files that are safe to overwrite on upgrade (config/protocol, not user data)
+// Files that are safe to overwrite on upgrade (protocol docs, not user data)
 const ALWAYS_OVERWRITE = [
   "OPENWOLF.md",
-  "config.json",
   "reframe-frameworks.md",
 ];
 
-// Files that contain user/session data — only create if missing, never overwrite
+// Files that contain user/session data — only create if missing, never overwrite.
+// config.json is here (not in ALWAYS_OVERWRITE) because users set port
+// assignments and bind addresses there; overwriting it causes EADDRINUSE
+// crash-loops on upgrade.
 const CREATE_IF_MISSING = [
+  "config.json",
   "identity.md",
   "cerebrum.md",
   "memory.md",

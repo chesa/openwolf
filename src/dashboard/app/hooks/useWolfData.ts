@@ -68,6 +68,12 @@ export interface WolfData {
   client: WolfClient | null;
 }
 
+/** Returns auth headers for API requests. Token is seeded from sessionStorage by main.tsx. */
+function getApiHeaders(): HeadersInit {
+  const token = sessionStorage.getItem("wolf_token");
+  return token ? { "x-api-token": token } : {};
+}
+
 export function useWolfData(): WolfData {
   const [loading, setLoading] = useState(true);
   const [anatomy, setAnatomy] = useState<WolfData["anatomy"]>({ entries: [], metadata: { files: 0, hits: 0, misses: 0 } });
@@ -119,8 +125,10 @@ export function useWolfData(): WolfData {
   }, []);
 
   useEffect(() => {
-    // Initial fetch
-    fetch("/api/files")
+    // Initial fetch — token sent via X-Api-Token header (seeded from URL param
+    // by main.tsx bootstrap, stored in sessionStorage, stripped from URL).
+    const apiHeaders = getApiHeaders();
+    fetch("/api/files", { headers: apiHeaders })
       .then(r => r.json())
       .then(files => {
         processFiles(files);
@@ -128,12 +136,12 @@ export function useWolfData(): WolfData {
       })
       .catch(() => setLoading(false));
 
-    fetch("/api/health")
+    fetch("/api/health", { headers: apiHeaders })
       .then(r => r.json())
       .then(h => setHealth(h))
       .catch(() => {});
 
-    fetch("/api/project")
+    fetch("/api/project", { headers: apiHeaders })
       .then(r => r.json())
       .then(p => setProject(p))
       .catch(() => {});

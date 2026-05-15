@@ -52,7 +52,15 @@ function findPidOnPort(port: number): number | null {
       const pid = parseInt(output.trim(), 10);
       if (pid > 0) return pid;
     }
-  } catch {}
+  } catch (err) {
+    // ENOENT = lsof/netstat not installed on this system — expected on some
+    // minimal environments. Other codes (EACCES, etc.) indicate a real problem.
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      process.stderr.write(
+        `[openwolf] findPidOnPort(${port}): ${err instanceof Error ? err.message : String(err)}\n`
+      );
+    }
+  }
   return null;
 }
 
@@ -107,8 +115,8 @@ export function daemonStart(): void {
     if (isWindows()) {
       console.log("  Tip: Run 'pm2-windows-startup' for boot persistence.");
     }
-  } catch {
-    console.error("Failed to start daemon.");
+  } catch (err) {
+    console.error(`  Failed to start daemon: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 
@@ -128,12 +136,20 @@ export function daemonStop(): void {
       const pm2Cmd = isWindows() ? "pm2.cmd" : "pm2";
       execFileSync(pm2Cmd, ["stop", name], { stdio: "ignore" });
       console.log(`  ✓ Daemon stopped (PM2): ${name}`);
-      
+
       const tokenPath = path.join(wolfDir, "daemon-token.tmp");
       if (fs.existsSync(tokenPath)) fs.unlinkSync(tokenPath);
       return;
-    } catch {
-      // PM2 process not found — fall through to port-based stop
+    } catch (err) {
+      // PM2 reports "not found" when the named process doesn't exist — expected
+      // on first stop or after a crash. Warn on other failures (permission, etc.).
+      const msg = err instanceof Error ? err.message : String(err);
+      const isNotFound = msg.toLowerCase().includes("not found") ||
+        msg.toLowerCase().includes("no such process");
+      if (!isNotFound) {
+        console.warn(`  PM2 stop warning: ${msg}`);
+      }
+      // Fall through to port-based stop
     }
   }
 
@@ -171,8 +187,16 @@ export function daemonRestart(): void {
       execFileSync(pm2Cmd, ["restart", name], { stdio: "ignore" });
       console.log(`  ✓ Daemon restarted (PM2): ${name}`);
       return;
-    } catch {
-      // PM2 process not found — fall through
+    } catch (err) {
+      // PM2 reports "not found" when the named process doesn't exist — expected
+      // before the daemon has been started with PM2. Warn on other failures.
+      const msg = err instanceof Error ? err.message : String(err);
+      const isNotFound = msg.toLowerCase().includes("not found") ||
+        msg.toLowerCase().includes("no such process");
+      if (!isNotFound) {
+        console.warn(`  PM2 restart warning: ${msg}`);
+      }
+      // Fall through to port-based restart
     }
   }
 
