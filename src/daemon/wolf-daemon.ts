@@ -20,7 +20,7 @@ const wolfDir = path.join(projectRoot, ".wolf");
 interface WolfConfig {
   openwolf?: {
     daemon?: { port?: number; log_level?: string };
-    dashboard?: { enabled?: boolean; port?: number };
+    dashboard?: { enabled?: boolean; port?: number; bind?: string };
     cron?: { enabled?: boolean; heartbeat_interval_minutes?: number };
   };
 }
@@ -36,7 +36,7 @@ const config = readJSON<WolfConfig>(path.join(wolfDir, "config.json"), {
 // Dashboard bind address. Defaults to loopback so the unauthenticated API
 // and WebSocket endpoints are not exposed to the LAN. Set to "0.0.0.0" in
 // .wolf/config.json only if you explicitly need network access.
-const bind = config.openwolf.dashboard.bind ?? "127.0.0.1";
+const bind = config.openwolf?.dashboard?.bind ?? "127.0.0.1";
 
 const logger = new Logger(
   path.join(wolfDir, "daemon.log"),
