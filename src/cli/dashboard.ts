@@ -49,7 +49,7 @@ export async function dashboardCommand(): Promise<void> {
   });
 
   const port = config.openwolf?.dashboard?.port ?? 18791;
-  const url = `http://localhost:${port}`;
+  let url = `http://localhost:${port}`;
 
   // Check if daemon is already running on that port
   const running = await isPortOpen(port);
@@ -92,7 +92,20 @@ export async function dashboardCommand(): Promise<void> {
     console.log(`  ✓ Dashboard server running on port ${port}`);
   }
 
-  console.log(`  Opening ${url}...`);
+  // Append auth token to URL for initial page load.
+  // SECURITY NOTE (WR-06): The token appears in the browser URL bar,
+  // browser history, and any HTTP Referer headers on outbound links.
+  // Future improvement: have the dashboard JS store the token in
+  // sessionStorage after the first load and send it via X-Api-Token
+  // header on subsequent API calls, removing the need for ?token= in
+  // the URL.
+  const tokenPath = path.join(wolfDir, "daemon-token.tmp");
+  if (fs.existsSync(tokenPath)) {
+    const token = fs.readFileSync(tokenPath, "utf-8").trim();
+    url += `?token=${token}`;
+  }
+
+  console.log(`  Opening http://localhost:${port}...`);
 
   try {
     const { default: open } = await import("open");

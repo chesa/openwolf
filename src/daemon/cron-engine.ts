@@ -312,7 +312,19 @@ export class CronEngine {
 
     const contextParts: string[] = [];
     for (const file of params.context_files) {
-      const filePath = path.join(this.projectRoot, file);
+      const filePath = path.resolve(this.projectRoot, file);
+      
+      // Path Traversal Protection: Ensure the resolved path is within
+      // projectRoot. Normalize to lowercase for comparison so the check
+      // is not bypassable on case-insensitive filesystems (macOS, Windows).
+      const resolvedNorm = filePath.toLowerCase();
+      const rootWithSep = (this.projectRoot + path.sep).toLowerCase();
+      const rootNorm = this.projectRoot.toLowerCase();
+      if (!resolvedNorm.startsWith(rootWithSep) && resolvedNorm !== rootNorm) {
+        this.logger.warn(`Path traversal attempt blocked: ${file}`);
+        continue;
+      }
+
       try {
         contextParts.push(`--- ${file} ---\n${fs.readFileSync(filePath, "utf-8")}`);
       } catch {

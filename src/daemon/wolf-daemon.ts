@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import type { IncomingMessage } from "node:http";
 import express from "express";
@@ -16,6 +17,15 @@ const __dirname = path.dirname(__filename);
 // Prefer explicit OPENWOLF_PROJECT_ROOT env (set by CLI commands) over cwd detection
 const projectRoot = process.env.OPENWOLF_PROJECT_ROOT || findProjectRoot();
 const wolfDir = path.join(projectRoot, ".wolf");
+
+// Generate a session token for authentication
+const authToken = crypto.randomBytes(32).toString("hex");
+fs.mkdirSync(wolfDir, { recursive: true }); // ensure .wolf/ exists before write
+fs.writeFileSync(
+  path.join(wolfDir, "daemon-token.tmp"),
+  authToken,
+  { encoding: "utf-8", mode: 0o600 }  // owner-only read/write
+);
 
 interface WolfConfig {
   openwolf?: {
@@ -50,12 +60,25 @@ const wsClients = new Set<WebSocket>();
 const app = express();
 app.use(express.json());
 
-// Serve dashboard static files
+// Serve dashboard static files before auth — HTML/JS/CSS contain no
+// sensitive data and must load without a token in request headers.
 // In dist: dist/src/daemon/wolf-daemon.js → ../../../dist/dashboard/
 const dashboardDir = path.resolve(__dirname, "..", "..", "..", "dist", "dashboard");
 if (fs.existsSync(dashboardDir)) {
   app.use(express.static(dashboardDir));
 }
+
+// Auth middleware — scoped to /api/ only so static assets are always
+// served. All API endpoints require a valid x-api-token header or
+// ?token= query param.
+app.use("/api", (req, res, next) => {
+  const token = req.headers["x-api-token"] || req.query.token;
+  if (token !== authToken) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  next();
+});
 
 // Detect project metadata
 function detectProjectMeta(): { name: string; description: string } {
