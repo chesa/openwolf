@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { IncomingMessage } from "node:http";
 import express from "express";
 import { WebSocketServer, WebSocket } from "ws";
 import { findProjectRoot } from "../scanner/project-root.js";
@@ -27,10 +28,15 @@ interface WolfConfig {
 const config = readJSON<WolfConfig>(path.join(wolfDir, "config.json"), {
   openwolf: {
     daemon: { port: 18790, log_level: "info" },
-    dashboard: { enabled: true, port: 18791 },
+    dashboard: { enabled: true, port: 18791, bind: "127.0.0.1" },
     cron: { enabled: true, heartbeat_interval_minutes: 30 },
   },
 });
+
+// Dashboard bind address. Defaults to loopback so the unauthenticated API
+// and WebSocket endpoints are not exposed to the LAN. Set to "0.0.0.0" in
+// .wolf/config.json only if you explicitly need network access.
+const bind = config.openwolf.dashboard.bind ?? "127.0.0.1";
 
 const logger = new Logger(
   path.join(wolfDir, "daemon.log"),
@@ -185,14 +191,67 @@ app.get("/{*path}", (_req, res) => {
   }
 });
 
+// Helper: is a bind address (or remote IP) a loopback address?
+const isLoopback = (addr: string): boolean =>
+  addr === "127.0.0.1" || addr === "localhost" || addr === "::1";
+
 // Start HTTP server
 const port = config.openwolf?.dashboard?.port ?? 18791;
 const server = app.listen(port, () => {
   logger.info(`Dashboard server listening on port ${port}`);
 });
 
+// Allow same-origin WebSocket connections (dashboard loaded from
+// http://<bind>:<port>) and non-browser clients (no Origin header). Reject
+// any other Origin to prevent a visited webpage from driving the daemon.
+//
+// When bind = "0.0.0.0" (opt-in network access), browsers send
+// Origin: http://<actual-ip>:<port>, never http://0.0.0.0:<port>. We use
+// the Host request header to dynamically match whatever IP the client reached
+// us on instead of adding the literal (and useless) bind address to the set.
+function isAllowedOrigin(
+  origin: string | undefined,
+  req: IncomingMessage
+): boolean {
+  const loopbackOrigins = new Set<string>([
+    `http://127.0.0.1:${port}`,
+    `http://localhost:${port}`,
+    `http://[::1]:${port}`,
+  ]);
+
+  if (!origin) {
+    // Non-browser clients (CLI tools) don't send an Origin header. Only allow
+    // them from loopback — when bind = "0.0.0.0" any remote machine could
+    // otherwise omit Origin and bypass the check entirely.
+    const remoteAddr = req.socket.remoteAddress ?? "";
+    return (
+      remoteAddr === "127.0.0.1" ||
+      remoteAddr === "::1" ||
+      remoteAddr === "::ffff:127.0.0.1"
+    );
+  }
+
+  if (loopbackOrigins.has(origin)) return true;
+
+  // For wildcard bind (e.g. "0.0.0.0"), allow the origin that matches the
+  // Host header the client actually connected to.
+  if (!isLoopback(bind)) {
+    const host = req.headers["host"]; // e.g. "192.168.1.10:18791"
+    if (host && origin === `http://${host}`) return true;
+  }
+
+  return false;
+}
+
 // WebSocket server
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({
+  server,
+  verifyClient: (info: { origin: string; req: IncomingMessage; secure: boolean }) => {
+    if (isAllowedOrigin(info.origin || undefined, info.req)) return true;
+    logger.warn(`Rejected WebSocket upgrade: origin=${info.origin}`);
+    return false;
+  },
+});
 
 wss.on("connection", (ws) => {
   wsClients.add(ws);
