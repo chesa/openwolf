@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import { Logger } from "./logger.js";
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return (
@@ -52,7 +53,7 @@ export function readJSON<T = unknown>(filePath: string, fallback: T): T {
   }
 }
 
-export function writeJSON(filePath: string, data: unknown): void {
+export function writeJSON(filePath: string, data: unknown, logger?: Logger): void {
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -61,11 +62,20 @@ export function writeJSON(filePath: string, data: unknown): void {
   try {
     fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
     fs.renameSync(tmp, filePath);
-  } catch {
+  } catch (err) {
     // On Windows, rename can fail if another process holds a handle.
     // Fall back to direct write and clean up the tmp file.
-    try { fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8"); } catch {}
-    try { fs.unlinkSync(tmp); } catch {}
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+    } catch (writeErr) {
+      logger?.error(`Failed to write JSON file: ${filePath}. Error: ${writeErr instanceof Error ? writeErr.message : String(writeErr)}`);
+      throw writeErr;
+    }
+    try {
+      fs.unlinkSync(tmp);
+    } catch (unlinkErr) {
+      logger?.warn(`Failed to clean up temp file: ${tmp}. Error: ${unlinkErr instanceof Error ? unlinkErr.message : String(unlinkErr)}`);
+    }
   }
 }
 
@@ -77,7 +87,7 @@ export function readText(filePath: string, fallback: string = ""): string {
   }
 }
 
-export function writeText(filePath: string, content: string): void {
+export function writeText(filePath: string, content: string, logger?: Logger): void {
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -86,11 +96,20 @@ export function writeText(filePath: string, content: string): void {
   try {
     fs.writeFileSync(tmp, content, "utf-8");
     fs.renameSync(tmp, filePath);
-  } catch {
+  } catch (err) {
     // On Windows, rename can fail if another process holds a handle.
     // Fall back to direct write and clean up the tmp file.
-    try { fs.writeFileSync(filePath, content, "utf-8"); } catch {}
-    try { fs.unlinkSync(tmp); } catch {}
+    try {
+      fs.writeFileSync(filePath, content, "utf-8");
+    } catch (writeErr) {
+      logger?.error(`Failed to write text file: ${filePath}. Error: ${writeErr instanceof Error ? writeErr.message : String(writeErr)}`);
+      throw writeErr;
+    }
+    try {
+      fs.unlinkSync(tmp);
+    } catch (unlinkErr) {
+      logger?.warn(`Failed to clean up temp file: ${tmp}. Error: ${unlinkErr instanceof Error ? unlinkErr.message : String(unlinkErr)}`);
+    }
   }
 }
 

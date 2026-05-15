@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { fork } from "node:child_process";
 import { findProjectRoot } from "../scanner/project-root.js";
 import { readJSON } from "../utils/fs-safe.js";
+import { Logger } from "../utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,6 +44,8 @@ export async function dashboardCommand(): Promise<void> {
     console.log("OpenWolf not initialized. Run: openwolf init");
     return;
   }
+
+  const logger = new Logger(path.join(wolfDir, "dashboard.log"), "info");
 
   const config = readJSON<WolfConfig>(path.join(wolfDir, "config.json"), {
     openwolf: { dashboard: { port: 18791 } },
@@ -110,7 +113,19 @@ export async function dashboardCommand(): Promise<void> {
   try {
     const { default: open } = await import("open");
     await open(url);
-  } catch {
-    console.log(`  Could not open browser. Visit: ${url}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error
+      ? error.message
+      : 'Unknown error';
+
+    logger.error(`Failed to open browser at ${url}. Error: ${errorMessage}. Hint: Try opening the URL manually in your browser`);
+
+    // User-friendly message
+    console.log(`
+🚨 Could not open browser automatically`);
+    console.log(`URL: ${url}`);
+    console.log(`Error: ${errorMessage}`);
+    console.log(`You can manually open this URL in your browser.
+`);
   }
 }

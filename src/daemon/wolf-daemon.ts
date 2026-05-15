@@ -90,7 +90,9 @@ function detectProjectMeta(): { name: string; description: string } {
     const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, "package.json"), "utf-8"));
     if (pkg.name) name = pkg.name;
     if (pkg.description) description = pkg.description;
-  } catch {}
+  } catch (err) {
+    logger.debug(`Could not read package.json: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   // Try Cargo.toml for name if not found
   if (name === path.basename(projectRoot)) {
@@ -98,7 +100,9 @@ function detectProjectMeta(): { name: string; description: string } {
       const cargo = fs.readFileSync(path.join(projectRoot, "Cargo.toml"), "utf-8");
       const nameMatch = cargo.match(/^name\s*=\s*"([^"]+)"/m);
       if (nameMatch) name = nameMatch[1];
-    } catch {}
+    } catch (err) {
+      logger.debug(`Could not read Cargo.toml: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   // If no description, try cerebrum.md project description
@@ -107,7 +111,9 @@ function detectProjectMeta(): { name: string; description: string } {
       const cerebrum = fs.readFileSync(path.join(wolfDir, "cerebrum.md"), "utf-8");
       const descMatch = cerebrum.match(/\*\*Project:\*\*\s*(.+)/);
       if (descMatch) description = descMatch[1].trim();
-    } catch {}
+    } catch (err) {
+      logger.debug(`Could not read cerebrum.md: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   // If still no description, try README first paragraph
@@ -124,7 +130,9 @@ function detectProjectMeta(): { name: string; description: string } {
           }
         }
         if (description) break;
-      } catch {}
+      } catch (err) {
+        logger.debug(`Could not read ${readme}: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
   }
 
@@ -172,14 +180,16 @@ app.get("/api/files", (_req, res) => {
   for (const file of wolfFiles) {
     try {
       files[file] = fs.readFileSync(path.join(wolfDir, file), "utf-8");
-    } catch {
+    } catch (err) {
+      logger.debug(`Could not read ${file}: ${err instanceof Error ? err.message : String(err)}`);
       files[file] = "";
     }
   }
   // Also try suggestions.json
   try {
     files["suggestions.json"] = fs.readFileSync(path.join(wolfDir, "suggestions.json"), "utf-8");
-  } catch {
+  } catch (err) {
+    logger.debug(`Could not read suggestions.json: ${err instanceof Error ? err.message : String(err)}`);
     files["suggestions.json"] = "";
   }
   res.json(files);
@@ -284,8 +294,8 @@ wss.on("connection", (ws) => {
     try {
       const msg = JSON.parse(data.toString()) as { type: string; task_id?: string };
       handleDashboardCommand(msg);
-    } catch {
-      logger.warn("Invalid WebSocket message received");
+    } catch (err) {
+      logger.warn(`Invalid WebSocket message received: ${err instanceof Error ? err.message : String(err)}`);
     }
   });
 
@@ -347,7 +357,8 @@ function handleDashboardCommand(msg: { type: string; task_id?: string }): void {
         for (const file of wolfFiles) {
           try {
             files[file] = fs.readFileSync(path.join(wolfDir, file), "utf-8");
-          } catch {
+          } catch (err) {
+            logger.debug(`Could not read ${file}: ${err instanceof Error ? err.message : String(err)}`);
             files[file] = "";
           }
         }
