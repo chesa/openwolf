@@ -160,7 +160,11 @@ export class CronEngine {
         const delay = this.calculateDelay(task.retry.backoff, task.retry.base_delay_seconds, failures);
         this.logger.info(`Retrying ${task.name} in ${delay}ms`);
         setTimeout(() => {
-          this.executeTask(task).catch(() => {});
+          this.executeTask(task).catch((retryErr) => {
+            this.logger.error(
+              `Task ${task.name} retry failed: ${retryErr instanceof Error ? retryErr.message : String(retryErr)}`
+            );
+          });
         }, delay);
       } else {
         // Dead letter or skip
@@ -312,10 +316,30 @@ export class CronEngine {
 
     const contextParts: string[] = [];
     for (const file of params.context_files) {
-      const filePath = path.join(this.projectRoot, file);
+      const filePath = path.resolve(this.projectRoot, file);
+      
+      // Path Traversal Protection: Ensure the resolved path is within
+      // projectRoot. Normalize to lowercase for comparison so the check
+      // is not bypassable on case-insensitive filesystems (macOS, Windows).
+      const resolvedNorm = filePath.toLowerCase();
+      const rootWithSep = (this.projectRoot + path.sep).toLowerCase();
+      const rootNorm = this.projectRoot.toLowerCase();
+      if (!resolvedNorm.startsWith(rootWithSep) && resolvedNorm !== rootNorm) {
+        this.logger.warn(`Path traversal attempt blocked: ${file}`);
+        continue;
+      }
+
       try {
         contextParts.push(`--- ${file} ---\n${fs.readFileSync(filePath, "utf-8")}`);
-      } catch {
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code !== "ENOENT") {
+          // Permission errors and I/O errors should be visible — only ENOENT
+          // is expected for optional context files.
+          this.logger.warn(
+            `Could not read context file ${file}: ${err instanceof Error ? err.message : String(err)}`
+          );
+        }
         contextParts.push(`--- ${file} --- (not found)`);
       }
     }

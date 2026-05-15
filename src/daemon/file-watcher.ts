@@ -29,6 +29,13 @@ export function startFileWatcher(
     logger.debug(`File changed: ${relativePath}`);
 
     try {
+      // DoS Protection: Skip massive files
+      const stat = fs.statSync(filePath as string);
+      if (stat.size > 1024 * 1024) {
+        logger.warn(`Skipping broadcast for large file: ${relativePath} (${stat.size} bytes)`);
+        return;
+      }
+
       const content = fs.readFileSync(filePath as string, "utf-8");
       broadcast({
         type: "file_changed",
@@ -36,8 +43,12 @@ export function startFileWatcher(
         content,
         timestamp: new Date().toISOString(),
       });
-    } catch {
-      // File might be in process of being written
+    } catch (err) {
+      // File might be in process of being written — log at debug so it's
+      // visible in verbose mode without spamming normal output.
+      logger.debug(
+        `Could not read/broadcast ${relativePath}: ${err instanceof Error ? err.message : String(err)}`
+      );
     }
 
     // Hot-reload config

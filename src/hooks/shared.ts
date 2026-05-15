@@ -114,10 +114,43 @@ export function isWolfFile(filePath: string): boolean {
   return false;
 }
 
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    !Array.isArray(v) &&
+    Object.getPrototypeOf(v) === Object.prototype
+  );
+}
+
+/**
+ * Recursively fills missing keys in `loaded` from `defaults`.
+ * Loaded values always win; defaults only fill gaps. Arrays and scalars
+ * are replaced wholesale (not merged). Uses structuredClone so that
+ * default-only nested objects are deep-copied, not shared by reference.
+ */
+function deepMergeDefaults<T>(defaults: T, loaded: T): T {
+  if (!isPlainObject(defaults) || !isPlainObject(loaded)) return loaded;
+  const result: Record<string, unknown> = structuredClone(
+    defaults
+  ) as Record<string, unknown>;
+  for (const key of Object.keys(loaded as Record<string, unknown>)) {
+    const lv = (loaded as Record<string, unknown>)[key];
+    const dv = (defaults as Record<string, unknown>)[key];
+    if (isPlainObject(lv) && isPlainObject(dv)) {
+      result[key] = deepMergeDefaults(dv, lv);
+    } else {
+      result[key] = lv;
+    }
+  }
+  return result as T;
+}
+
 export function readJSON<T = unknown>(filePath: string, fallback: T): T {
   try {
     if (!fs.existsSync(filePath)) return fallback;
-    return JSON.parse(fs.readFileSync(filePath, "utf-8")) as T;
+    const parsed = JSON.parse(fs.readFileSync(filePath, "utf-8")) as T;
+    return deepMergeDefaults(fallback, parsed);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
       process.stderr.write(
@@ -165,7 +198,14 @@ export function writeJSON(filePath: string, data: unknown): void {
 export function readMarkdown(filePath: string): string {
   try {
     return fs.readFileSync(filePath, "utf-8");
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      // Permission denied, I/O error, etc. — ENOENT (file not yet created)
+      // is expected and silent, but other errors indicate a real problem.
+      process.stderr.write(
+        `OpenWolf: failed to read ${filePath}: ${err instanceof Error ? err.message : String(err)}\n`
+      );
+    }
     return "";
   }
 }
@@ -185,7 +225,8 @@ export interface AnatomyEntry {
 export function parseAnatomy(content: string): Map<string, AnatomyEntry[]> {
   const sections = new Map<string, AnatomyEntry[]>();
   let currentSection = "";
-  for (const line of content.split("\n")) {
+  for (const raw of content.split("\n")) {
+    const line = raw.replace(/\r$/, "");
     const sm = line.match(/^## (.+)/);
     if (sm) {
       currentSection = sm[1].trim();

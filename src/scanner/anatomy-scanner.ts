@@ -1,30 +1,33 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { extractDescription, capDescription } from "./description-extractor.js";
-import { readJSON } from "../utils/fs-safe.js";
-import { writeText } from "../utils/fs-safe.js";
+import { readJSON, writeText } from "../utils/fs-safe.js";
 import { normalizePath } from "../utils/paths.js";
-
-interface AnatomyEntry {
-  file: string;
-  description: string;
-  tokens: number;
-}
+import { parseAnatomy, type AnatomyEntry } from "../hooks/shared.js";
+import { CODE_EXTENSIONS, PROSE_EXTENSIONS } from "../utils/extensions.js";
 
 interface WolfConfig {
-  version: number;
-  openwolf: {
-    anatomy: {
-      max_description_length: number;
-      max_files: number;
-      exclude_patterns: string[];
+  version?: number;
+  openwolf?: {
+    anatomy?: {
+      max_description_length?: number;
+      max_files?: number;
+      exclude_patterns?: string[];
     };
-    token_audit: {
-      chars_per_token_code: number;
-      chars_per_token_prose: number;
+    token_audit?: {
+      chars_per_token_code?: number;
+      chars_per_token_prose?: number;
     };
   };
 }
+
+const DEFAULT_MAX_FILES = 500;
+const DEFAULT_EXCLUDE_PATTERNS = [
+  "node_modules", ".git", "dist", "build", ".wolf",
+  ".next", ".nuxt", "coverage", "__pycache__", ".cache",
+  "target", ".vscode", ".idea", ".turbo", ".vercel",
+  ".netlify", ".output", "*.min.js", "*.min.css",
+];
 
 const BINARY_EXTENSIONS = new Set([
   ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".svg",
@@ -37,14 +40,6 @@ const BINARY_EXTENSIONS = new Set([
   ".wasm",
   ".lock",
 ]);
-
-const CODE_EXTENSIONS = new Set([
-  ".ts", ".js", ".tsx", ".jsx", ".py", ".rs", ".go", ".java",
-  ".c", ".cpp", ".h", ".css", ".scss", ".sql", ".sh", ".yaml",
-  ".yml", ".json", ".toml", ".xml", ".dart",
-]);
-
-const PROSE_EXTENSIONS = new Set([".md", ".txt", ".rst", ".adoc"]);
 
 function estimateTokens(text: string, filePath: string): number {
   const ext = path.extname(filePath).toLowerCase();
@@ -179,35 +174,6 @@ export function serializeAnatomy(
   return lines.join("\n");
 }
 
-export function parseAnatomy(content: string): Map<string, AnatomyEntry[]> {
-  const sections = new Map<string, AnatomyEntry[]>();
-  let currentSection = "";
-
-  for (const line of content.split("\n")) {
-    const sectionMatch = line.match(/^## (.+)/);
-    if (sectionMatch) {
-      currentSection = sectionMatch[1].trim();
-      if (!sections.has(currentSection)) {
-        sections.set(currentSection, []);
-      }
-      continue;
-    }
-
-    if (!currentSection) continue;
-
-    const entryMatch = line.match(/^- `([^`]+)`(?:\s+—\s+(.+?))?\s*\(~(\d+)\s+tok\)$/);
-    if (entryMatch) {
-      sections.get(currentSection)!.push({
-        file: entryMatch[1],
-        description: entryMatch[2] || "",
-        tokens: parseInt(entryMatch[3], 10),
-      });
-    }
-  }
-
-  return sections;
-}
-
 /**
  * Scan the project and return the anatomy content and file count WITHOUT writing to disk.
  */
@@ -218,8 +184,8 @@ export function buildAnatomy(wolfDir: string, projectRoot: string): { content: s
     openwolf: {
       anatomy: {
         max_description_length: 100,
-        max_files: 500,
-        exclude_patterns: ["node_modules", ".git", "dist", "build", ".wolf"],
+        max_files: DEFAULT_MAX_FILES,
+        exclude_patterns: DEFAULT_EXCLUDE_PATTERNS,
       },
       token_audit: { chars_per_token_code: 3.5, chars_per_token_prose: 4.0 },
     },
@@ -229,8 +195,8 @@ export function buildAnatomy(wolfDir: string, projectRoot: string): { content: s
   walkDir(
     projectRoot,
     projectRoot,
-    config.openwolf.anatomy.exclude_patterns,
-    config.openwolf.anatomy.max_files,
+    config.openwolf?.anatomy?.exclude_patterns ?? DEFAULT_EXCLUDE_PATTERNS,
+    config.openwolf?.anatomy?.max_files ?? DEFAULT_MAX_FILES,
     entries
   );
 

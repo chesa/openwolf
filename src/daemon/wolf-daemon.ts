@@ -1,6 +1,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+import type { IncomingMessage } from "node:http";
 import express from "express";
 import { WebSocketServer, WebSocket } from "ws";
 import { findProjectRoot } from "../scanner/project-root.js";
@@ -16,25 +18,46 @@ const __dirname = path.dirname(__filename);
 const projectRoot = process.env.OPENWOLF_PROJECT_ROOT || findProjectRoot();
 const wolfDir = path.join(projectRoot, ".wolf");
 
+// Generate a session token for authentication
+const authToken = crypto.randomBytes(32).toString("hex");
+try {
+  fs.mkdirSync(wolfDir, { recursive: true }); // ensure .wolf/ exists before write
+  fs.writeFileSync(
+    path.join(wolfDir, "daemon-token.tmp"),
+    authToken,
+    { encoding: "utf-8", mode: 0o600 }  // owner-only read/write
+  );
+} catch (err) {
+  process.stderr.write(
+    `[openwolf] Failed to write auth token to ${wolfDir}: ${err instanceof Error ? err.message : String(err)}\n`
+  );
+  process.exit(1);
+}
+
 interface WolfConfig {
-  openwolf: {
-    daemon: { port: number; log_level: string };
-    dashboard: { enabled: boolean; port: number };
-    cron: { enabled: boolean; heartbeat_interval_minutes: number };
+  openwolf?: {
+    daemon?: { port?: number; log_level?: string };
+    dashboard?: { enabled?: boolean; port?: number; bind?: string };
+    cron?: { enabled?: boolean; heartbeat_interval_minutes?: number };
   };
 }
 
 const config = readJSON<WolfConfig>(path.join(wolfDir, "config.json"), {
   openwolf: {
     daemon: { port: 18790, log_level: "info" },
-    dashboard: { enabled: true, port: 18791 },
+    dashboard: { enabled: true, port: 18791, bind: "127.0.0.1" },
     cron: { enabled: true, heartbeat_interval_minutes: 30 },
   },
 });
 
+// Dashboard bind address. Defaults to loopback so the unauthenticated API
+// and WebSocket endpoints are not exposed to the LAN. Set to "0.0.0.0" in
+// .wolf/config.json only if you explicitly need network access.
+const bind = config.openwolf?.dashboard?.bind ?? "127.0.0.1";
+
 const logger = new Logger(
   path.join(wolfDir, "daemon.log"),
-  config.openwolf.daemon.log_level as "debug" | "info" | "warn" | "error"
+  (config.openwolf?.daemon?.log_level ?? "info") as "debug" | "info" | "warn" | "error"
 );
 
 const startTime = Date.now();
@@ -44,12 +67,43 @@ const wsClients = new Set<WebSocket>();
 const app = express();
 app.use(express.json());
 
-// Serve dashboard static files
+// Serve dashboard static files before auth — HTML/JS/CSS contain no
+// sensitive data and must load without a token in request headers.
 // In dist: dist/src/daemon/wolf-daemon.js → ../../../dist/dashboard/
 const dashboardDir = path.resolve(__dirname, "..", "..", "..", "dist", "dashboard");
 if (fs.existsSync(dashboardDir)) {
   app.use(express.static(dashboardDir));
 }
+
+// Constant-time token comparison — prevents timing side-channel attacks
+// from a local co-tenant who cannot read the token file.
+function safeCompareToken(provided: string): boolean {
+  try {
+    const a = Buffer.from(provided);
+    const b = Buffer.from(authToken);
+    // Buffers must be the same length for timingSafeEqual; mismatched
+    // lengths are an instant reject but we avoid returning early in a
+    // way that varies with the token content.
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+// Auth middleware — header-only. Accepting ?token= in query params would
+// expose the token in browser history, Referer headers, and server access
+// logs. The dashboard reads the token from the URL once on page load,
+// strips it via history.replaceState, and stores it in sessionStorage.
+// All subsequent API requests use the X-Api-Token header only.
+app.use("/api", (req, res, next) => {
+  const token = req.headers["x-api-token"];
+  if (!token || !safeCompareToken(String(token))) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  next();
+});
 
 // Detect project metadata
 function detectProjectMeta(): { name: string; description: string } {
@@ -61,7 +115,9 @@ function detectProjectMeta(): { name: string; description: string } {
     const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, "package.json"), "utf-8"));
     if (pkg.name) name = pkg.name;
     if (pkg.description) description = pkg.description;
-  } catch {}
+  } catch (err) {
+    logger.debug(`Could not read package.json: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   // Try Cargo.toml for name if not found
   if (name === path.basename(projectRoot)) {
@@ -69,7 +125,9 @@ function detectProjectMeta(): { name: string; description: string } {
       const cargo = fs.readFileSync(path.join(projectRoot, "Cargo.toml"), "utf-8");
       const nameMatch = cargo.match(/^name\s*=\s*"([^"]+)"/m);
       if (nameMatch) name = nameMatch[1];
-    } catch {}
+    } catch (err) {
+      logger.debug(`Could not read Cargo.toml: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   // If no description, try cerebrum.md project description
@@ -78,7 +136,9 @@ function detectProjectMeta(): { name: string; description: string } {
       const cerebrum = fs.readFileSync(path.join(wolfDir, "cerebrum.md"), "utf-8");
       const descMatch = cerebrum.match(/\*\*Project:\*\*\s*(.+)/);
       if (descMatch) description = descMatch[1].trim();
-    } catch {}
+    } catch (err) {
+      logger.debug(`Could not read cerebrum.md: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   // If still no description, try README first paragraph
@@ -95,7 +155,9 @@ function detectProjectMeta(): { name: string; description: string } {
           }
         }
         if (description) break;
-      } catch {}
+      } catch (err) {
+        logger.debug(`Could not read ${readme}: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
   }
 
@@ -143,14 +205,16 @@ app.get("/api/files", (_req, res) => {
   for (const file of wolfFiles) {
     try {
       files[file] = fs.readFileSync(path.join(wolfDir, file), "utf-8");
-    } catch {
+    } catch (err) {
+      logger.debug(`Could not read ${file}: ${err instanceof Error ? err.message : String(err)}`);
       files[file] = "";
     }
   }
   // Also try suggestions.json
   try {
     files["suggestions.json"] = fs.readFileSync(path.join(wolfDir, "suggestions.json"), "utf-8");
-  } catch {
+  } catch (err) {
+    logger.debug(`Could not read suggestions.json: ${err instanceof Error ? err.message : String(err)}`);
     files["suggestions.json"] = "";
   }
   res.json(files);
@@ -185,14 +249,104 @@ app.get("/{*path}", (_req, res) => {
   }
 });
 
+// Helper: is a bind address (or remote IP) a loopback address?
+const isLoopback = (addr: string): boolean =>
+  addr === "127.0.0.1" || addr === "localhost" || addr === "::1";
+
 // Start HTTP server
-const port = config.openwolf.dashboard.port;
-const server = app.listen(port, () => {
-  logger.info(`Dashboard server listening on port ${port}`);
+const port = config.openwolf?.dashboard?.port ?? 18791;
+const server = app.listen(port, bind, () => {
+  logger.info(`Dashboard server listening on ${bind}:${port}`);
 });
 
+server.on("error", (err: NodeJS.ErrnoException) => {
+  // The token was written before listen() — if we fail to bind, remove
+  // the stale token so a subsequent restart doesn't find a dead token file.
+  try { fs.unlinkSync(path.join(wolfDir, "daemon-token.tmp")); } catch { /* ignore */ }
+  if (err.code === "EADDRINUSE") {
+    logger.error(
+      `Port ${port} is already in use. Is another daemon running? ` +
+      `Change dashboard.port in .wolf/config.json to use a different port.`
+    );
+  } else {
+    logger.error(`Server error: ${err.message}`);
+  }
+  process.exit(1);
+});
+
+// Allow same-origin WebSocket connections (dashboard loaded from
+// http://<bind>:<port>) and non-browser clients (no Origin header). Reject
+// any other Origin to prevent a visited webpage from driving the daemon.
+//
+// When bind = "0.0.0.0" (opt-in network access), browsers send
+// Origin: http://<actual-ip>:<port>, never http://0.0.0.0:<port>. We use
+// the Host request header to dynamically match whatever IP the client reached
+// us on instead of adding the literal (and useless) bind address to the set.
+function isAllowedOrigin(
+  origin: string | undefined,
+  req: IncomingMessage
+): boolean {
+  const loopbackOrigins = new Set<string>([
+    `http://127.0.0.1:${port}`,
+    `http://localhost:${port}`,
+    `http://[::1]:${port}`,
+  ]);
+
+  if (!origin) {
+    // Non-browser clients (CLI tools) don't send an Origin header. Only allow
+    // them from loopback — when bind = "0.0.0.0" any remote machine could
+    // otherwise omit Origin and bypass the check entirely.
+    const remoteAddr = req.socket.remoteAddress ?? "";
+    return (
+      remoteAddr === "127.0.0.1" ||
+      remoteAddr === "::1" ||
+      remoteAddr === "::ffff:127.0.0.1"
+    );
+  }
+
+  if (loopbackOrigins.has(origin)) return true;
+
+  // For wildcard bind (e.g. "0.0.0.0"), allow the origin that matches the
+  // Host header the client actually connected to.
+  if (!isLoopback(bind)) {
+    const host = req.headers["host"]; // e.g. "192.168.1.10:18791"
+    if (host && origin === `http://${host}`) return true;
+  }
+
+  return false;
+}
+
 // WebSocket server
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({
+  server,
+  // 4 MB cap — prevents memory exhaustion from oversized JSON messages.
+  maxPayload: 4 * 1024 * 1024,
+  verifyClient: (info: { origin: string; req: IncomingMessage; secure: boolean }) => {
+    // 1. Origin check — reject cross-origin WebSocket upgrade attempts.
+    if (!isAllowedOrigin(info.origin || undefined, info.req)) {
+      logger.warn(`Rejected WebSocket upgrade: origin=${info.origin}`);
+      return false;
+    }
+    // 2. Token auth — parse ?token= from the WS upgrade URL.
+    //    The dashboard appends the token to the ws:// URL on connect, just
+    //    as the HTTP dashboard URL carries it for the initial page load.
+    try {
+      const wsUrl = new URL(
+        info.req.url ?? "",
+        `http://${info.req.headers.host ?? "localhost"}`
+      );
+      const token = wsUrl.searchParams.get("token") ?? "";
+      if (!safeCompareToken(token)) {
+        logger.warn("Rejected WebSocket upgrade: invalid or missing token");
+        return false;
+      }
+    } catch {
+      logger.warn("Rejected WebSocket upgrade: could not parse upgrade URL");
+      return false;
+    }
+    return true;
+  },
+});
 
 wss.on("connection", (ws) => {
   wsClients.add(ws);
@@ -201,9 +355,9 @@ wss.on("connection", (ws) => {
   ws.on("message", (data) => {
     try {
       const msg = JSON.parse(data.toString()) as { type: string; task_id?: string };
-      handleDashboardCommand(msg);
-    } catch {
-      logger.warn("Invalid WebSocket message received");
+      handleDashboardCommand(msg, ws);
+    } catch (err) {
+      logger.warn(`Invalid WebSocket message received: ${err instanceof Error ? err.message : String(err)}`);
     }
   });
 
@@ -224,7 +378,7 @@ function broadcast(msg: unknown): void {
   }
 }
 
-function handleDashboardCommand(msg: { type: string; task_id?: string }): void {
+function handleDashboardCommand(msg: { type: string; task_id?: string }, sender: WebSocket): void {
   switch (msg.type) {
     case "trigger_task":
       if (msg.task_id && cronEngine) {
@@ -253,7 +407,8 @@ function handleDashboardCommand(msg: { type: string; task_id?: string }): void {
       }
       break;
     case "request_full_state":
-      // Send all files
+      // Reply only to the requesting client — full .wolf/ state is sensitive
+      // and should not be broadcast to every connected WebSocket session.
       try {
         const files: Record<string, string> = {};
         const wolfFiles = [
@@ -265,11 +420,14 @@ function handleDashboardCommand(msg: { type: string; task_id?: string }): void {
         for (const file of wolfFiles) {
           try {
             files[file] = fs.readFileSync(path.join(wolfDir, file), "utf-8");
-          } catch {
+          } catch (err) {
+            logger.debug(`Could not read ${file}: ${err instanceof Error ? err.message : String(err)}`);
             files[file] = "";
           }
         }
-        broadcast({ type: "full_state", files, timestamp: new Date().toISOString() });
+        if (sender.readyState === WebSocket.OPEN) {
+          sender.send(JSON.stringify({ type: "full_state", files, timestamp: new Date().toISOString() }));
+        }
       } catch (err) {
         logger.error(`Full state request failed: ${err}`);
       }
@@ -279,7 +437,8 @@ function handleDashboardCommand(msg: { type: string; task_id?: string }): void {
 
 // Cron engine
 let cronEngine: CronEngine | null = null;
-if (config.openwolf.cron.enabled) {
+// Default to enabled if key is absent (matches template default)
+if (config.openwolf?.cron?.enabled ?? true) {
   cronEngine = new CronEngine(wolfDir, projectRoot, logger, broadcast);
   cronEngine.start();
 }
@@ -288,7 +447,7 @@ if (config.openwolf.cron.enabled) {
 startFileWatcher(wolfDir, logger, broadcast);
 
 // Health heartbeat
-const heartbeatInterval = config.openwolf.cron.heartbeat_interval_minutes * 60 * 1000;
+const heartbeatInterval = (config.openwolf?.cron?.heartbeat_interval_minutes ?? 30) * 60 * 1000;
 const heartbeatTimer = setInterval(() => {
   const statePath = path.join(wolfDir, "cron-state.json");
   const state = readJSON<Record<string, unknown>>(statePath, {});
@@ -317,6 +476,9 @@ function shutdown(): void {
   const state = readJSON<Record<string, unknown>>(cronStatePath, {});
   state.engine_status = "stopped";
   writeJSON(cronStatePath, state);
+
+  // Remove the auth token so stale tokens don't persist across restarts.
+  try { fs.unlinkSync(path.join(wolfDir, "daemon-token.tmp")); } catch { /* ignore */ }
 
   for (const client of wsClients) {
     client.close();

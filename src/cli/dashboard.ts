@@ -5,13 +5,14 @@ import { fileURLToPath } from "node:url";
 import { fork } from "node:child_process";
 import { findProjectRoot } from "../scanner/project-root.js";
 import { readJSON } from "../utils/fs-safe.js";
+import { Logger } from "../utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 interface WolfConfig {
-  openwolf: {
-    dashboard: { port: number };
+  openwolf?: {
+    dashboard?: { port?: number };
   };
 }
 
@@ -44,12 +45,14 @@ export async function dashboardCommand(): Promise<void> {
     return;
   }
 
+  const logger = new Logger(path.join(wolfDir, "dashboard.log"), "info");
+
   const config = readJSON<WolfConfig>(path.join(wolfDir, "config.json"), {
     openwolf: { dashboard: { port: 18791 } },
   });
 
-  const port = config.openwolf.dashboard.port;
-  const url = `http://localhost:${port}`;
+  const port = config.openwolf?.dashboard?.port ?? 18791;
+  let url = `http://localhost:${port}`;
 
   // Check if daemon is already running on that port
   const running = await isPortOpen(port);
@@ -72,6 +75,14 @@ export async function dashboardCommand(): Promise<void> {
       detached: true,
       stdio: "ignore",
     });
+    child.on("error", (err) => {
+      console.error(`  Daemon process error: ${err.message}`);
+    });
+    child.on("exit", (code) => {
+      if (code !== null && code !== 0) {
+        console.error(`  Daemon exited unexpectedly with code ${code}. Check .wolf/daemon.log for details.`);
+      }
+    });
     child.unref();
 
     // Wait for the port to open (up to 5 seconds)
@@ -92,12 +103,40 @@ export async function dashboardCommand(): Promise<void> {
     console.log(`  ✓ Dashboard server running on port ${port}`);
   }
 
-  console.log(`  Opening ${url}...`);
+  // Append auth token to URL for initial page load bootstrap.
+  // The dashboard JS reads the token from the URL param on first load,
+  // stores it in sessionStorage, and immediately strips it from the URL
+  // via history.replaceState — so it does not appear in browser history
+  // entries or outbound Referer headers. Subsequent API calls send the
+  // token via the X-Api-Token header rather than the URL.
+  const tokenPath = path.join(wolfDir, "daemon-token.tmp");
+  if (fs.existsSync(tokenPath)) {
+    const token = fs.readFileSync(tokenPath, "utf-8").trim();
+    url += `?token=${token}`;
+  }
+
+  console.log(`  Opening http://localhost:${port}...`);
 
   try {
     const { default: open } = await import("open");
     await open(url);
-  } catch {
-    console.log(`  Could not open browser. Visit: ${url}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error
+      ? error.message
+      : 'Unknown error';
+
+    // Strip the token query param before logging — the URL includes ?token=<hex>
+    // and writing it to dashboard.log would expose the live auth token to
+    // anyone who can read the log file.
+    const safeUrl = url.includes("?") ? url.slice(0, url.indexOf("?")) : url;
+    logger.error(`Failed to open browser at ${safeUrl}. Error: ${errorMessage}. Hint: Try opening the URL manually in your browser`);
+
+    // User-friendly message
+    console.log(`
+🚨 Could not open browser automatically`);
+    console.log(`URL: ${url}`);
+    console.log(`Error: ${errorMessage}`);
+    console.log(`You can manually open this URL in your browser.
+`);
   }
 }

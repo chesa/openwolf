@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { findProjectRoot } from "../scanner/project-root.js";
 import { scanProject } from "../scanner/anatomy-scanner.js";
-import { readJSON, writeJSON } from "../utils/fs-safe.js";
+import { readJSON, writeJSON, safeCopyFile } from "../utils/fs-safe.js";
 import { ensureDir } from "../utils/paths.js";
 import { registerProject } from "./registry.js";
 import { detectWorktreeContext } from "../utils/worktree.js";
@@ -25,19 +25,23 @@ function getVersion(): string {
   }
 }
 
-// Files that are safe to overwrite on upgrade (config/protocol, not user data)
+// Files that are safe to overwrite on upgrade (protocol docs, not user data)
 const ALWAYS_OVERWRITE = [
   "OPENWOLF.md",
-  "config.json",
   "reframe-frameworks.md",
 ];
 
-// Files that contain user/session data — only create if missing, never overwrite
+// Files that contain user/session data — only create if missing, never overwrite.
+// config.json is here (not in ALWAYS_OVERWRITE) because users set port
+// assignments and bind addresses there; overwriting it causes EADDRINUSE
+// crash-loops on upgrade.
 const CREATE_IF_MISSING = [
+  "config.json",
   "identity.md",
   "cerebrum.md",
   "memory.md",
   "anatomy.md",
+  "STATUS.md",
   "token-ledger.json",
   "buglog.json",
   "cron-manifest.json",
@@ -88,7 +92,7 @@ function writeHooks(wolfDir: string): void {
     const srcPath = path.join(sourceDir, file);
     const destPath = path.join(hooksDir, file);
     if (fs.existsSync(srcPath)) {
-      fs.copyFileSync(srcPath, destPath);
+      safeCopyFile(srcPath, destPath);
       copiedCount++;
     } else {
       console.warn(`  ⚠ Hook not found: ${file}`);
@@ -118,7 +122,7 @@ function writeSettings(projectRoot: string): void {
       existing = JSON.parse(fs.readFileSync(settingsPath, "utf-8")) as Record<string, unknown>;
     } catch (err) {
       const backupPath = settingsPath + ".bak";
-      fs.copyFileSync(settingsPath, backupPath);
+      safeCopyFile(settingsPath, backupPath);
       console.warn(
         `  ⚠ settings.json could not be parsed (${err instanceof Error ? err.message : String(err)}).\n` +
         `    The original was backed up to ${backupPath}.\n` +
@@ -135,7 +139,7 @@ function writeIdentity(projectRoot: string, wolfDir: string): void {
   const identityPath = path.join(wolfDir, "identity.md");
   const pkgPath = path.join(projectRoot, "package.json");
   const name = path.basename(projectRoot);
-  
+
   let projectName = name;
   let projectDesc = "";
   try {
@@ -147,7 +151,7 @@ function writeIdentity(projectRoot: string, wolfDir: string): void {
       console.warn(`  ⚠ Could not parse ${pkgPath}: ${(err as Error).message}`);
     }
   }
-  
+
   const identity = `# ${projectName}\n\n${projectDesc}\n\n> Initialized: ${new Date().toISOString()}\n> Root: ${projectRoot}`;
   fs.writeFileSync(identityPath, identity, "utf-8");
 }
@@ -177,7 +181,7 @@ function writeClaudeRules(projectRoot: string, templatesDir: string): void {
   const destPath = path.join(rulesDir, "openwolf.md");
   const srcPath = path.join(templatesDir, "claude-rules-openwolf.md");
   if (fs.existsSync(srcPath)) {
-    fs.copyFileSync(srcPath, destPath);
+    safeCopyFile(srcPath, destPath);
   }
 
   // Insert @.wolf/OPENWOLF.md reference at the top of CLAUDE.md if not present
@@ -235,6 +239,23 @@ function detectProjectDescription(projectRoot: string): string {
     }
   }
   return "";
+}
+
+function seedStatus(wolfDir: string, projectRoot: string): void {
+  const statusPath = path.join(wolfDir, "STATUS.md");
+  const projectName = detectProjectName(projectRoot);
+  let content: string;
+  try {
+    content = fs.readFileSync(statusPath, "utf-8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`  ⚠ Could not read STATUS.md: ${(err as Error).message}`);
+    }
+    return;
+  }
+  content = content.replace(/\{\{PROJECT_NAME\}\}/g, projectName);
+  content = content.replace(/\{\{DATE\}\}/g, new Date().toISOString().slice(0, 10));
+  fs.writeFileSync(statusPath, content, "utf-8");
 }
 
 function seedCerebrum(wolfDir: string, projectRoot: string): void {
@@ -312,6 +333,9 @@ export async function initCommand(): Promise<void> {
   // --- Template files ---
   let createdCount = 0;
   let skippedCount = 0;
+  // Track which CREATE_IF_MISSING files were newly written so we can seed
+  // their placeholders even when isUpgrade is true.
+  const newlyCreated = new Set<string>();
 
   for (const file of ALWAYS_OVERWRITE) {
     writeTemplateFile(actualTemplatesDir, wolfDir, file);
@@ -324,6 +348,7 @@ export async function initCommand(): Promise<void> {
       skippedCount++;
     } else {
       writeTemplateFile(actualTemplatesDir, wolfDir, file);
+      newlyCreated.add(file);
       createdCount++;
     }
   }
@@ -355,6 +380,12 @@ export async function initCommand(): Promise<void> {
   if (!isUpgrade) {
     writeIdentity(projectRoot, wolfDir);
     seedCerebrum(wolfDir, projectRoot);
+    seedStatus(wolfDir, projectRoot);
+  } else if (newlyCreated.has("STATUS.md")) {
+    // STATUS.md was just created for the first time during an upgrade
+    // (e.g. upgrading from a version that predated STATUS.md). Seed its
+    // {{PROJECT_NAME}}/{{DATE}} placeholders now, just as a fresh init does.
+    seedStatus(wolfDir, projectRoot);
   }
 
   // --- Project files ---
@@ -386,14 +417,22 @@ export async function initCommand(): Promise<void> {
   }
 
   // --- Summary ---
-  console.log("\n" + "=".repeat(60));
-  console.log(`OpenWolf v${version} initialized at: ${wolfDir}`);
-  console.log("=".repeat(60));
-  console.log(`  Daemon: start manually with 'openwolf daemon start' (requires pm2)`);
-  console.log("\nNext steps:");
-  console.log(`  1. Add .wolf/ to .gitignore (already done)`);
-  console.log(`  2. Commit the changes: git add .gitignore .claude/ CLAUDE.md`);
-  console.log(`  3. Start using OpenWolf in your Claude Code sessions`);
-  console.log("\nDocumentation: https://github.com/cytostack/openwolf");
-  console.log("Troubleshooting: openwolf status\n");
+  console.log("");
+  if (isUpgrade) {
+    console.log(`  ✓ OpenWolf upgraded to v${version}`);
+    console.log(`  ✓ All .wolf data preserved (${skippedCount} files: cerebrum, memory, anatomy, buglog, ledger)`);
+    console.log(`  ✓ Hook scripts updated (6 hooks)`);
+    console.log(`  ✓ ${createdCount} config files updated`);
+    console.log(`  ✓ Anatomy: ${fileCount} files tracked (unchanged)`);
+  } else {
+    console.log(`  ✓ OpenWolf v${version} initialized`);
+    console.log(`  ✓ .wolf/ created with ${createdCount} files`);
+    console.log(`  ✓ Claude Code hooks registered (6 hooks)`);
+    console.log(`  ✓ CLAUDE.md updated`);
+    console.log(`  ✓ .claude/rules/openwolf.md created`);
+    console.log(`  ✓ Anatomy scan: ${fileCount} files indexed`);
+  }
+  console.log("");
+  console.log("  You're ready. Just use 'claude' as normal — OpenWolf is watching.");
+  console.log("");
 }

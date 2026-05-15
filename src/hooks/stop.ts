@@ -68,6 +68,9 @@ export function finalizeSession(wolfDir: string, sessionDir: string, session: Se
   // Check if cerebrum was updated this session (it should be if there were edits)
   checkCerebrumFreshness(wolfDir, session);
 
+  // Check if STATUS.md is stale relative to this session
+  checkStatusFreshness(wolfDir, session);
+
   // Build session entry for ledger
   const reads = Object.entries(session.files_read).map(([file, data]) => ({
     file,
@@ -216,6 +219,44 @@ function checkForMissingBugLogs(wolfDir: string, session: SessionData): void {
 }
 
 /**
+ * Check if STATUS.md is older than the session start AND there was meaningful
+ * code activity (3+ writes outside .wolf/). If so, nudge Claude to update
+ * STATUS.md so the next /clear has fresh handoff context.
+ */
+function checkStatusFreshness(wolfDir: string, session: SessionData): void {
+  const statusPath = path.join(wolfDir, "STATUS.md");
+  const codeWrites = session.files_written.filter(
+    (w) =>
+      !w.file.includes(`${path.sep}.wolf${path.sep}`) &&
+      !w.file.includes("/.wolf/") &&
+      !w.file.endsWith(".tmp")
+  );
+
+  try {
+    const stat = fs.statSync(statusPath);
+    const sessionStartMs = session.started ? Date.parse(session.started) : 0;
+    if (!sessionStartMs) return;
+
+    if (codeWrites.length >= 3 && stat.mtimeMs < sessionStartMs) {
+      process.stderr.write(
+        `📌 OpenWolf: STATUS.md not updated this session despite ${codeWrites.length} code writes. Update .wolf/STATUS.md (✅ done / 🚀 next quest) before /clear so next session resumes in 1 read.\n`
+      );
+    }
+  } catch (err: unknown) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      // STATUS.md doesn't exist — nudge to create it if there were code writes
+      if (codeWrites.length >= 3) {
+        process.stderr.write(
+          `📌 OpenWolf: .wolf/STATUS.md missing. Create it with current quest summary + next steps so /clear stays cheap.\n`
+        );
+      }
+    }
+    // Non-ENOENT errors: silently skip (don't disrupt the stop hook)
+  }
+}
+
+/**
  * Check if cerebrum.md was updated recently. If it hasn't been updated in
  * a while and there was significant activity, emit a gentle reminder.
  */
@@ -231,8 +272,15 @@ function checkCerebrumFreshness(wolfDir: string, session: SessionData): void {
         `💡 OpenWolf: cerebrum.md hasn't been updated in ${Math.floor(hoursSinceUpdate)}h. Did you learn any user preferences, conventions, or gotchas this session? Consider updating .wolf/cerebrum.md.\n`
       );
     }
-  } catch {
-    // cerebrum.md doesn't exist, that's ok
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      // ENOENT: cerebrum.md doesn't exist yet — expected on first init, skip silently.
+      // Other errors (EACCES, I/O) indicate a real problem worth surfacing,
+      // matching the pattern checkStatusFreshness uses in this same file.
+      process.stderr.write(
+        `OpenWolf: could not check cerebrum.md freshness: ${err instanceof Error ? err.message : String(err)}\n`
+      );
+    }
   }
 }
 
