@@ -79,11 +79,11 @@ export async function cronRun(id: string): Promise<void> {
   }
 
   // Read dashboard port from config
-  interface WolfConfig { openwolf: { dashboard: { port: number } } }
+  interface WolfConfig { openwolf?: { dashboard?: { port?: number } } }
   const config = readJSON<WolfConfig>(path.join(wolfDir, "config.json"), {
     openwolf: { dashboard: { port: 18791 } },
   });
-  const port = config.openwolf.dashboard.port;
+  const port = config.openwolf?.dashboard?.port ?? 18791;
 
   // Try calling the daemon's HTTP endpoint first
   try {

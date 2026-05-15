@@ -10,8 +10,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 interface WolfConfig {
-  openwolf: {
-    dashboard: { port: number };
+  openwolf?: {
+    dashboard?: { port?: number };
   };
 }
 
@@ -48,7 +48,7 @@ export async function dashboardCommand(): Promise<void> {
     openwolf: { dashboard: { port: 18791 } },
   });
 
-  const port = config.openwolf.dashboard.port;
+  const port = config.openwolf?.dashboard?.port ?? 18791;
   let url = `http://localhost:${port}`;
 
   // Check if daemon is already running on that port
