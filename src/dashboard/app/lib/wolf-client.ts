@@ -6,9 +6,13 @@ export class WolfClient {
   private reconnectTimer: number | null = null;
   private url: string;
 
-  constructor(url?: string) {
+  constructor(url?: string, token?: string) {
     const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
-    this.url = url || `${wsProtocol}//${location.host}/ws`;
+    const base = url || `${wsProtocol}//${location.host}/ws`;
+    // Append the session token so the server's verifyClient can authenticate
+    // the WebSocket upgrade. The token is read from sessionStorage (seeded by
+    // main.tsx from the URL param on first load).
+    this.url = token ? `${base}?token=${encodeURIComponent(token)}` : base;
   }
 
   connect(): void {

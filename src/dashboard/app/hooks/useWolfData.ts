@@ -146,8 +146,10 @@ export function useWolfData(): WolfData {
       .then(p => setProject(p))
       .catch(() => {});
 
-    // WebSocket
-    const wsClient = new WolfClient();
+    // WebSocket — pass the session token so the server's verifyClient can
+    // authenticate the upgrade. Token is in sessionStorage (set by main.tsx).
+    const wsToken = sessionStorage.getItem("wolf_token") ?? undefined;
+    const wsClient = new WolfClient(undefined, wsToken);
     wsClient.connect();
     setClient(wsClient);
 
