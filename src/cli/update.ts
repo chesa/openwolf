@@ -11,7 +11,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { getRegisteredProjects, registerProject, type RegisteredProject } from "./registry.js";
-import { readJSON, writeJSON, readText, writeText } from "../utils/fs-safe.js";
+import { readJSON, writeJSON, readText, writeText, safeCopyFile } from "../utils/fs-safe.js";
 import { ensureDir } from "../utils/paths.js";
 import { detectWorktreeContext } from "../utils/worktree.js";
 
@@ -170,7 +170,7 @@ async function updateProject(
       const srcPath = path.join(templatesDir, file);
       const destPath = path.join(wolfDir, file);
       if (fs.existsSync(srcPath)) {
-        fs.copyFileSync(srcPath, destPath);
+        safeCopyFile(srcPath, destPath);
       }
     }
     console.log(`    ✓ Templates updated (${ALWAYS_OVERWRITE.join(", ")})`);
@@ -250,7 +250,7 @@ function createBackup(wolfDir: string): string {
   for (const file of BACKUP_FILES) {
     const src = path.join(wolfDir, file);
     if (fs.existsSync(src)) {
-      fs.copyFileSync(src, path.join(backupDir, file));
+      safeCopyFile(src, path.join(backupDir, file));
     }
   }
 
@@ -264,7 +264,7 @@ function createBackup(wolfDir: string): string {
       for (const f of hookFiles) {
         const src = path.join(hooksDir, f);
         if (fs.statSync(src).isFile()) {
-          fs.copyFileSync(src, path.join(hooksBackup, f));
+          safeCopyFile(src, path.join(hooksBackup, f));
         }
       }
     } catch {}
@@ -276,13 +276,13 @@ function createBackup(wolfDir: string): string {
   if (fs.existsSync(claudeSettings)) {
     const claudeBackup = path.join(backupDir, ".claude");
     ensureDir(claudeBackup);
-    fs.copyFileSync(claudeSettings, path.join(claudeBackup, "settings.json"));
+    safeCopyFile(claudeSettings, path.join(claudeBackup, "settings.json"));
   }
   const claudeRules = path.join(projectRoot, ".claude", "rules", "openwolf.md");
   if (fs.existsSync(claudeRules)) {
     const rulesBackup = path.join(backupDir, ".claude", "rules");
     ensureDir(rulesBackup);
-    fs.copyFileSync(claudeRules, path.join(rulesBackup, "openwolf.md"));
+    safeCopyFile(claudeRules, path.join(rulesBackup, "openwolf.md"));
   }
 
   return backupDir;
@@ -322,7 +322,7 @@ function copyHookScripts(wolfDir: string): void {
     for (const file of HOOK_FILES) {
       const src = path.join(sourceDir, file);
       if (fs.existsSync(src)) {
-        fs.copyFileSync(src, path.join(hooksDir, file));
+        safeCopyFile(src, path.join(hooksDir, file));
       }
     }
   }
@@ -395,7 +395,7 @@ export function restoreCommand(backupName?: string): void {
   // Restore files
   const files = fs.readdirSync(backupDir).filter(f => fs.statSync(path.join(backupDir, f)).isFile());
   for (const file of files) {
-    fs.copyFileSync(path.join(backupDir, file), path.join(wolfDir, file));
+    safeCopyFile(path.join(backupDir, file), path.join(wolfDir, file));
   }
 
   // Restore hooks if present
@@ -405,7 +405,7 @@ export function restoreCommand(backupName?: string): void {
     const hooksDir = path.join(wolfDir, "hooks");
     ensureDir(hooksDir);
     for (const f of hookFiles) {
-      fs.copyFileSync(path.join(hooksBackup, f), path.join(hooksDir, f));
+      safeCopyFile(path.join(hooksBackup, f), path.join(hooksDir, f));
     }
   }
 
@@ -417,13 +417,13 @@ export function restoreCommand(backupName?: string): void {
     if (fs.existsSync(settingsBackup)) {
       const dest = path.join(projectRoot, ".claude", "settings.json");
       ensureDir(path.dirname(dest));
-      fs.copyFileSync(settingsBackup, dest);
+      safeCopyFile(settingsBackup, dest);
     }
     const rulesBackup = path.join(claudeBackup, "rules", "openwolf.md");
     if (fs.existsSync(rulesBackup)) {
       const dest = path.join(projectRoot, ".claude", "rules", "openwolf.md");
       ensureDir(path.dirname(dest));
-      fs.copyFileSync(rulesBackup, dest);
+      safeCopyFile(rulesBackup, dest);
     }
   }
 

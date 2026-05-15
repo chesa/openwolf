@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { findProjectRoot } from "../scanner/project-root.js";
 import { scanProject } from "../scanner/anatomy-scanner.js";
-import { readJSON, writeJSON } from "../utils/fs-safe.js";
+import { readJSON, writeJSON, safeCopyFile } from "../utils/fs-safe.js";
 import { ensureDir } from "../utils/paths.js";
 import { registerProject } from "./registry.js";
 import { detectWorktreeContext } from "../utils/worktree.js";
@@ -88,7 +88,7 @@ function writeHooks(wolfDir: string): void {
     const srcPath = path.join(sourceDir, file);
     const destPath = path.join(hooksDir, file);
     if (fs.existsSync(srcPath)) {
-      fs.copyFileSync(srcPath, destPath);
+      safeCopyFile(srcPath, destPath);
       copiedCount++;
     } else {
       console.warn(`  ⚠ Hook not found: ${file}`);
@@ -118,7 +118,7 @@ function writeSettings(projectRoot: string): void {
       existing = JSON.parse(fs.readFileSync(settingsPath, "utf-8")) as Record<string, unknown>;
     } catch (err) {
       const backupPath = settingsPath + ".bak";
-      fs.copyFileSync(settingsPath, backupPath);
+      safeCopyFile(settingsPath, backupPath);
       console.warn(
         `  ⚠ settings.json could not be parsed (${err instanceof Error ? err.message : String(err)}).\n` +
         `    The original was backed up to ${backupPath}.\n` +
@@ -135,7 +135,7 @@ function writeIdentity(projectRoot: string, wolfDir: string): void {
   const identityPath = path.join(wolfDir, "identity.md");
   const pkgPath = path.join(projectRoot, "package.json");
   const name = path.basename(projectRoot);
-  
+
   let projectName = name;
   let projectDesc = "";
   try {
@@ -147,7 +147,7 @@ function writeIdentity(projectRoot: string, wolfDir: string): void {
       console.warn(`  ⚠ Could not parse ${pkgPath}: ${(err as Error).message}`);
     }
   }
-  
+
   const identity = `# ${projectName}\n\n${projectDesc}\n\n> Initialized: ${new Date().toISOString()}\n> Root: ${projectRoot}`;
   fs.writeFileSync(identityPath, identity, "utf-8");
 }
@@ -177,7 +177,7 @@ function writeClaudeRules(projectRoot: string, templatesDir: string): void {
   const destPath = path.join(rulesDir, "openwolf.md");
   const srcPath = path.join(templatesDir, "claude-rules-openwolf.md");
   if (fs.existsSync(srcPath)) {
-    fs.copyFileSync(srcPath, destPath);
+    safeCopyFile(srcPath, destPath);
   }
 
   // Insert @.wolf/OPENWOLF.md reference at the top of CLAUDE.md if not present
@@ -386,14 +386,22 @@ export async function initCommand(): Promise<void> {
   }
 
   // --- Summary ---
-  console.log("\n" + "=".repeat(60));
-  console.log(`OpenWolf v${version} initialized at: ${wolfDir}`);
-  console.log("=".repeat(60));
-  console.log(`  Daemon: start manually with 'openwolf daemon start' (requires pm2)`);
-  console.log("\nNext steps:");
-  console.log(`  1. Add .wolf/ to .gitignore (already done)`);
-  console.log(`  2. Commit the changes: git add .gitignore .claude/ CLAUDE.md`);
-  console.log(`  3. Start using OpenWolf in your Claude Code sessions`);
-  console.log("\nDocumentation: https://github.com/cytostack/openwolf");
-  console.log("Troubleshooting: openwolf status\n");
+  console.log("");
+  if (isUpgrade) {
+    console.log(`  ✓ OpenWolf upgraded to v${version}`);
+    console.log(`  ✓ All .wolf data preserved (${skippedCount} files: cerebrum, memory, anatomy, buglog, ledger)`);
+    console.log(`  ✓ Hook scripts updated (6 hooks)`);
+    console.log(`  ✓ ${createdCount} config files updated`);
+    console.log(`  ✓ Anatomy: ${fileCount} files tracked (unchanged)`);
+  } else {
+    console.log(`  ✓ OpenWolf v${version} initialized`);
+    console.log(`  ✓ .wolf/ created with ${createdCount} files`);
+    console.log(`  ✓ Claude Code hooks registered (6 hooks)`);
+    console.log(`  ✓ CLAUDE.md updated`);
+    console.log(`  ✓ .claude/rules/openwolf.md created`);
+    console.log(`  ✓ Anatomy scan: ${fileCount} files indexed`);
+  }
+  console.log("");
+  console.log("  You're ready. Just use 'claude' as normal — OpenWolf is watching.");
+  console.log("");
 }
