@@ -189,7 +189,7 @@ async function updateProject(
     const configDest = path.join(wolfDir, "config.json");
     const configSrc = path.join(templatesDir, "config.json");
     if (!fs.existsSync(configDest) && fs.existsSync(configSrc)) {
-      fs.copyFileSync(configSrc, configDest);
+      safeCopyFile(configSrc, configDest);
       console.log(`    ✓ config.json seeded (first time)`);
     }
 
