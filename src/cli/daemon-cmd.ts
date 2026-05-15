@@ -72,7 +72,19 @@ function killPid(pid: number): boolean {
       process.kill(pid, "SIGTERM");
     }
     return true;
-  } catch {
+  } catch (err) {
+    // EPERM: caller lacks privilege to signal this process — tell the user
+    // explicitly so they know elevated privileges are needed.
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "EPERM") {
+      process.stderr.write(
+        `[openwolf] killPid(${pid}): permission denied — try running with elevated privileges\n`
+      );
+    } else {
+      process.stderr.write(
+        `[openwolf] killPid(${pid}): ${err instanceof Error ? err.message : String(err)}\n`
+      );
+    }
     return false;
   }
 }
@@ -228,7 +240,7 @@ export function daemonLogs(): void {
   try {
     const pm2Cmd = isWindows() ? "pm2.cmd" : "pm2";
     execFileSync(pm2Cmd, ["logs", name, "--lines", "50", "--nostream"], { stdio: "inherit" });
-  } catch {
-    console.error("Failed to get daemon logs.");
+  } catch (err) {
+    console.error(`Failed to get daemon logs: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
