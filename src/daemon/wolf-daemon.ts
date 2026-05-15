@@ -75,12 +75,30 @@ if (fs.existsSync(dashboardDir)) {
   app.use(express.static(dashboardDir));
 }
 
-// Auth middleware — scoped to /api/ only so static assets are always
-// served. All API endpoints require a valid x-api-token header or
-// ?token= query param.
+// Constant-time token comparison — prevents timing side-channel attacks
+// from a local co-tenant who cannot read the token file.
+function safeCompareToken(provided: string): boolean {
+  try {
+    const a = Buffer.from(provided);
+    const b = Buffer.from(authToken);
+    // Buffers must be the same length for timingSafeEqual; mismatched
+    // lengths are an instant reject but we avoid returning early in a
+    // way that varies with the token content.
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+// Auth middleware — header-only. Accepting ?token= in query params would
+// expose the token in browser history, Referer headers, and server access
+// logs. The dashboard reads the token from the URL once on page load,
+// strips it via history.replaceState, and stores it in sessionStorage.
+// All subsequent API requests use the X-Api-Token header only.
 app.use("/api", (req, res, next) => {
-  const token = req.headers["x-api-token"] || req.query.token;
-  if (token !== authToken) {
+  const token = req.headers["x-api-token"];
+  if (!token || !safeCompareToken(String(token))) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
@@ -242,6 +260,9 @@ const server = app.listen(port, bind, () => {
 });
 
 server.on("error", (err: NodeJS.ErrnoException) => {
+  // The token was written before listen() — if we fail to bind, remove
+  // the stale token so a subsequent restart doesn't find a dead token file.
+  try { fs.unlinkSync(path.join(wolfDir, "daemon-token.tmp")); } catch { /* ignore */ }
   if (err.code === "EADDRINUSE") {
     logger.error(
       `Port ${port} is already in use. Is another daemon running? ` +
@@ -298,10 +319,32 @@ function isAllowedOrigin(
 // WebSocket server
 const wss = new WebSocketServer({
   server,
+  // 4 MB cap — prevents memory exhaustion from oversized JSON messages.
+  maxPayload: 4 * 1024 * 1024,
   verifyClient: (info: { origin: string; req: IncomingMessage; secure: boolean }) => {
-    if (isAllowedOrigin(info.origin || undefined, info.req)) return true;
-    logger.warn(`Rejected WebSocket upgrade: origin=${info.origin}`);
-    return false;
+    // 1. Origin check — reject cross-origin WebSocket upgrade attempts.
+    if (!isAllowedOrigin(info.origin || undefined, info.req)) {
+      logger.warn(`Rejected WebSocket upgrade: origin=${info.origin}`);
+      return false;
+    }
+    // 2. Token auth — parse ?token= from the WS upgrade URL.
+    //    The dashboard appends the token to the ws:// URL on connect, just
+    //    as the HTTP dashboard URL carries it for the initial page load.
+    try {
+      const wsUrl = new URL(
+        info.req.url ?? "",
+        `http://${info.req.headers.host ?? "localhost"}`
+      );
+      const token = wsUrl.searchParams.get("token") ?? "";
+      if (!safeCompareToken(token)) {
+        logger.warn("Rejected WebSocket upgrade: invalid or missing token");
+        return false;
+      }
+    } catch {
+      logger.warn("Rejected WebSocket upgrade: could not parse upgrade URL");
+      return false;
+    }
+    return true;
   },
 });
 
@@ -312,7 +355,7 @@ wss.on("connection", (ws) => {
   ws.on("message", (data) => {
     try {
       const msg = JSON.parse(data.toString()) as { type: string; task_id?: string };
-      handleDashboardCommand(msg);
+      handleDashboardCommand(msg, ws);
     } catch (err) {
       logger.warn(`Invalid WebSocket message received: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -335,7 +378,7 @@ function broadcast(msg: unknown): void {
   }
 }
 
-function handleDashboardCommand(msg: { type: string; task_id?: string }): void {
+function handleDashboardCommand(msg: { type: string; task_id?: string }, sender: WebSocket): void {
   switch (msg.type) {
     case "trigger_task":
       if (msg.task_id && cronEngine) {
@@ -364,7 +407,8 @@ function handleDashboardCommand(msg: { type: string; task_id?: string }): void {
       }
       break;
     case "request_full_state":
-      // Send all files
+      // Reply only to the requesting client — full .wolf/ state is sensitive
+      // and should not be broadcast to every connected WebSocket session.
       try {
         const files: Record<string, string> = {};
         const wolfFiles = [
@@ -381,7 +425,9 @@ function handleDashboardCommand(msg: { type: string; task_id?: string }): void {
             files[file] = "";
           }
         }
-        broadcast({ type: "full_state", files, timestamp: new Date().toISOString() });
+        if (sender.readyState === WebSocket.OPEN) {
+          sender.send(JSON.stringify({ type: "full_state", files, timestamp: new Date().toISOString() }));
+        }
       } catch (err) {
         logger.error(`Full state request failed: ${err}`);
       }
@@ -430,6 +476,9 @@ function shutdown(): void {
   const state = readJSON<Record<string, unknown>>(cronStatePath, {});
   state.engine_status = "stopped";
   writeJSON(cronStatePath, state);
+
+  // Remove the auth token so stale tokens don't persist across restarts.
+  try { fs.unlinkSync(path.join(wolfDir, "daemon-token.tmp")); } catch { /* ignore */ }
 
   for (const client of wsClients) {
     client.close();
