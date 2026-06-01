@@ -64,21 +64,21 @@
 | AUTH-04 | Phase 2 | Pending |
 | HOOK-01 | Phase 2 | Pending |
 | HOOK-02 | Phase 2 | Pending |
-| HOOK-03 | Phase 3 | Pending |
+| COMPAT-01 | Phase 2 | Pending |
+| COMPAT-02 | Phase 2 | Pending |
 | SCAN-01 | Phase 3 | Pending |
 | SCAN-02 | Phase 3 | Pending |
 | TEST-01 | Phase 3 | Pending |
 | TEST-02 | Phase 3 | Pending |
+| HOOK-03 | Phase 3 | Pending |
 | CLEAN-01 | Phase 4 | Pending |
 | CLEAN-02 | Phase 4 | Pending |
-| COMPAT-01 | Phase 2 | Pending |
-| COMPAT-02 | Phase 2 | Pending |
 
 **Coverage:**
-- v1 requirements: 17 total
-- Mapped to phases: 17
-- Unmapped: 0 ✓
+- v1 requirements: 16 total
+- Mapped to phases: 16
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-01*
-*Last updated: 2026-06-01 after initial definition*
+*Last updated: 2026-06-01 (roadmap created, traceability updated)*
