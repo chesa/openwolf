@@ -327,21 +327,18 @@ const wss = new WebSocketServer({
       logger.warn(`Rejected WebSocket upgrade: origin=${info.origin}`);
       return false;
     }
-    // 2. Token auth — parse ?token= from the WS upgrade URL.
-    //    The dashboard appends the token to the ws:// URL on connect, just
-    //    as the HTTP dashboard URL carries it for the initial page load.
+    // 2. Token auth — parse Authorization: Bearer header from the WS upgrade request.
+    //    The dashboard sends the token as an Authorization: Bearer header on connect,
+    //    keeping it in memory only (not in browser history or proxy logs).
     try {
-      const wsUrl = new URL(
-        info.req.url ?? "",
-        `http://${info.req.headers.host ?? "localhost"}`
-      );
-      const token = wsUrl.searchParams.get("token") ?? "";
+      const authHeader = (info.req.headers.authorization ?? "") as string;
+      const token = authHeader.replace(/^Bearer\s+/i, "").trim();
       if (!safeCompareToken(token)) {
         logger.warn("Rejected WebSocket upgrade: invalid or missing token");
         return false;
       }
     } catch {
-      logger.warn("Rejected WebSocket upgrade: could not parse upgrade URL");
+      logger.warn("Rejected WebSocket upgrade: could not parse Authorization header");
       return false;
     }
     return true;
