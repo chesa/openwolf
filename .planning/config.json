@@ -1,3 +1,17 @@
 {
-  "model_profile": "inherit"
+  "mode": "yolo",
+  "granularity": "coarse",
+  "parallelization": true,
+  "commit_docs": true,
+  "model_profile": "inherit",
+  "workflow": {
+    "research": true,
+    "plan_check": true,
+    "verifier": true,
+    "nyquist_validation": false,
+    "auto_advance": true
+  },
+  "ship": {
+    "pr_body_sections": []
+  }
 }
