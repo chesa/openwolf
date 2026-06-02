@@ -5,19 +5,21 @@ export class WolfClient {
   private handlers: MessageHandler[] = [];
   private reconnectTimer: number | null = null;
   private url: string;
+  private token: string | null;
 
   constructor(url?: string, token?: string) {
     const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
     const base = url || `${wsProtocol}//${location.host}/ws`;
-    // Append the session token so the server's verifyClient can authenticate
-    // the WebSocket upgrade. The token is read from sessionStorage (seeded by
-    // main.tsx from the URL param on first load).
-    this.url = token ? `${base}?token=${encodeURIComponent(token)}` : base;
+    // Store token in memory — it is sent as Authorization: Bearer header on
+    // WebSocket upgrade, keeping it out of browser history and proxy logs.
+    this.token = token ?? null;
+    this.url = base;
   }
 
   connect(): void {
     try {
-      this.ws = new WebSocket(this.url);
+      // Send token as Authorization: Bearer header — stays in JS memory, not in URL.
+      this.ws = new WebSocket(this.url, this.token ? { headers: { Authorization: `Bearer ${this.token}` } } : undefined);
       this.ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
