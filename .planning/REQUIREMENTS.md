@@ -7,14 +7,14 @@
 
 ### Session Consolidation
 
-- [ ] **SESS-01**: Daemon consolidator deletes zero-action sessions from `memory.md` entirely (no marker entries written)
-- [ ] **SESS-02**: Daemon consolidator never writes `Consolidated session (0 actions)` marker entries to `memory.md`
+- [x] **SESS-01**: Daemon consolidator deletes zero-action sessions from `memory.md` entirely (no marker entries written)
+- [x] **SESS-02**: Daemon consolidator never writes `Consolidated session (0 actions)` marker entries to `memory.md`
 
 ### Dashboard Auth
 
-- [ ] **AUTH-01**: Dashboard WebSocket handshake authenticates via `Authorization: Bearer` header (not URL query param)
-- [ ] **AUTH-02**: Proxy access logs contain no token value after auth migration
-- [ ] **AUTH-03**: Threat model document for dashboard auth covering XSS scope, logout, and token rotation
+- [x] **AUTH-01**: Dashboard WebSocket handshake authenticates via `Authorization: Bearer` header (not URL query param)
+- [x] **AUTH-02**: Proxy access logs contain no token value after auth migration
+- [x] **AUTH-03**: Threat model document for dashboard auth covering XSS scope, logout, and token rotation
 - [ ] **AUTH-04**: E2E integration test for WebSocket token-in-URL auth path (end-to-end, not unit only)
 
 ### Hook Modularization
@@ -56,11 +56,11 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SESS-01 | Phase 1 | Pending |
-| SESS-02 | Phase 1 | Pending |
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
+| SESS-01 | Phase 1 | Complete |
+| SESS-02 | Phase 1 | Complete |
+| AUTH-01 | Phase 1 | Complete |
+| AUTH-02 | Phase 1 | Complete |
+| AUTH-03 | Phase 1 | Complete |
 | AUTH-04 | Phase 2 | Pending |
 | HOOK-01 | Phase 2 | Pending |
 | HOOK-02 | Phase 2 | Pending |
