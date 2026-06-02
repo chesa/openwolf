@@ -19,8 +19,8 @@
 
 ### Hook Modularization
 
-- [ ] **HOOK-01**: `src/hooks/shared.ts` split into focused concern modules with re-export facade; each module ≤ 4,000 tokens
-- [ ] **HOOK-02**: Hook re-exports from `shared.ts` maintain backward compatibility with existing hook imports (no changes required by consumers)
+- [x] **HOOK-01**: `src/hooks/shared.ts` split into focused concern modules with re-export facade; each module ≤ 4,000 tokens
+- [x] **HOOK-02**: Hook re-exports from `shared.ts` maintain backward compatibility with existing hook imports (no changes required by consumers)
 - [ ] **HOOK-03**: `docs/hooks.md` documents the `worktree-helper.js` hook contract
 
 ### Scanner Modularization
@@ -40,8 +40,8 @@
 
 ### Backward Compatibility
 
-- [ ] **COMPAT-01**: All existing hook re-export named exports remain importable from `shared.ts` after split
-- [ ] **COMPAT-02**: `tsc --noEmit -p tsconfig.hooks.json` passes after all splits (no circular imports)
+- [x] **COMPAT-01**: All existing hook re-export named exports remain importable from `shared.ts` after split
+- [x] **COMPAT-02**: `tsc --noEmit -p tsconfig.hooks.json` passes after all splits (no circular imports)
 
 ## Out of Scope
 
@@ -62,10 +62,10 @@
 | AUTH-02 | Phase 1 | Complete |
 | AUTH-03 | Phase 1 | Complete |
 | AUTH-04 | Phase 2 | Pending |
-| HOOK-01 | Phase 2 | Pending |
-| HOOK-02 | Phase 2 | Pending |
-| COMPAT-01 | Phase 2 | Pending |
-| COMPAT-02 | Phase 2 | Pending |
+| HOOK-01 | Phase 2 | Complete |
+| HOOK-02 | Phase 2 | Complete |
+| COMPAT-01 | Phase 2 | Complete |
+| COMPAT-02 | Phase 2 | Complete |
 | SCAN-01 | Phase 3 | Pending |
 | SCAN-02 | Phase 3 | Pending |
 | TEST-01 | Phase 3 | Pending |
