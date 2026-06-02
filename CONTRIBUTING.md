@@ -34,7 +34,8 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
    ```
 
 See [docs/getting-started.md](docs/getting-started.md) for a full walkthrough of
-installation and first-run.
+installation and first-run, and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for
+local development setup details.
 
 ### Project Structure
 
@@ -77,8 +78,10 @@ src/
 - **Tests:** All changes must keep the existing test suite passing. Test files
   use the suffix `*.test.ts` (unit) or `*.integration.test.ts` (integration).
   Run `pnpm test` before opening a pull request.
-- **Style:** Follow the existing file organization in `src/` and match the
-  naming conventions already in use.
+- **Style:** No automated linting or formatting tools (ESLint, Prettier, Biome)
+  are currently configured. The project relies on TypeScript strict mode and
+  manual consistency with the existing file organization in `src/` and the naming
+  conventions already in use.
 
 ## Pull Request Guidelines
 

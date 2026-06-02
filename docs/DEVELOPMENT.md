@@ -113,7 +113,7 @@ pnpm test         # Run once
 pnpm test:watch   # Watch mode
 ```
 
-Tests live in `tests/` and mirror the `src/` structure. Integration tests use the real filesystem and real `git` binary.
+Tests live in `tests/` and follow the directory structure of the `src/` modules they cover (`cli/`, `hooks/`, `utils/`, and security guards). Integration tests use the real filesystem and real `git` binary.
 
 See [TESTING.md](TESTING.md) for detailed testing documentation.
 

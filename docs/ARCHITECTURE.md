@@ -12,7 +12,7 @@ OpenWolf has three independently compiled artifacts that together form a working
 2. **Hooks** (`tsc -p tsconfig.hooks.json`) — compiles `src/hooks/*.ts` into standalone Node scripts that Claude Code executes directly. Hooks run in isolation and cannot import from `src/utils/` at runtime; `src/hooks/shared.ts` is a thin barrel that re-exports utilities from six internal `wolf-*` modules.
 3. **Dashboard** (Vite, `src/dashboard/app`) — a React 19 + TailwindCSS 4 SPA built to `dist/dashboard/`. Served by the Express daemon (`src/daemon/wolf-daemon.ts`).
 
-The CLI is the user-facing interface. The daemon runs in the background, serving the dashboard and running scheduled cron tasks. Hooks integrate with Claude Code's lifecycle events (session start, pre-read, post-read, pre-write, post-write, stop). The scanner maintains an `anatomy.md` file that maps every tracked file to a description and token estimate, which the hooks consult to avoid re-reading files unnecessarily.
+The CLI is the user-facing interface. The daemon runs in the background, serving the dashboard and running scheduled cron tasks. Hooks integrate with Claude Code's lifecycle events (session start, pre-read, post-read, pre-write, post-write, stop). The scanner maintains an `anatomy.md` file that maps every tracked file to a description and token estimate, which the hooks consult to surface file descriptions and warn about repeated reads, reducing token waste.
 
 ## Component Diagram
 
@@ -58,8 +58,8 @@ A typical OpenWolf interaction flows as follows:
 1. **Initialization** (`openwolf init`): The CLI copies templates from `src/templates/` into the project's `.wolf/` directory, compiles hooks, and performs an initial filesystem scan.
 2. **Scanning**: `src/scanner/anatomy-scanner.ts` walks the project tree, skipping excluded paths and binary files. For each file, it extracts a description and estimates token count, writing the results to `.wolf/anatomy.md`.
 3. **Session Start**: When Claude Code starts a session, the `session-start` hook increments the session counter in `.wolf/token-ledger.json` and logs the start time.
-4. **Pre-Read**: Before Claude Code reads a file, the `pre-read` hook checks `anatomy.md`. If the file is already described there, the hook returns the description, avoiding a costly re-read.
-5. **Post-Read / Post-Write**: After file operations, these hooks update the token ledger, detect repeated reads, and check if buglog entries should be created or updated.
+4. **Pre-Read**: Before Claude Code reads a file, the `pre-read` hook checks `anatomy.md`. If the file is already described there, the hook prints the description to stderr as a hint to Claude Code. If the file was already read earlier in the same session, it warns about the repeated read, prompting the developer to reuse existing knowledge.
+5. **Post-Read / Post-Write**: After file operations, these hooks update the session file with token counts, detect repeated reads, and check if buglog entries should be created or updated.
 6. **Session Stop**: The `stop` hook finalizes the session, writes totals to the ledger, and triggers waste detection.
 7. **Dashboard**: The user opens `openwolf dashboard`, which launches a browser connected to the local Express daemon. The dashboard fetches project state, health metrics, and file data via authenticated HTTP and WebSocket APIs.
 
@@ -69,7 +69,7 @@ A typical OpenWolf interaction flows as follows:
 |------|------|-------------|----------|
 | `createProgram` | Function | Builds the Commander CLI with all subcommands | `src/cli/index.ts` |
 | `CronEngine` | Class | Schedules and executes cron tasks, handles retries and dead-letter queue | `src/daemon/cron-engine.ts` |
-| `WolfClient` | Class | Dashboard API client for HTTP and WebSocket communication | `src/dashboard/app/lib/wolf-client.ts` |
+| `WolfClient` | Class | Dashboard WebSocket client for real-time updates | `src/dashboard/app/lib/wolf-client.ts` |
 | `scanProject` | Function | Walks the project tree and writes `anatomy.md` | `src/scanner/anatomy-scanner.ts` |
 | `buildAnatomy` | Function | Builds anatomy content and file count without writing to disk | `src/scanner/anatomy-scanner.ts` |
 | `addSessionToLedger` | Function | Appends a completed session to `token-ledger.json` | `src/tracker/token-ledger.ts` |
@@ -108,7 +108,7 @@ openwolf/
 - **`src/cli/`**: Each subcommand lives in its own file. Commands are registered in `index.ts` and loaded on demand to keep startup fast.
 - **`src/daemon/`**: The daemon is a long-running Express server. It serves the dashboard static files, exposes authenticated REST and WebSocket APIs, and embeds the cron engine and file watcher.
 - **`src/dashboard/app/`**: A modern React SPA built with Vite. It uses a custom hook (`useWolfData`) for API communication and TailwindCSS for styling.
-- **`src/hooks/`**: These are not imported by the CLI or daemon. They are standalone scripts executed by Claude Code. `shared.ts` is a thin barrel that re-exports utilities from six internal `wolf-*` modules (`wolf-paths`, `wolf-files`, `wolf-json`, `wolf-anatomy`, `wolf-describe`, `wolf-misc`).
+- **`src/hooks/`**: The lifecycle hook scripts are standalone Node scripts executed by Claude Code; they are not imported by the CLI or daemon at runtime. `shared.ts` and the wolf-* modules are imported by the scanner during the core build. `shared.ts` is a thin barrel that re-exports utilities from six internal `wolf-*` modules (`wolf-paths`, `wolf-files`, `wolf-json`, `wolf-anatomy`, `wolf-describe`, `wolf-misc`).
 - **`src/scanner/`**: `anatomy-scanner.ts` is the main scanner. `description-extractor.ts` and the `extractors/` subdirectory handle language-specific description extraction for TypeScript, JavaScript, Go, PHP, SQL, and other file types.
 - **`src/templates/`**: The source of truth for every file that `openwolf init` copies into a project's `.wolf/` directory. Editing these changes what new projects receive.
 - **`src/tracker/`**: `token-estimator.ts` calculates token counts. `token-ledger.ts` manages the session ledger. `waste-detector.ts` identifies token waste patterns.

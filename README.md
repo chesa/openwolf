@@ -62,6 +62,11 @@ Creates a `.wolf/` directory with the project brain files:
 | `memory.md` | Chronological action log with token estimates |
 | `buglog.json` | Bug fix memory, searchable, prevents re-discovery |
 | `token-ledger.json` | Lifetime token tracking and session history |
+| `config.json` | Project configuration (ports, intervals, thresholds) |
+| `identity.md` | Project name and description |
+| `STATUS.md` | Project health and next-phase tracker |
+| `OPENWOLF.md` | Operating protocol for Claude Code sessions |
+| `reframe-frameworks.md` | UI framework selection knowledge base |
 | `hooks/` | Six Claude Code lifecycle hooks (pure Node.js) |
 
 ### Monitor project health
@@ -130,6 +135,7 @@ openwolf restore [backup]  Restore .wolf/ from a backup
 - [Hooks](docs/hooks.md)
 - [Dashboard](docs/dashboard.md)
 - [Design QC](docs/designqc.md)
+- [Reframe](docs/reframe.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Updating](docs/updating.md)
 

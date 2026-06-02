@@ -12,7 +12,7 @@ openwolf init
 
 **What it does:**
 1. Detects the project root (looks for `.git`, `package.json`, `Cargo.toml`, etc.)
-2. Creates `.wolf/` with 12 template files
+2. Creates `.wolf/` with 14 template files
 3. Copies 8 hook scripts to `.wolf/hooks/`
 4. Registers 6 Claude Code hooks in `.claude/settings.json`
 5. Creates `.claude/rules/openwolf.md`
@@ -173,31 +173,29 @@ Cron Tasks
 ==========
 
   Full anatomy rescan (anatomy-rescan)
-    Schedule: Every 6 hours
+    Schedule: 0 */6 * * *
     Status: enabled
     Last run: 3 hours ago
 
   Consolidate old memory (memory-consolidation)
-    Schedule: Daily at 2:00 AM
+    Schedule: 0 2 * * *
     Status: enabled
     Last run: yesterday
 
   Token audit report (token-audit)
-    Schedule: Mondays at midnight
+    Schedule: 0 0 * * 1
     Status: enabled
     Last run: 5 days ago
 
   Cerebrum reflection (cerebrum-reflection)
-    Schedule: Sundays at 3:00 AM
+    Schedule: 0 3 * * 0
     Status: enabled
     Last run: 2 days ago
-    Uses: claude -p (subscription)
 
   AI suggestions (project-suggestions)
-    Schedule: Mondays at 4:00 AM
+    Schedule: 0 4 * * 1
     Status: enabled
     Last run: 5 days ago
-    Uses: claude -p (subscription)
 ```
 
 ### `openwolf cron run <id>`

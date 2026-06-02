@@ -67,7 +67,7 @@ That is it. Use `claude` as you normally would. OpenWolf runs invisibly through 
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | `openwolf: command not found` after global install | npm global bin directory is not in your shell `PATH` | Add the npm global prefix `bin` directory to your `PATH`, or use `npx openwolf` instead |
-| Path separator errors on Windows | Older Node.js versions have path-handling edge cases | Upgrade to **Node.js 20.10.0 or later**. OpenWolf normalizes paths internally, but some edge cases require Node 20.10+ |
+| Path separator errors on Windows | Older Node.js versions have path-handling edge cases | Upgrade to **Node.js 20.0.0 or later**. OpenWolf normalizes paths internally. |
 | `Credit balance is too low` when running AI tasks | `ANTHROPIC_API_KEY` is set in your environment, but the key has no credits | OpenWolf automatically strips `ANTHROPIC_API_KEY` when running AI tasks so that `claude -p` uses your subscription credentials from `~/.claude/.credentials.json` instead |
 | Design QC fails with browser not found | Chrome or Chromium is not installed, or `puppeteer-core` is missing | Install a Chromium-based browser (Chrome, Edge, or Chromium) and install `puppeteer-core` globally |
 
