@@ -59,4 +59,8 @@ export function normalizePath(p: string): string {
   return p.replace(/\\/g, "/");
 }
 
+// Re-exported here so the barrel in shared.ts can re-export it as a type-only
+// import without needing to inline the WorktreeContext interface. The barrel's
+// `export type { WorktreeContext } from "./wolf-paths.js"` keeps type imports
+// isolated under Node16 module resolution (RESEARCH.md Pitfall 6).
 export type { WorktreeContext };
