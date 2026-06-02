@@ -5,7 +5,7 @@ import * as path from "node:path";
 
 vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
 
-vi.mock("./shared.js", async () => {
+vi.mock("../../src/hooks/shared.js", async () => {
     return {
         getWolfDir: vi.fn(),
         getSessionDir: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock("./shared.js", async () => {
 });
 
 // Re-import after mock
-const { readJSON, writeJSON } = await import("./shared.js");
+const { readJSON, writeJSON } = await import("../../src/hooks/shared.js");
 
 interface FileRead {
     count: number;
@@ -56,7 +56,7 @@ interface SessionData {
     stop_count: number;
 }
 
-const { finalizeSession } = await import("./stop.js");
+const { finalizeSession } = await import("../../src/hooks/stop.js");
 
 describe("stop.ts robustness", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "ow-stop-"));

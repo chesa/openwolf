@@ -5,7 +5,7 @@ import * as path from "node:path";
 
 async function freshSessionStart() {
     vi.resetModules();
-    return import("./session-start.js");
+    return import("../../src/hooks/session-start.js");
 }
 
 describe("session-start.ts ledger init", () => {

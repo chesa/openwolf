@@ -10,9 +10,9 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 
 // Mock the helper so we control the WorktreeContext returned to shared.ts.
-vi.mock("./worktree-helper.js", async (importOriginal) => {
+vi.mock("../../src/hooks/worktree-helper.js", async (importOriginal) => {
     const mod =
-        await importOriginal<typeof import("./worktree-helper.js")>();
+        await importOriginal<typeof import("../../src/hooks/worktree-helper.js")>();
     return {
         ...mod,
         detectWorktreeContextRaw: vi.fn(),
@@ -22,12 +22,12 @@ vi.mock("./worktree-helper.js", async (importOriginal) => {
 import {
     detectWorktreeContextRaw,
     type WorktreeId,
-} from "./worktree-helper.js";
+} from "../../src/hooks/worktree-helper.js";
 
 async function freshShared() {
     // Reset module state so _cachedWorktreeCtx starts empty for each test.
     vi.resetModules();
-    return import("./shared.js");
+    return import("../../src/hooks/shared.js");
 }
 
 describe("shared.ts (hot path)", () => {

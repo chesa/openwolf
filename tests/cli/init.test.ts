@@ -1,18 +1,18 @@
 import { describe, it, expect, vi } from "vitest";
 import * as fs from "node:fs";
-import { findProjectRoot } from "../scanner/project-root.js";
-import { detectWorktreeContext } from "../utils/worktree.js";
-import type { WorktreeId } from "../hooks/worktree-helper.js";
-import { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks } from "./hook-settings.js";
-import { initCommand } from "./init.js";
+import { findProjectRoot } from "../../src/scanner/project-root.js";
+import { detectWorktreeContext } from "../../src/utils/worktree.js";
+import type { WorktreeId } from "../../src/hooks/worktree-helper.js";
+import { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks } from "../../src/cli/hook-settings.js";
+import { initCommand } from "../../src/cli/init.js";
 
-vi.mock("../scanner/project-root.js", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("../scanner/project-root.js")>();
+vi.mock("../../src/scanner/project-root.js", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("../../src/scanner/project-root.js")>();
   return { ...mod, findProjectRoot: vi.fn() };
 });
 
-vi.mock("../utils/worktree.js", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("../utils/worktree.js")>();
+vi.mock("../../src/utils/worktree.js", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("../../src/utils/worktree.js")>();
   return { ...mod, detectWorktreeContext: vi.fn() };
 });
 
@@ -256,12 +256,12 @@ describe("replaceOpenWolfHooks", () => {
 // ---------------------------------------------------------------------------
 describe("hook-file copy list", () => {
   it("includes worktree-helper.js so dist/hooks/shared.js can resolve its sibling import", async () => {
-    const { HOOK_FILES } = await import("./hook-settings.js");
+    const { HOOK_FILES } = await import("../../src/cli/hook-settings.js");
     expect(HOOK_FILES).toContain("worktree-helper.js");
   });
 
   it("covers all seven OpenWolf hook scripts plus the worktree-helper", async () => {
-    const { HOOK_FILES } = await import("./hook-settings.js");
+    const { HOOK_FILES } = await import("../../src/cli/hook-settings.js");
     // Exact list — if this changes, update both this test and the constant.
     expect([...HOOK_FILES].sort()).toEqual([
       "post-read.js", "post-write.js", "pre-read.js", "pre-write.js",
