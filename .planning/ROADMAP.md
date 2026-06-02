@@ -50,7 +50,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 02-01: Analyze shared.ts and identify natural split boundaries (worktree-context, fs-helpers, anatomy-helpers)
+- [x] 02-01: Analyze shared.ts and identify natural split boundaries (worktree-context, fs-helpers, anatomy-helpers)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -103,7 +103,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. P0 Security Fixes | 3/3 | Complete    | 2026-06-02 |
-| 2. Hook Module Split | 0/3 | Not started | - |
+| 2. Hook Module Split | 1/3 | In Progress|  |
 | 3. P1 Modularization | 0/3 | Not started | - |
 | 4. P2 Cleanup | 0/1 | Not started | - |
 
