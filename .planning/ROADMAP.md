@@ -9,7 +9,7 @@ Fix the two active failures (broken session consolidation and credential leakage
 - [x] **Phase 1: P0 Security Fixes + Quick Win** - Session consolidator bug fix, WebSocket cookie-based auth migration, threat model document (completed 2026-06-02)
 - [x] **Phase 2: Hook Module Split** - Split shared.ts into focused concern modules with re-export facade; verify backward compatibility (completed 2026-06-02)
 - [x] **Phase 3: P1 Modularization** - description-extractor split, test consolidation, hook contract docs (completed 2026-06-02)
-- [ ] **Phase 4: P2 Cleanup** - pnpm clean script, .DS_Store removal from repo
+- [x] **Phase 4: P2 Cleanup** - pnpm clean script, .DS_Store removal from repo (completed 2026-06-02)
 
 ## Phase Details
 
@@ -101,7 +101,7 @@ Plans:
 **Plans**: 1 plan
 Plans:
 
-- [ ] 04-01: Add pnpm clean script and remove .DS_Store entries from repo
+- [x] 04-01: Add pnpm clean script and remove .DS_Store entries from repo
 
 ## Progress
 
@@ -110,7 +110,7 @@ Plans:
 | 1. P0 Security Fixes | 3/3 | Complete    | 2026-06-02 |
 | 2. Hook Module Split | 3/3 | Complete    | 2026-06-02 |
 | 3. P1 Modularization | 3/3 | Complete    | 2026-06-02 |
-| 4. P2 Cleanup | 0/1 | Not started | - |
+| 4. P2 Cleanup | 1/1 | Complete   | 2026-06-02 |
 
 ---
 
