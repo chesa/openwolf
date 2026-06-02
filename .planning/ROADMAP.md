@@ -74,11 +74,17 @@ Plans:
   5. docs/hooks.md documents the worktree-helper.js hook contract (HOOK-03)
 
 **Plans**: 3 plans
-
 Plans:
+**Wave 1**
 
 - [ ] 03-01: Extract description-extractor.ts per-language handlers into src/scanner/extractors/ modules
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 03-02: Consolidate all tests under tests/ and update vitest.config.ts include path
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 03-03: Write docs/hooks.md documenting the worktree-helper.js hook contract
 
 ### Phase 4: P2 Cleanup
