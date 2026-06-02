@@ -54,7 +54,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02: Extract modules and create re-export facade for backward compatibility
+- [x] 02-02: Extract modules and create re-export facade for backward compatibility
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -103,7 +103,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. P0 Security Fixes | 3/3 | Complete    | 2026-06-02 |
-| 2. Hook Module Split | 1/3 | In Progress|  |
+| 2. Hook Module Split | 2/3 | In Progress|  |
 | 3. P1 Modularization | 0/3 | Not started | - |
 | 4. P2 Cleanup | 0/1 | Not started | - |
 
