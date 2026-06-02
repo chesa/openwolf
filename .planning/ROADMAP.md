@@ -99,7 +99,6 @@ Plans:
   3. `pnpm clean` does NOT delete .wolf/ state files (only dist/, designqc-captures/, tmp.*) (CLEAN-01)
 
 **Plans**: 1 plan
-
 Plans:
 
 - [ ] 04-01: Add pnpm clean script and remove .DS_Store entries from repo
