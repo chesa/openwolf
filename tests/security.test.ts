@@ -9,7 +9,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { readJSON, readText, safeCopyFile, writeJSON } from "../utils/fs-safe.js";
+import { readJSON, readText, safeCopyFile, writeJSON } from "../src/utils/fs-safe.js";
 
 // ---------------------------------------------------------------------------
 // Helpers

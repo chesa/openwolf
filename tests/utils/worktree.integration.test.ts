@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import * as path from "node:path";
-import { detectWorktreeContext } from "./worktree.js";
+import { detectWorktreeContext } from "../../src/utils/worktree.js";
 
 const HAS_GIT = (() => {
   try {

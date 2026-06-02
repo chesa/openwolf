@@ -9,12 +9,12 @@ const consoleSpy = {
     log: vi.spyOn(console, "log").mockImplementation(() => {}),
 };
 
-vi.mock("../scanner/project-root.js", () => ({ findProjectRoot: vi.fn() }));
-vi.mock("../utils/worktree.js", () => ({ detectWorktreeContext: vi.fn() }));
+vi.mock("../../src/scanner/project-root.js", () => ({ findProjectRoot: vi.fn() }));
+vi.mock("../../src/utils/worktree.js", () => ({ detectWorktreeContext: vi.fn() }));
 
-import { findProjectRoot } from "../scanner/project-root.js";
-import { detectWorktreeContext } from "../utils/worktree.js";
-import { statusCommand } from "./status.js";
+import { findProjectRoot } from "../../src/scanner/project-root.js";
+import { detectWorktreeContext } from "../../src/utils/worktree.js";
+import { statusCommand } from "../../src/cli/status.js";
 
 describe("status.ts", () => {
     beforeEach(() => {

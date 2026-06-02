@@ -55,7 +55,7 @@ All hooks are **pure Node.js file I/O**. No network calls, no AI, no external de
 
 **Fires:** Before Claude reads any file (via the Read tool).
 
-**Stdin:** `{ "tool_name": "Read", "tool_input": { "file_path": "src/index.ts" } }`
+**Stdin:** `{ "tool_name": "Read", "tool_input": { "file_path": "src/cli/index.ts" } }`
 
 **What it does:**
 1. Checks if this file was already read this session
@@ -132,6 +132,74 @@ All hooks are **pure Node.js file I/O**. No network calls, no AI, no external de
 **Note:** The stop hook fires every time Claude finishes a response, not just at session end. It only writes to the ledger when there's significant data.
 
 **Timeout:** 10 seconds
+
+---
+
+## Worktree Helper (`worktree-helper.js`)
+
+**Purpose:** Git worktree detection for session isolation per branch.
+
+### Exports
+
+| Export | Signature | Description |
+|--------|-----------|-------------|
+| `detectWorktreeContextRaw` | `(dir: string) => WorktreeContext` | Detects whether `dir` is in a git worktree; returns context object |
+| `isNotARepoError` | `(err: unknown) => boolean` | Classifies error as "not a git repo" (exit status 128) |
+| `isMissingGitError` | `(err: unknown) => boolean` | Classifies error as "git binary not found" (ENOENT) |
+| `isTimeoutError` | `(err: unknown) => boolean` | Classifies error as "git command timed out" (SIGTERM / ETIMEDOUT) |
+
+### Types
+
+```typescript
+type WorktreeId = string & { readonly __brand: "WorktreeId" };
+
+type WorktreeContext =
+  | { isWorktree: false; mainRepoRoot: string; worktreePath: string; branch: string }
+  | { isWorktree: true; mainRepoRoot: string; worktreePath: string; worktreeId: WorktreeId; branch: string };
+```
+
+### Error Handling Contract
+
+| Error | Condition | Callers Should |
+|-------|-----------|----------------|
+| Not a repo | `git rev-parse` exits 128 | Use main repo root directly |
+| Git missing | `git` binary not found (ENOENT) | Log warning, fall back to single-repo mode |
+| Timeout | Command exceeds 2 s (SIGTERM / ETIMEDOUT) | Log warning, treat as single-repo mode |
+
+### Usage Example
+
+```typescript
+import {
+  detectWorktreeContextRaw,
+  isNotARepoError,
+  isMissingGitError,
+  isTimeoutError,
+} from "./worktree-helper.js";
+
+const ctx = detectWorktreeContextRaw(process.cwd());
+
+if (ctx.isWorktree) {
+  console.log(`Worktree ${ctx.worktreeId} on branch "${ctx.branch}"`);
+  console.log(`Main repo: ${ctx.mainRepoRoot}`);
+} else {
+  console.log(`Single-repo mode, branch "${ctx.branch}"`);
+}
+
+// Classify errors from git operations
+try {
+  // ... git operation ...
+} catch (err) {
+  if (isNotARepoError(err)) {
+    // Handle no-repo gracefully
+  } else if (isMissingGitError(err)) {
+    console.warn("git not found — falling back to single-repo mode");
+  } else if (isTimeoutError(err)) {
+    console.warn("git command timed out — falling back to single-repo mode");
+  } else {
+    throw err;
+  }
+}
+```
 
 ---
 

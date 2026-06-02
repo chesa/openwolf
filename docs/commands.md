@@ -1,3 +1,4 @@
+<!-- generated-by: gsd-doc-writer -->
 # Commands
 
 Complete reference for all OpenWolf CLI commands.
@@ -11,14 +12,14 @@ openwolf init
 ```
 
 **What it does:**
-1. Detects the project root (looks for `.git`, `package.json`, `Cargo.toml`, etc.)
-2. Creates `.wolf/` with 10 template files
-3. Copies 7 hook scripts to `.wolf/hooks/`
+1. Detects the project root (looks for `.git`, `package.json`, etc.)
+2. Creates `.wolf/` with 14 template files
+3. Copies 8 hook scripts to `.wolf/hooks/`
 4. Registers 6 Claude Code hooks in `.claude/settings.json`
 5. Creates `.claude/rules/openwolf.md`
 6. Prepends the OpenWolf snippet to `CLAUDE.md`
 7. Runs an initial anatomy scan
-8. Populates `cerebrum.md` with detected project name and description
+8. Populates `.wolf/cerebrum.md` with detected project name and description
 
 If `.wolf/` already exists, it reinitializes (overwrites templates, preserves learned data).
 
@@ -41,8 +42,8 @@ openwolf status
 OpenWolf Status
 ===============
 
-  ✓ All 10 core files present
-  ✓ All 7 hook scripts present
+  ✓ All 9 shared knowledge files present
+  ✓ All 8 hook scripts present
   ✓ Claude Code hooks registered (6 matchers)
 
 Token Stats:
@@ -75,16 +76,16 @@ Scanning project...
 
 ### `openwolf scan --check`
 
-Compare the current filesystem against `anatomy.md` without writing any changes. Exits with code 1 if the anatomy is out of date.
+Compare the current filesystem against `.wolf/anatomy.md` without writing any changes. Exits with code 1 if the anatomy is out of date.
 
 ```bash
 openwolf scan --check
 ```
 
-Useful in CI pipelines to verify that `anatomy.md` has been kept in sync:
+Useful in CI pipelines to verify that `.wolf/anatomy.md` has been kept in sync:
 
 ```bash
-openwolf scan --check || echo "anatomy.md is out of date. Run openwolf scan"
+openwolf scan --check || echo ".wolf/anatomy.md is out of date. Run openwolf scan"
 ```
 
 ---
@@ -173,31 +174,29 @@ Cron Tasks
 ==========
 
   Full anatomy rescan (anatomy-rescan)
-    Schedule: Every 6 hours
+    Schedule: 0 */6 * * *
     Status: enabled
     Last run: 3 hours ago
 
   Consolidate old memory (memory-consolidation)
-    Schedule: Daily at 2:00 AM
+    Schedule: 0 2 * * *
     Status: enabled
     Last run: yesterday
 
   Token audit report (token-audit)
-    Schedule: Mondays at midnight
+    Schedule: 0 0 * * 1
     Status: enabled
     Last run: 5 days ago
 
   Cerebrum reflection (cerebrum-reflection)
-    Schedule: Sundays at 3:00 AM
+    Schedule: 0 3 * * 0
     Status: enabled
     Last run: 2 days ago
-    Uses: claude -p (subscription)
 
   AI suggestions (project-suggestions)
-    Schedule: Mondays at 4:00 AM
+    Schedule: 0 4 * * 1
     Status: enabled
     Last run: 5 days ago
-    Uses: claude -p (subscription)
 ```
 
 ### `openwolf cron run <id>`

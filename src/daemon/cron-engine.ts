@@ -246,6 +246,7 @@ export class CronEngine {
     const result: string[] = [];
     let inOldSession = false;
     let oldSessionLines: string[] = [];
+    let currentSessionActionCount = 0;
     let currentSessionDate: Date | null = null;
 
     for (const line of lines) {
@@ -253,7 +254,10 @@ export class CronEngine {
       if (sessionMatch) {
         // Flush previous old session
         if (inOldSession && oldSessionLines.length > 0) {
-          const actionCount = oldSessionLines.filter((l) => l.startsWith("|") && !l.startsWith("|--") && !l.startsWith("| Time")).length;
+          const actionCount = currentSessionActionCount;
+          if (actionCount > 0) {
+            result.push(line); // Keep the header
+          }
           result.push(`> Consolidated session (${actionCount} actions)`);
           result.push("");
         }
@@ -262,7 +266,7 @@ export class CronEngine {
         if (currentSessionDate < cutoff) {
           inOldSession = true;
           oldSessionLines = [];
-          result.push(line); // Keep the header
+          currentSessionActionCount = 0;
         } else {
           inOldSession = false;
           result.push(line);
@@ -272,6 +276,10 @@ export class CronEngine {
 
       if (inOldSession) {
         oldSessionLines.push(line);
+        // Count action rows (data rows, not header or separator)
+        if (line.startsWith("|") && !line.startsWith("|--") && !line.startsWith("| Time")) {
+          currentSessionActionCount++;
+        }
       } else {
         result.push(line);
       }
@@ -279,7 +287,14 @@ export class CronEngine {
 
     // Flush last old session
     if (inOldSession && oldSessionLines.length > 0) {
-      const actionCount = oldSessionLines.filter((l) => l.startsWith("|") && !l.startsWith("|--") && !l.startsWith("| Time")).length;
+      const actionCount = currentSessionActionCount;
+      if (actionCount > 0) {
+        // Re-emit the session header (first line of oldSessionLines)
+        const headerLine = oldSessionLines.find((l) => l.match(/^## Session:/));
+        if (headerLine) {
+          result.push(headerLine);
+        }
+      }
       result.push(`> Consolidated session (${actionCount} actions)`);
       result.push("");
     }

@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { HOOK_SETTINGS, WOLF_ROOT_SHELL } from "./hook-settings.js";
+import { HOOK_SETTINGS, WOLF_ROOT_SHELL } from "../../src/cli/hook-settings.js";
 
 const HAS_GIT = (() => {
   try {

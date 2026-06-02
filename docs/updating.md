@@ -20,16 +20,16 @@ openwolf update
 
 1. **Creates a timestamped backup** of each project's `.wolf/` directory before making any changes
 2. **Overwrites protocol files** with the latest versions:
-   - `OPENWOLF.md`
-   - `config.json`
-   - `reframe-frameworks.md`
+   - `.wolf/OPENWOLF.md`
+   - `.wolf/config.json`
+   - `.wolf/reframe-frameworks.md`
    - Hook scripts in `.wolf/hooks/`
    - Claude rules in `.claude/rules/openwolf.md`
 3. **Preserves user data** -- these files are never overwritten:
-   - `cerebrum.md` (learned preferences and conventions)
-   - `memory.md` (session history)
-   - `buglog.json` (bug tracking)
-   - `anatomy.md` (project file map)
+   - `.wolf/cerebrum.md` (learned preferences and conventions)
+   - `.wolf/memory.md` (session history)
+   - `.wolf/buglog.json` (bug tracking)
+   - `.wolf/anatomy.md` (project file map)
    - Any custom files you added to `.wolf/`
 4. **Updates hooks** registered in `.claude/settings.json`
 
@@ -70,7 +70,7 @@ openwolf restore 2026-03-15T14-30-00
 Pass a backup timestamp to restore `.wolf/` from that snapshot. The current `.wolf/` directory is replaced entirely with the backup contents.
 
 ::: warning
-Restoring overwrites the entire `.wolf/` directory, including user data files like `cerebrum.md` and `memory.md`. If you have recent changes you want to keep, back them up manually first.
+Restoring overwrites the entire `.wolf/` directory, including user data files like `.wolf/cerebrum.md` and `.wolf/memory.md`. If you have recent changes you want to keep, back them up manually first.
 :::
 
 ---
@@ -81,14 +81,14 @@ Every backup is a full copy of `.wolf/` at the time of the update. This includes
 
 | File | Type |
 |------|------|
-| `OPENWOLF.md` | Protocol |
-| `config.json` | Protocol |
-| `reframe-frameworks.md` | Protocol |
-| `hooks/*` | Protocol |
-| `cerebrum.md` | User data |
-| `memory.md` | User data |
-| `buglog.json` | User data |
-| `anatomy.md` | User data |
+| `.wolf/OPENWOLF.md` | Protocol |
+| `.wolf/config.json` | Protocol |
+| `.wolf/reframe-frameworks.md` | Protocol |
+| `.wolf/hooks/*` | Protocol |
+| `.wolf/cerebrum.md` | User data |
+| `.wolf/memory.md` | User data |
+| `.wolf/buglog.json` | User data |
+| `.wolf/anatomy.md` | User data |
 | `designqc-captures/*` | Generated |
 | Any custom files in `.wolf/` | User data |
 

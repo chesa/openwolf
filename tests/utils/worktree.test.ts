@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { execFileSync } from "node:child_process";
-import { detectWorktreeContext } from "./worktree.js";
+import { detectWorktreeContext } from "../../src/utils/worktree.js";
 
 vi.mock("node:child_process", async (importOriginal) => {
   const mod = await importOriginal<typeof import("node:child_process")>();

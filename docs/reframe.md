@@ -4,7 +4,7 @@ Curated knowledge base of 12 modern UI frameworks with battle-tested prompts for
 
 ## Overview
 
-When you ask Claude to change, pick, or migrate your UI framework, Claude reads `.wolf/reframe-frameworks.md` (installed during `openwolf init`). The file contains decision criteria, framework profiles, and framework-specific prompts that Claude adapts to your project using `anatomy.md`.
+When you ask Claude to change, pick, or migrate your UI framework, Claude reads `.wolf/reframe-frameworks.md` (installed during `openwolf init`). The file contains decision criteria, framework profiles, and framework-specific prompts that Claude adapts to your project using `.wolf/anatomy.md`.
 
 No CLI invocation needed. Just talk to Claude about your UI framework and Reframe activates automatically.
 
@@ -16,7 +16,7 @@ No CLI invocation needed. Just talk to Claude about your UI framework and Refram
 2. When you mention changing or picking a UI framework, Claude reads the file
 3. Claude asks **5 decision questions** to understand your priorities and constraints
 4. Claude recommends a framework based on your answers
-5. Claude uses the framework-specific prompt -- adapted to your project via `anatomy.md` -- to execute the installation and migration
+5. Claude uses the framework-specific prompt -- adapted to your project via `.wolf/anatomy.md` -- to execute the installation and migration
 
 The framework-specific prompts handle dependency installation, configuration, component patterns, and common migration steps. Claude tailors them to your actual project structure.
 
