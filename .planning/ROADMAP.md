@@ -6,7 +6,7 @@ Fix the two active failures (broken session consolidation and credential leakage
 
 ## Phases
 
-- [ ] **Phase 1: P0 Security Fixes + Quick Win** - Session consolidator bug fix, WebSocket cookie-based auth migration, threat model document
+- [x] **Phase 1: P0 Security Fixes + Quick Win** - Session consolidator bug fix, WebSocket cookie-based auth migration, threat model document (completed 2026-06-02)
 - [ ] **Phase 2: Hook Module Split** - Split shared.ts into focused concern modules with re-export facade; verify backward compatibility
 - [ ] **Phase 3: P1 Modularization** - description-extractor split, test consolidation, hook contract docs
 - [ ] **Phase 4: P2 Cleanup** - pnpm clean script, .DS_Store removal from repo
@@ -26,9 +26,9 @@ Fix the two active failures (broken session consolidation and credential leakage
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Fix daemon session-consolidator to delete zero-action sessions and skip marker entries
-- [ ] 01-02: Migrate dashboard WebSocket auth from URL query param to Authorization: Bearer header
-- [ ] 01-03: Write threat model document for dashboard auth covering XSS scope, logout, and token rotation
+- [x] 01-01: Fix daemon session-consolidator to delete zero-action sessions and skip marker entries
+- [x] 01-02: Migrate dashboard WebSocket auth from URL query param to Authorization: Bearer header
+- [x] 01-03: Write threat model document for dashboard auth covering XSS scope, logout, and token rotation
 
 ### Phase 2: Hook Module Split
 **Goal**: Split shared.ts into focused concern modules while maintaining backward compatibility
@@ -80,7 +80,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. P0 Security Fixes | 0/3 | Not started | - |
+| 1. P0 Security Fixes | 3/3 | Complete   | 2026-06-02 |
 | 2. Hook Module Split | 0/3 | Not started | - |
 | 3. P1 Modularization | 0/3 | Not started | - |
 | 4. P2 Cleanup | 0/1 | Not started | - |
