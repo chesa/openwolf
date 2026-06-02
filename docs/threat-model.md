@@ -29,7 +29,7 @@
 - Not visible in server access logs unless header logging is explicitly configured
 
 **Implementation:**
-- Dashboard client (`src/dashboard/app/lib/wolf-client.ts`) reads token from `sessionStorage` and sets `Authorization: Bearer <token>` on the WebSocket upgrade request.
+- Dashboard client (`src/dashboard/app/lib/wolf-client.ts`) receives the token via its constructor and sets `Authorization: Bearer <token>` on the WebSocket upgrade request. The token is read from `sessionStorage` by `src/dashboard/app/hooks/useWolfData.ts` and passed to `WolfClient`.
 - Daemon (`src/daemon/wolf-daemon.ts`, `verifyClient` callback) reads the `Authorization` header and validates via constant-time comparison.
 
 **Residual risk:** Proxy operators who explicitly configure header logging can capture the Authorization header. Mitigation: daemon binds to loopback (`127.0.0.1`) by default, confining traffic to the local machine. Network-exposed deployments should use `wss://` and consider certificate authentication.
@@ -44,12 +44,12 @@
 
 **Impact:** Attacker can authenticate as the user to the daemon WebSocket endpoint using the stolen token.
 
-**Attack surface:** The OpenWolf dashboard renders user-controlled content (project files, descriptions). A cross-site scripting (XSS) vulnerability in this content could allow an attacker to execute `sessionStorage.getItem("token")` in the browser context.
+**Attack surface:** The OpenWolf dashboard renders user-controlled content (project files, descriptions). A cross-site scripting (XSS) vulnerability in this content could allow an attacker to execute `sessionStorage.getItem("wolf_token")` in the browser context.
 
 **Scope limitation:** The XSS attacker has the same session privileges as the user — this is inherent to any XSS in an application that stores secrets in JavaScript-accessible storage. The auth token being JS-readable (not in an `HttpOnly` cookie) is a known trade-off for this architecture.
 
 **Mitigations:**
-- Origin check on WebSocket upgrade: daemon rejects upgrade requests with mismatched `Origin` header (`src/daemon/wolf-daemon.ts` lines 325-328). Only same-origin requests from the dashboard are accepted.
+- Origin check on WebSocket upgrade: daemon rejects upgrade requests with mismatched `Origin` header (`src/daemon/wolf-daemon.ts` lines 285-316). Only same-origin requests from the dashboard are accepted.
 - `location.host` check prevents cross-origin WebSocket dialdown.
 - Token stored in `sessionStorage` (not `localStorage`) — cleared when the browser tab closes.
 - Consider `Content-Security-Policy` to restrict inline script execution in future hardening.
@@ -78,7 +78,7 @@
 
 **Threat:** Token is suspected to be compromised and needs to be rotated.
 
-**Mechanism:** Token is regenerated on every daemon restart. The file `daemon-token.tmp` is deleted on graceful shutdown (`src/daemon/wolf-daemon.ts` line 481).
+**Mechanism:** Token is regenerated on every daemon restart. The file `daemon-token.tmp` is deleted on graceful shutdown (`src/daemon/wolf-daemon.ts` line 478).
 
 **Trigger:** User runs `openwolf daemon restart` (or sends SIGTERM to the daemon process). Next start generates a new 256-bit token via `crypto.randomBytes(32)`.
 
@@ -110,9 +110,9 @@
 
 | Property | Mechanism |
 |----------|-----------|
-| **Authentication** | Token validated via constant-time comparison (`crypto.timingSafeEqual`) in daemon `verifyClient` (`src/daemon/wolf-daemon.ts` lines 80-91). Prevents timing side-channel attacks from local co-tenants. |
+| **Authentication** | Token validated via constant-time comparison (`crypto.timingSafeEqual`) in `safeCompareToken` (`src/daemon/wolf-daemon.ts` lines 80-91), called from `verifyClient` (lines 324-345). Prevents timing side-channel attacks from local co-tenants. |
 | **Authorization** | Token grants access to the daemon WebSocket endpoint serving `.wolf/` state files and cron management. |
-| **Transport security** | By default, daemon binds to `127.0.0.1` — not exposed to the LAN. Setting `bind: "0.0.0.0"` in `.wolf/config.json` enables network access (with associated risk). |
+| **Transport security** | By default, daemon binds to `127.0.0.1` — not exposed to the LAN. Setting `dashboard.bind: "0.0.0.0"` in `.wolf/config.json` (under `openwolf.dashboard`) enables network access (with associated risk). |
 | **Session model** | Stateless. Daemon does not track issued tokens — validation is against the secret file only. No revocation list. |
 | **Token entropy** | 256-bit random hex string (`crypto.randomBytes(32)`) — infeasible to brute force. |
 
@@ -129,6 +129,8 @@
 
 ## References
 
-- `src/daemon/wolf-daemon.ts` — Daemon token generation (lines 22-35), `verifyClient` (lines 324-348), graceful shutdown (lines 469-495)
-- `src/dashboard/app/lib/wolf-client.ts` — WebSocket client, token from `sessionStorage`, `Authorization` header transport
+- `src/daemon/wolf-daemon.ts` — Daemon token generation (lines 22-35), `safeCompareToken` (lines 80-91), `isAllowedOrigin` (lines 285-316), `verifyClient` (lines 324-345), graceful shutdown (lines 466-492)
+- `src/dashboard/app/lib/wolf-client.ts` — WebSocket client, `Authorization: Bearer` header transport
+- `src/dashboard/app/hooks/useWolfData.ts` — Reads `wolf_token` from `sessionStorage`, passes to `WolfClient`
+- `src/dashboard/app/main.tsx` — Bootstrap: reads token from URL param, stores as `wolf_token` in `sessionStorage`
 - `.wolf/config.json` — `openwolf.dashboard.bind` (loopback default), `openwolf.daemon.port`

@@ -12,13 +12,13 @@ openwolf init
 
 **What it does:**
 1. Detects the project root (looks for `.git`, `package.json`, `Cargo.toml`, etc.)
-2. Creates `.wolf/` with 10 template files
-3. Copies 7 hook scripts to `.wolf/hooks/`
+2. Creates `.wolf/` with 12 template files
+3. Copies 8 hook scripts to `.wolf/hooks/`
 4. Registers 6 Claude Code hooks in `.claude/settings.json`
 5. Creates `.claude/rules/openwolf.md`
 6. Prepends the OpenWolf snippet to `CLAUDE.md`
 7. Runs an initial anatomy scan
-8. Populates `cerebrum.md` with detected project name and description
+8. Populates `.wolf/cerebrum.md` with detected project name and description
 
 If `.wolf/` already exists, it reinitializes (overwrites templates, preserves learned data).
 
@@ -41,8 +41,8 @@ openwolf status
 OpenWolf Status
 ===============
 
-  ✓ All 10 core files present
-  ✓ All 7 hook scripts present
+  ✓ All 9 core files present
+  ✓ All 8 hook scripts present
   ✓ Claude Code hooks registered (6 matchers)
 
 Token Stats:
@@ -75,7 +75,7 @@ Scanning project...
 
 ### `openwolf scan --check`
 
-Compare the current filesystem against `anatomy.md` without writing any changes. Exits with code 1 if the anatomy is out of date.
+Compare the current filesystem against `.wolf/anatomy.md` without writing any changes. Exits with code 1 if the anatomy is out of date.
 
 ```bash
 openwolf scan --check
@@ -84,7 +84,7 @@ openwolf scan --check
 Useful in CI pipelines to verify that `anatomy.md` has been kept in sync:
 
 ```bash
-openwolf scan --check || echo "anatomy.md is out of date. Run openwolf scan"
+openwolf scan --check || echo ".wolf/anatomy.md is out of date. Run openwolf scan"
 ```
 
 ---

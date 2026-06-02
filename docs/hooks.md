@@ -55,7 +55,7 @@ All hooks are **pure Node.js file I/O**. No network calls, no AI, no external de
 
 **Fires:** Before Claude reads any file (via the Read tool).
 
-**Stdin:** `{ "tool_name": "Read", "tool_input": { "file_path": "src/index.ts" } }`
+**Stdin:** `{ "tool_name": "Read", "tool_input": { "file_path": "src/cli/index.ts" } }`
 
 **What it does:**
 1. Checks if this file was already read this session

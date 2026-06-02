@@ -50,7 +50,7 @@ For each route, Design QC:
 2. Scrolls through the full page height
 3. Takes a viewport-height JPEG at each scroll position (one per "fold")
 4. Captures up to **8 sections** per route
-5. Repeats for both desktop (1200px) and mobile (390px) viewports by default
+5. Repeats for both desktop (1440px) and mobile (375px) viewports by default
 
 Screenshots are saved as JPEG at quality 70, max width 1200px -- optimized for token economy at roughly **2,500 tokens per screenshot**.
 
@@ -80,7 +80,7 @@ openwolf designqc --quality 50                    # lower quality = fewer tokens
 |------|-------------|
 | `--url <url>` | Skip server detection, use this URL directly |
 | `--routes <paths...>` | Capture only these routes instead of auto-detecting |
-| `--desktop-only` | Skip the mobile (390px) viewport |
+| `--desktop-only` | Skip the mobile (375px) viewport |
 | `--quality <number>` | JPEG quality (1-100). Default: 70. Lower = smaller = fewer tokens |
 
 ---
@@ -115,25 +115,25 @@ Design QC settings can be configured in `.wolf/config.json` under the `designqc`
 OpenWolf searches for a Chromium-based browser in this order:
 
 **Windows:**
-1. `designqc.chromePath` in `.wolf/config.json` (manual override)
+1. `designqc.chrome_path` in `.wolf/config.json` (manual override)
 2. `Program Files/Google/Chrome/Application/chrome.exe`
 3. `Program Files (x86)/Google/Chrome/Application/chrome.exe`
-4. `Program Files/Microsoft/Edge/Application/msedge.exe`
-5. `where chrome` (PATH lookup)
-6. `where msedge` (PATH lookup)
+4. `LOCALAPPDATA/Google/Chrome/Application/chrome.exe`
+5. `Program Files (x86)/Microsoft/Edge/Application/msedge.exe`
+6. `Program Files/Microsoft/Edge/Application/msedge.exe`
+7. `where chrome` (PATH lookup)
+8. `where msedge` (PATH lookup)
 
 **macOS:**
 1. Config override
 2. `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`
-3. `/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge`
+3. `/Applications/Chromium.app/Contents/MacOS/Chromium`
 
 **Linux:**
 1. Config override
 2. `which google-chrome`
-3. `which google-chrome-stable`
+3. `which chromium`
 4. `which chromium-browser`
-5. `which chromium`
-6. `which microsoft-edge`
 
 If no browser is found, Design QC exits with an error and instructions to set the path manually in config.
 

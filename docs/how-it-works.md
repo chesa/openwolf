@@ -49,14 +49,17 @@ Stop         ──→ stop.js             Writes session summary to token-ledge
 `anatomy.md` is a structured index of every file in your project:
 
 ```markdown
-## src/
+## src/cli/
 
-- `index.ts` -- Main entry point. startServer() (~380 tok)
-- `server.ts` -- Express HTTP server configuration (~520 tok)
+- `index.ts` -- CLI command registration (~380 tok)
+
+## src/daemon/
+
+- `wolf-daemon.ts` -- Express daemon server (~520 tok)
 ```
 
 When Claude wants to read a file, the pre-read hook tells it:
-> "anatomy.md says `server.ts` is 'Express HTTP server configuration' at ~520 tokens"
+> "anatomy.md says `wolf-daemon.ts` is 'Express daemon server' at ~520 tokens"
 
 If that description is enough, Claude can skip the full read. This is how OpenWolf saves tokens.
 
@@ -143,7 +146,7 @@ The daemon is optional. OpenWolf works without it -- hooks are the primary layer
 
 ### AI tasks and credentials
 
-The daemon's AI tasks (`cerebrum-reflection` and `project-suggestions`) use `claude -p` to invoke the Claude CLI. These use your **Claude subscription credentials** from `~/.claude/.credentials.json` -- not API credits.
+The daemon's AI tasks (`cerebrum-reflection` and `project-suggestions`) use `claude -p` to invoke the Claude CLI. These use your **Claude subscription credentials** -- not API credits.
 
 If `ANTHROPIC_API_KEY` is set in your environment, OpenWolf automatically strips it when spawning `claude -p` to ensure the subscription OAuth token is used instead.
 

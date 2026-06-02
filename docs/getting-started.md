@@ -1,170 +1,79 @@
+<!-- generated-by: gsd-doc-writer -->
+
 # Getting Started
 
 ## Prerequisites
 
-- **Node.js 20+** -- [download](https://nodejs.org). Required even if you installed Claude Code via the native installer, because OpenWolf's hooks run as Node.js scripts.
-- **Claude Code** -- OpenWolf is middleware for Claude Code. Any installation method works: native installer, npm, Homebrew, or WinGet. The Claude Code desktop app is also supported.
+Before installing OpenWolf, make sure you have the following installed:
 
-## Install OpenWolf
+- **Node.js** `>= 20.0.0`
+  - OpenWolf hooks run as Node.js scripts, so Node is required even if you installed Claude Code via a native installer.
+  - Download from [nodejs.org](https://nodejs.org) or use a version manager such as `nvm`.
+- **Claude Code**
+  - OpenWolf is middleware for Claude Code. Any installation method works: native installer, npm, Homebrew, or WinGet. The Claude Code desktop app is also supported.
 
-```bash
-npm install -g openwolf
-```
+## Installation steps
 
-Verify the installation:
+1. Install OpenWolf globally:
 
-```bash
-openwolf --version
-```
+   ```bash
+   npm install -g openwolf
+   ```
 
-## Initialize a project
+2. Verify the installation:
 
-Navigate to any project and run:
+   ```bash
+   openwolf --version
+   ```
 
-```bash
-cd your-project
-openwolf init
-```
+   You should see the installed version printed (e.g., `1.0.5-beta`).
 
-You'll see:
+3. (Optional) If you plan to use **Design QC**, install the optional dependency:
 
-```
-  ✓ OpenWolf initialized
-  ✓ .wolf/ created with 11 files
-  ✓ Claude Code hooks registered (6 hooks)
-  ✓ CLAUDE.md updated
-  ✓ .claude/rules/openwolf.md created
-  ✓ Anatomy scan: 47 files indexed
-  ✓ Daemon: start manually with: openwolf daemon start
+   ```bash
+   npm install -g puppeteer-core
+   ```
 
-  You're ready. Just use 'claude' as normal. OpenWolf is watching.
-```
+   Design QC requires a Chrome or Chromium browser installation to capture screenshots.
 
-That's it. No configuration needed. Just use `claude` as you normally would.
+## First run
 
-## Verify it's working
+1. Navigate to the project you want to manage:
 
-```bash
-openwolf status
-```
+   ```bash
+   cd your-project
+   ```
 
-```
-OpenWolf Status
-===============
+2. Initialize OpenWolf in the project:
 
-  ✓ All 11 core files present
-  ✓ All 7 hook scripts present
-  ✓ Claude Code hooks registered (6 matchers)
+   ```bash
+   openwolf init
+   ```
 
-Token Stats:
-  Sessions: 0
-  Total reads: 0
-  Total writes: 0
-  Tokens tracked: ~0
-  Estimated savings: ~0 tokens
+   This creates a `.wolf/` directory with the project brain files, registers Claude Code hooks, and performs an initial anatomy scan.
 
-Anatomy: 47 files tracked
+3. Verify everything is ready:
 
-Daemon: initialized
-```
+   ```bash
+   openwolf status
+   ```
 
-## What happens next?
+   You should see confirmation that all core files and hooks are present, along with token stats and daemon status.
 
-Every time you run `claude` in this project:
+That is it. Use `claude` as you normally would. OpenWolf runs invisibly through its hooks.
 
-1. **Session starts** -- OpenWolf creates a session tracker and logs the start to `memory.md`
-2. **Before file reads** -- the hook checks if the file was already read (warns you) and shows the anatomy description
-3. **Before writes** -- the hook scans your `cerebrum.md` Do-Not-Repeat list and warns if you're about to repeat a known mistake
-4. **After reads** -- token usage is estimated and tracked
-5. **After writes** -- `anatomy.md` is updated with the new/changed file, `memory.md` gets a log entry
-6. **On stop** -- session totals are written to the token ledger
+## Common setup issues
 
-You don't interact with any of this. It's invisible.
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| `openwolf: command not found` after global install | npm global bin directory is not in your shell `PATH` | Add the npm global prefix `bin` directory to your `PATH`, or use `npx openwolf` instead |
+| Path separator errors on Windows | Older Node.js versions have path-handling edge cases | Upgrade to **Node.js 20.10.0 or later**. OpenWolf normalizes paths internally, but some edge cases require Node 20.10+ |
+| `Credit balance is too low` when running AI tasks | `ANTHROPIC_API_KEY` is set in your environment, but the key has no credits | OpenWolf automatically strips `ANTHROPIC_API_KEY` when running AI tasks so that `claude -p` uses your subscription credentials from `~/.claude/.credentials.json` instead |
+| Design QC fails with browser not found | Chrome or Chromium is not installed, or `puppeteer-core` is missing | Install a Chromium-based browser (Chrome, Edge, or Chromium) and install `puppeteer-core` globally |
 
-## View the dashboard
+## Next steps
 
-The simplest way to get going. This auto-starts the daemon and opens the dashboard:
-
-```bash
-openwolf dashboard
-```
-
-Opens `http://localhost:18791` with real-time token usage, project anatomy, cron status, cerebrum state, and more.
-
-## Optional: Persistent daemon with PM2
-
-For production use, you can run the daemon via [PM2](https://pm2.keymetrics.io/) for auto-restart and boot persistence:
-
-```bash
-npm install -g pm2
-```
-
-```bash
-openwolf daemon start
-```
-
-::: tip Windows
-Run `pm2-windows-startup` for boot persistence after installing PM2.
-:::
-
-::: info PM2 is optional
-`openwolf dashboard` starts the daemon automatically without PM2. PM2 is only needed if you want the daemon to survive terminal closures and auto-start on boot.
-:::
-
-## AI-powered tasks
-
-OpenWolf includes two weekly AI tasks that use your **Claude subscription** (not API credits):
-
-- **Cerebrum reflection** -- reviews and cleans up `cerebrum.md` (Sundays 3am)
-- **AI suggestions** -- analyzes your project and generates improvement suggestions (Mondays 4am)
-
-These run automatically via the daemon's cron scheduler. You can also trigger them manually:
-
-```bash
-openwolf cron run cerebrum-reflection
-openwolf cron run project-suggestions
-```
-
-::: warning ANTHROPIC_API_KEY conflict
-If you have `ANTHROPIC_API_KEY` set in your environment, OpenWolf automatically strips it when running AI tasks so that `claude -p` uses your subscription credentials from `~/.claude/.credentials.json` instead. This prevents "Credit balance is too low" errors when your API key has no credits but your subscription is active.
-:::
-
-## Design QC
-
-Design QC captures full-page sectioned screenshots of your running app so Claude can evaluate the design. It requires `puppeteer-core` and a Chrome/Chromium installation:
-
-```bash
-npm install -g puppeteer-core
-```
-
-Then run:
-
-```bash
-openwolf designqc
-```
-
-OpenWolf will auto-detect (or start) your dev server, detect routes from your project structure, and capture screenshots at desktop (1440px) and mobile (375px) viewports. Screenshots are saved to `.wolf/designqc-captures/`.
-
-After capture, tell Claude:
-
-> Read the screenshots in `.wolf/designqc-captures/` and evaluate the design.
-
-Claude reads the images directly and provides inline feedback. No external design tools or services needed.
-
-::: tip Options
-Use `--url http://localhost:3000` to specify a dev server URL manually. Use `--desktop-only` to skip mobile captures. Use `--routes /,/about,/pricing` to capture specific routes.
-:::
-
-## Reframe
-
-Need help choosing a UI component framework? Just ask Claude:
-
-> Help me pick a UI framework for this project.
-
-OpenWolf ships a knowledge file (`.wolf/reframe-frameworks.md`) that Claude reads automatically. It covers 12 frameworks -- shadcn/ui, Aceternity UI, Magic UI, DaisyUI, HeroUI, Chakra UI, Flowbite, Preline UI, Park UI, Origin UI, Headless UI, and Cult UI -- with a decision tree, comparison matrix, and ready-made migration prompts.
-
-There is no CLI command for reframe. It works through Claude's normal conversation flow.
-
-::: tip Windows path separators
-If you see path errors on Windows, ensure you're using a recent Node.js 20+ release. OpenWolf normalizes paths internally, but some edge cases require Node 20.10+.
-:::
+- **Learn the commands** -- See `docs/commands.md` for the full CLI reference.
+- **Configuration** -- See `docs/configuration.md` for environment variables and config files.
+- **Architecture** -- See `docs/ARCHITECTURE.md` for an overview of the system components.
+- **Contributing** -- See `CONTRIBUTING.md` for development setup and contribution guidelines.
