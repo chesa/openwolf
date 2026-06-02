@@ -165,3 +165,31 @@ None. This plan is verification + tracking only — no code paths, no new I/O, n
 - ROADMAP.md Progress table row 2: `3/3 | Complete | 2026-06-02`.
 - STATE.md Current Position: `Phase: 02 (hook-module-split) — COMPLETE`, `Status: Complete`, `Progress: [█████░░░░░] 50%`.
 - STATE.md Decisions log: contains the Phase 2 completion entry.
+
+## Final Self-Check (post-commit)
+
+```
+=== SELF-CHECK ===
+
+1. Files exist check:
+  FOUND: .planning/phases/02-hook-module-split/02-VERIFICATION.md (56 lines)
+  FOUND: .planning/phases/02-hook-module-split/02-03-SUMMARY.md (167 lines)
+
+2. Commits exist check:
+  FOUND: 8446efd
+  FOUND: f00793a
+  FOUND: bb789ed
+
+3. ROADMAP.md Phase 2 status check:
+  - [x] **Phase 2: Hook Module Split** - Split shared.ts into focused concern modules with re-export facade; verify backward compatibility (completed 2026-06-02)
+
+4. STATE.md progress percent check:
+  percent: 50
+
+5. Working tree status:
+  (empty = clean)
+
+=== SELF-CHECK COMPLETE ===
+```
+
+**Self-Check: PASSED.**
