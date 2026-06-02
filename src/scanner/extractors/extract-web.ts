@@ -1,5 +1,3 @@
-import * as path from "node:path";
-
 // ─── TypeScript / JavaScript ─────────────────────────────────
 export function extractTsJs(content: string, basename: string, ext: string): string {
   // React/Preact component

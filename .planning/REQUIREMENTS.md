@@ -21,17 +21,17 @@
 
 - [x] **HOOK-01**: `src/hooks/shared.ts` split into focused concern modules with re-export facade; each module ≤ 4,000 tokens
 - [x] **HOOK-02**: Hook re-exports from `shared.ts` maintain backward compatibility with existing hook imports (no changes required by consumers)
-- [ ] **HOOK-03**: `docs/hooks.md` documents the `worktree-helper.js` hook contract
+- [x] **HOOK-03**: `docs/hooks.md` documents the `worktree-helper.js` hook contract
 
 ### Scanner Modularization
 
-- [ ] **SCAN-01**: `description-extractor.ts` per-language handlers extracted into separate modules under `src/scanner/extractors/`
-- [ ] **SCAN-02**: Each scanner module ≤ 5,000 tokens after extraction
+- [x] **SCAN-01**: `description-extractor.ts` per-language handlers extracted into separate modules under `src/scanner/extractors/`
+- [x] **SCAN-02**: Each scanner module ≤ 5,000 tokens after extraction
 
 ### Test Consolidation
 
-- [ ] **TEST-01**: All tests consolidated under `tests/` directory (not `src/tests/`)
-- [ ] **TEST-02**: `vitest.config.ts` `include` path updated to `tests/**/*.test.ts`
+- [x] **TEST-01**: All tests consolidated under `tests/` directory (not `src/tests/`)
+- [x] **TEST-02**: `vitest.config.ts` `include` path updated to `tests/**/*.test.ts`
 
 ### Repository Hygiene
 
@@ -66,11 +66,11 @@
 | HOOK-02 | Phase 2 | Complete |
 | COMPAT-01 | Phase 2 | Complete |
 | COMPAT-02 | Phase 2 | Complete |
-| SCAN-01 | Phase 3 | Pending |
-| SCAN-02 | Phase 3 | Pending |
-| TEST-01 | Phase 3 | Pending |
-| TEST-02 | Phase 3 | Pending |
-| HOOK-03 | Phase 3 | Pending |
+| SCAN-01 | Phase 3 | Complete |
+| SCAN-02 | Phase 3 | Complete |
+| TEST-01 | Phase 3 | Complete |
+| TEST-02 | Phase 3 | Complete |
+| HOOK-03 | Phase 3 | Complete |
 | CLEAN-01 | Phase 4 | Pending |
 | CLEAN-02 | Phase 4 | Pending |
 

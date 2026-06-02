@@ -305,7 +305,7 @@ try {
 | A1 | 4-family extraction stays under 5,000 tokens per module | D-01 analysis (CONTEXT.md) | LOW — based on LOC estimates; actual token count may vary |
 | A2 | `src/tests/` contains only security.test.ts | Environment audit | LOW — verified via ls; confirmed 9 test files in src/ with only security.test.ts in src/tests/ |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Vitest alias consideration**
    - What we know: D-02 notes planner may add `@/` alias to simplify imports
