@@ -54,7 +54,7 @@
 - Token stored in `sessionStorage` (not `localStorage`) — cleared when the browser tab closes.
 - Consider `Content-Security-Policy` to restrict inline script execution in future hardening.
 
-**Notable:** Because the token is in `sessionStorage` (not an auto-transmitted cookie), an XSS payload must explicitly call `sessionStorage.getItem("token")`. The browser's same-origin policy prevents the injected script from reading `sessionStorage` for a different origin, but the dashboard and daemon share the same origin by design.
+**Notable:** Because the token is in `sessionStorage` (not an auto-transmitted cookie), an XSS payload must explicitly call `sessionStorage.getItem("wolf_token")`. The browser's same-origin policy prevents the injected script from reading `sessionStorage` for a different origin, but the dashboard and daemon share the same origin by design.
 
 ---
 

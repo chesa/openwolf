@@ -36,8 +36,8 @@ If no running server is found, Design QC reads your `package.json` scripts and l
 
 Design QC scans your project for route files:
 
-- **Next.js** -- `pages/` and `app/` directories
-- **Vite / React Router** -- `pages/` directory
+- **Next.js / Remix** -- `pages/` and `app/` directories
+- **Vite / React Router** -- `pages/`, `app/`, `src/pages/`, and `src/app/` directories
 - **Astro** -- `src/pages/` directory
 
 Detected routes are queued for capture unless you specify `--routes` manually.
@@ -115,7 +115,7 @@ Design QC settings can be configured in `.wolf/config.json` under the `designqc`
 OpenWolf searches for a Chromium-based browser in this order:
 
 **Windows:**
-1. `designqc.chrome_path` in `.wolf/config.json` (manual override)
+1. `openwolf.designqc.chrome_path` in `.wolf/config.json` (manual override)
 2. `Program Files/Google/Chrome/Application/chrome.exe`
 3. `Program Files (x86)/Google/Chrome/Application/chrome.exe`
 4. `LOCALAPPDATA/Google/Chrome/Application/chrome.exe`

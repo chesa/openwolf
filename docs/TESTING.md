@@ -8,7 +8,7 @@ OpenWolf uses [Vitest](https://vitest.dev/) as its test framework. Tests run in 
 
 ## Test Framework and Setup
 
-- **Framework:** Vitest 4.1.5
+- **Framework:** Vitest `^4.1.5`
 - **Environment:** Node.js (`environment: "node"` in `vitest.config.ts`)
 - **File pattern:** `tests/**/*.test.ts`
 
@@ -143,13 +143,12 @@ vi.mock("node:fs", async (importOriginal) => {
 
 No coverage threshold is configured. The project does not enforce minimum line, branch, function, or statement coverage in CI.
 
-To generate a coverage report manually, run:
+To generate a coverage report manually, install a coverage provider first — `@vitest/coverage-v8` is not included in the project's dependencies — then pass the `--coverage` flag:
 
 ```bash
+pnpm add -D @vitest/coverage-v8
 pnpm test -- --coverage
 ```
-
-> **Note:** `--coverage` requires `@vitest/coverage-v8` or an equivalent coverage provider to be installed.
 
 ---
 

@@ -11,7 +11,7 @@ How to set up, build, and contribute to OpenWolf.
 1. Fork and clone the repository:
 
    ```bash
-   git clone https://github.com/your-username/openwolf.git
+   git clone https://github.com/cytostack/openwolf.git
    cd openwolf
    ```
 
@@ -68,29 +68,36 @@ OpenWolf does not currently enforce linting or formatting via ESLint, Prettier, 
 - Keep line lengths reasonable; break long lines for readability.
 - Match existing code style when editing files.
 
+Run these before committing to catch type errors:
+
+```bash
+tsc --noEmit
+tsc --noEmit -p tsconfig.hooks.json
+```
+
 ---
 
 ## Branch Conventions
 
-No formal branch naming convention is documented. The default branch is `main`.
+Branch from `main`. Use conventional commit style for commit messages:
 
-Create a descriptive branch name for your change:
-
-```bash
-git checkout -b my-change
 ```
+type(scope): description
+```
+
+Examples: `fix(cli): handle missing .wolf dir`, `feat(hooks): add pre-tool hook`.
 
 ---
 
 ## PR Process
 
 1. Keep PRs focused -- one feature or fix per PR.
-2. Describe what your PR does and why in the description.
-3. If your change is platform-specific, note which platforms you tested on.
-4. Update `README.md` if you add or change commands.
-5. Update `src/templates/` if you change the `.wolf/` file structure.
-6. Build and verify before pushing: `pnpm build && node dist/bin/openwolf.js --help`.
-7. Commit with a clear message describing **what** and **why**.
+2. Ensure `pnpm build` and `pnpm test` pass before requesting review.
+3. Describe what your PR does and why in the description.
+4. If your change is platform-specific, note which platforms you tested on.
+5. Update `README.md` if you add or change commands.
+6. Update `src/templates/` if you change the `.wolf/` file structure.
+7. Update relevant pages under `docs/` if user-facing behavior changes.
 8. Push and open a pull request against `main`.
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for the full contribution guide.
@@ -114,7 +121,12 @@ See [TESTING.md](TESTING.md) for detailed testing documentation.
 
 ## CI / CD
 
-The only CI workflow is `.github/workflows/docs.yml`, which builds and deploys the VitePress documentation site to GitHub Pages on pushes to `main` that touch `docs/**`.
+The only CI workflow is `.github/workflows/docs.yml`, which builds and deploys the VitePress documentation site to GitHub Pages. It triggers on:
+
+- Pushes to `main` that touch `docs/**` or `.github/workflows/docs.yml`
+- Manual dispatch (`workflow_dispatch`)
+
+The workflow installs dependencies with `npm` (inside the `docs/` directory) and runs `npm run build`, outputting to `docs/.vitepress/dist`.
 
 There is no automated test or build CI pipeline at this time.
 

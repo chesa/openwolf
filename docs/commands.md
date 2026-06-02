@@ -41,7 +41,7 @@ openwolf status
 OpenWolf Status
 ===============
 
-  ✓ All 9 core files present
+  ✓ All 9 shared knowledge files present
   ✓ All 8 hook scripts present
   ✓ Claude Code hooks registered (6 matchers)
 

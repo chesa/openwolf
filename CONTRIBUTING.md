@@ -52,15 +52,19 @@ src/
 └── templates/     Files created by `openwolf init`
 ```
 
-### Useful Build Commands
+### Build Commands
 
 | Command | Description |
 |---------|-------------|
-| `pnpm build` | Full build (TypeScript + hooks + dashboard) |
+| `pnpm build` | Full build (TypeScript + hooks + dashboard + templates) |
 | `pnpm build:hooks` | Compile hooks only |
 | `pnpm build:dashboard` | Build the React dashboard only |
 | `pnpm dev` | Watch mode for TypeScript CLI/core |
+| `pnpm test` | Run the full test suite once |
+| `pnpm test:watch` | Run tests in watch mode |
 | `pnpm docs:dev` | Start the local VitePress docs site |
+| `pnpm docs:build` | Build the VitePress docs for deployment |
+| `pnpm clean` | Remove `dist/`, `.wolf/designqc-captures/`, and `tmp.*` directories |
 
 ## Coding Standards
 
