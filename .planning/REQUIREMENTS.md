@@ -35,8 +35,8 @@
 
 ### Repository Hygiene
 
-- [ ] **CLEAN-01**: `pnpm clean` script removes `dist/`, `.wolf/designqc-captures/`, and `tmp.*` directories
-- [ ] **CLEAN-02**: `.DS_Store` removed from `.claude/` and repo root; added to `.gitignore`
+- [x] **CLEAN-01**: `pnpm clean` script removes `dist/`, `.wolf/designqc-captures/`, and `tmp.*` directories
+- [x] **CLEAN-02**: `.DS_Store` removed from `.claude/` and repo root; added to `.gitignore`
 
 ### Backward Compatibility
 
@@ -71,8 +71,8 @@
 | TEST-01 | Phase 3 | Complete |
 | TEST-02 | Phase 3 | Complete |
 | HOOK-03 | Phase 3 | Complete |
-| CLEAN-01 | Phase 4 | Pending |
-| CLEAN-02 | Phase 4 | Pending |
+| CLEAN-01 | Phase 4 | Complete |
+| CLEAN-02 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 16 total
