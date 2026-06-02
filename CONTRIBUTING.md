@@ -15,7 +15,7 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 1. **Prerequisites:** Node.js `>=20.0.0` and `pnpm`.
 2. **Clone and install:**
    ```bash
-   git clone https://github.com/cytostack/openwolf.git
+   git clone https://github.com/chesa/openwolf.git
    cd openwolf
    pnpm install
    ```
@@ -24,7 +24,7 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
    pnpm build
    ```
    This compiles the CLI core, hooks, dashboard, and templates into `dist/`.
-4. **Smoke-test the build:**
+4. **After building, smoke-test with:**
    ```bash
    node dist/bin/openwolf.js --help
    ```
@@ -97,7 +97,7 @@ src/
 ## Issue Reporting
 
 Open bugs and feature requests on [GitHub
-Issues](https://github.com/cytostack/openwolf/issues).
+Issues](https://github.com/chesa/openwolf/issues).
 
 - **Bugs:** Include your OS and Node.js version, steps to reproduce, expected
   behavior, actual behavior, and any relevant logs.

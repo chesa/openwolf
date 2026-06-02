@@ -68,7 +68,7 @@
 
 2. **Daemon restart (rotates token):** The daemon deletes `daemon-token.tmp` on graceful shutdown (SIGTERM/SIGINT). On next start, a new 256-bit token is generated (`src/daemon/wolf-daemon.ts` lines 22-35). The previous token is no longer valid.
 
-**Limitation:** Active WebSocket connections are not immediately invalidated on daemon restart. Existing connections will receive an auth failure on next reconnect attempt. There is no server-side session revocation list — the daemon is stateless (validates against the secret file only).
+**Limitation:** Active WebSocket connections are immediately invalidated on daemon restart (the daemon calls `client.close()` on each connection during graceful shutdown). Existing connections will receive an auth failure on next reconnect attempt. There is no server-side session revocation list — the daemon is stateless (validates against the secret file only).
 
 **Acceptability:** This is acceptable for the single-user local SPA design. The token lifetime is naturally bounded by daemon uptime, and a restart rotates the secret.
 
@@ -82,7 +82,7 @@
 
 **Trigger:** User runs `openwolf daemon restart` (or sends SIGTERM to the daemon process). Next start generates a new 256-bit token via `crypto.randomBytes(32)`.
 
-**Limitation:** Active WebSocket connections are not immediately invalidated. They will reconnect with the new token or fail auth naturally. There is no scheduled rotation — rotation is on-demand only.
+**Limitation:** Active WebSocket connections are immediately invalidated on daemon restart (the daemon calls `client.close()` on each connection during graceful shutdown). They will reconnect with the new token or fail auth naturally. There is no scheduled rotation — rotation is on-demand only.
 
 **No scheduled rotation** is implemented. Rotation is triggered manually via daemon restart.
 
@@ -133,4 +133,4 @@
 - `src/dashboard/app/lib/wolf-client.ts` — WebSocket client, `Authorization: Bearer` header transport
 - `src/dashboard/app/hooks/useWolfData.ts` — Reads `wolf_token` from `sessionStorage`, passes to `WolfClient`
 - `src/dashboard/app/main.tsx` — Bootstrap: reads token from URL param, stores as `wolf_token` in `sessionStorage`
-- `.wolf/config.json` — `openwolf.dashboard.bind` (loopback default), `openwolf.daemon.port`
+- `.wolf/config.json` — `openwolf.dashboard.enabled`, `openwolf.dashboard.port`, `openwolf.daemon.port`

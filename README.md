@@ -130,6 +130,7 @@ openwolf restore [backup]  Restore .wolf/ from a backup
 
 - [Getting Started](docs/getting-started.md)
 - [How It Works](docs/how-it-works.md)
+- [Architecture](docs/ARCHITECTURE.md)
 - [Commands Reference](docs/commands.md)
 - [Configuration](docs/configuration.md)
 - [Hooks](docs/hooks.md)
@@ -138,6 +139,8 @@ openwolf restore [backup]  Restore .wolf/ from a backup
 - [Reframe](docs/reframe.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Updating](docs/updating.md)
+- [Development](docs/DEVELOPMENT.md)
+- [Testing](docs/TESTING.md)
 
 ## Contributing
 

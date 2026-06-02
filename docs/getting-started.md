@@ -14,6 +14,8 @@ Before installing OpenWolf, make sure you have the following installed:
 
 ## Installation steps
 
+### Install from npm (recommended)
+
 1. Install OpenWolf globally:
 
    ```bash
@@ -35,6 +37,33 @@ Before installing OpenWolf, make sure you have the following installed:
    ```
 
    Design QC requires a Chrome or Chromium browser installation to capture screenshots.
+
+### Build from source
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/cytostack/openwolf.git
+   cd openwolf
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   pnpm install
+   ```
+
+3. Build the project:
+
+   ```bash
+   pnpm build
+   ```
+
+4. After building, verify the CLI works:
+
+   ```bash
+   node dist/bin/openwolf.js --help
+   ```
 
 ## First run
 
@@ -66,8 +95,8 @@ That is it. Use `claude` as you normally would. OpenWolf runs invisibly through 
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| `openwolf: command not found` after global install | npm global bin directory is not in your shell `PATH` | Add the npm global prefix `bin` directory to your `PATH`, or use `npx openwolf` instead |
-| Path separator errors on Windows | Older Node.js versions have path-handling edge cases | Upgrade to **Node.js 20.0.0 or later**. OpenWolf normalizes paths internally. |
+| `openwolf: command not found` after global install | npm global bin directory is not in your shell `PATH` | Add the npm global prefix `bin` directory to your `PATH` |
+| Commands say "OpenWolf not initialized" | The project has not been initialized with OpenWolf. These commands require the `.wolf/` directory and its configuration files to exist. | Run `openwolf init` from your project root |
 | `Credit balance is too low` when running AI tasks | `ANTHROPIC_API_KEY` is set in your environment, but the key has no credits | OpenWolf automatically strips `ANTHROPIC_API_KEY` when running AI tasks so that `claude -p` uses your subscription credentials from `~/.claude/.credentials.json` instead |
 | Design QC fails with browser not found | Chrome or Chromium is not installed, or `puppeteer-core` is missing | Install a Chromium-based browser (Chrome, Edge, or Chromium) and install `puppeteer-core` globally |
 

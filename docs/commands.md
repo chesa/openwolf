@@ -1,3 +1,4 @@
+<!-- generated-by: gsd-doc-writer -->
 # Commands
 
 Complete reference for all OpenWolf CLI commands.
@@ -11,7 +12,7 @@ openwolf init
 ```
 
 **What it does:**
-1. Detects the project root (looks for `.git`, `package.json`, `Cargo.toml`, etc.)
+1. Detects the project root (looks for `.git`, `package.json`, etc.)
 2. Creates `.wolf/` with 14 template files
 3. Copies 8 hook scripts to `.wolf/hooks/`
 4. Registers 6 Claude Code hooks in `.claude/settings.json`
@@ -81,7 +82,7 @@ Compare the current filesystem against `.wolf/anatomy.md` without writing any ch
 openwolf scan --check
 ```
 
-Useful in CI pipelines to verify that `anatomy.md` has been kept in sync:
+Useful in CI pipelines to verify that `.wolf/anatomy.md` has been kept in sync:
 
 ```bash
 openwolf scan --check || echo ".wolf/anatomy.md is out of date. Run openwolf scan"
