@@ -734,7 +734,7 @@ unverified" assertions.)*
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED — see D-08, D-09 in 02-CONTEXT.md)
 
 1. **Should `normalizePath` be in `wolf-paths.ts` or stay in `wolf-files.ts`?**
    - What we know: It's a one-liner path-string function with no dependencies.
