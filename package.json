@@ -17,7 +17,8 @@
     "docs:build": "vitepress build docs",
     "prepublishOnly": "pnpm build",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "clean": "node -e \"const fs=require('fs');['dist','.wolf/designqc-captures'].forEach(p=>{if(fs.existsSync(p))fs.rmSync(p,{recursive:true,force:true})});fs.readdirSync('.').filter(f=>/^tmp\\./.test(f)).forEach(d=>fs.rmSync(d,{recursive:true,force:true}))\""
   },
   "dependencies": {
     "chalk": "^5.3.0",
