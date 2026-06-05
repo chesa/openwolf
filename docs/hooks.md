@@ -1,3 +1,4 @@
+<!-- generated-by: gsd-doc-writer -->
 # Hooks
 
 OpenWolf registers 6 hooks with Claude Code. They fire automatically on every action. No user interaction required.
@@ -20,10 +21,10 @@ All hooks are **pure Node.js file I/O**. No network calls, no AI, no external de
        │ (read happens)
        ▼
 ┌──────────────┐      ┌──────────────┐
-│ Read complete │──→   │ post-read.js │──→ estimates tokens, records to _session.json
+│ Read complete │──→   │ post-read.js  │──→ estimates tokens, records to _session.json
 └──────────────┘      └──────────────┘
 
-┌──────────────┐      ┌───────────────┐
+┌──────────────┐      ┌──────────────┐
 │ Claude wants  │──→   │ pre-write.js  │──→ checks cerebrum Do-Not-Repeat patterns
 │ to WRITE     │      └───────────────┘
 └──────┬───────┘
@@ -31,11 +32,11 @@ All hooks are **pure Node.js file I/O**. No network calls, no AI, no external de
        ▼
 ┌──────────────┐      ┌────────────────┐
 │ Write done    │──→   │ post-write.js  │──→ updates anatomy.md, appends to memory.md
-└──────────────┘      └────────────────┘
+└──────┬───────┘      └────────────────┘
 
 ┌──────────────┐      ┌──────────┐
 │ Claude stops  │──→   │ stop.js  │──→ writes session summary to token-ledger.json
-└──────────────┘      └──────────┘
+└──────┬────────┘      └──────────┘
 ```
 
 ## `session-start.js`
