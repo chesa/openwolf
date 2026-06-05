@@ -23,6 +23,10 @@ function deepMergeDefaults<T>(defaults: T, loaded: T): T {
     defaults
   ) as Record<string, unknown>;
   for (const key of Object.keys(loaded as Record<string, unknown>)) {
+    // Skip dangerous prototype keys to prevent prototype pollution
+    if (key === "__proto__" || key === "constructor" || key === "prototype") {
+      continue;
+    }
     const lv = (loaded as Record<string, unknown>)[key];
     const dv = (defaults as Record<string, unknown>)[key];
     if (isPlainObject(lv) && isPlainObject(dv)) {

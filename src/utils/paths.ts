@@ -11,7 +11,14 @@ export function getWolfDir(from?: string): string {
 }
 
 export function resolveWolfFile(file: string, from?: string): string {
-  return path.join(getWolfDir(from), file);
+  const wolfDir = getWolfDir(from);
+  const resolved = path.resolve(path.join(wolfDir, file));
+  const resolvedWolfDir = path.resolve(wolfDir);
+  // Verify resolved path is contained within .wolf/ directory (prevent path traversal)
+  if (!resolved.startsWith(resolvedWolfDir + path.sep) && resolved !== resolvedWolfDir) {
+    throw new Error(`Path traversal detected: ${file} resolves outside .wolf/ directory`);
+  }
+  return resolved;
 }
 
 export function ensureDir(dir: string): void {
