@@ -22,9 +22,11 @@ function deepMergeDefaults<T>(defaults: T, loaded: T): T {
   const result: Record<string, unknown> = structuredClone(
     defaults
   ) as Record<string, unknown>;
+  const skipped: string[] = [];
   for (const key of Object.keys(loaded as Record<string, unknown>)) {
     // Skip dangerous prototype keys to prevent prototype pollution
     if (key === "__proto__" || key === "constructor" || key === "prototype") {
+      skipped.push(key);
       continue;
     }
     const lv = (loaded as Record<string, unknown>)[key];
@@ -34,6 +36,11 @@ function deepMergeDefaults<T>(defaults: T, loaded: T): T {
     } else {
       result[key] = lv;
     }
+  }
+  if (skipped.length > 0) {
+    console.warn(
+      `⚠️  deepMergeDefaults: Dropped potentially dangerous keys: ${skipped.join(", ")}`
+    );
   }
   return result as T;
 }

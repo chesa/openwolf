@@ -408,22 +408,22 @@ export class CronEngine {
           ...parsed,
         });
       } catch {
-        // Not JSON, might be a cerebrum update — write to staging file for review
-        if (result.includes("## User Preferences") || result.includes("## Key Learnings") || result.includes("# Cerebrum")) {
-          const cerebrumPath = path.join(this.wolfDir, "cerebrum.md");
+        // Not JSON — check if it looks like a cerebrum update with proper header validation
+        // Only accept output with actual markdown headers at line start, not substrings
+        const lines = result.split("\n");
+        const hasHeadersAtStart = lines.some((line) =>
+          line.startsWith("## User Preferences") ||
+          line.startsWith("## Key Learnings") ||
+          line.startsWith("# Cerebrum")
+        );
+
+        if (hasHeadersAtStart) {
           const draftPath = path.join(this.wolfDir, "cerebrum-draft.md");
-
-          // Create timestamped backup before any write (if original exists)
-          if (fs.existsSync(cerebrumPath)) {
-            const timestamp = new Date().toISOString().replace(/[:.Z]/g, "-");
-            const backupPath = path.join(this.wolfDir, `cerebrum.md.bak.${timestamp}`);
-            fs.copyFileSync(cerebrumPath, backupPath);
-            this.logger.info(`Backed up cerebrum.md to ${backupPath}`);
-          }
-
           // Write to staging file for user review instead of direct overwrite
           writeText(draftPath, result);
-          this.logger.warn(`⚠️  cerebrum.md draft generated at cerebrum-draft.md. Please review and promote manually to avoid unintended instruction changes.`);
+          this.logger.warn(
+            `⚠️  cerebrum.md draft generated at cerebrum-draft.md. Please review and promote manually to avoid unintended instruction changes.`
+          );
         }
       }
     } catch (err) {
