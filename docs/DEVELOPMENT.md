@@ -1,5 +1,4 @@
 <!-- generated-by: gsd-doc-writer -->
-
 # Development
 
 How to set up, build, and contribute to OpenWolf.

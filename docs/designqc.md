@@ -1,3 +1,4 @@
+<!-- generated-by: gsd-doc-writer -->
 # Design QC
 
 Screenshot capture tool that lets Claude Code evaluate your app's design visually. Capture-only architecture -- no separate API key needed.

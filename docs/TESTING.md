@@ -1,5 +1,4 @@
 <!-- generated-by: gsd-doc-writer -->
-
 # Testing
 
 OpenWolf uses [Vitest](https://vitest.dev/) as its test framework. Tests run in a Node.js environment and exercise both unit and integration surfaces.

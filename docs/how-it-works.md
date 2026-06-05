@@ -1,3 +1,4 @@
+<!-- generated-by: gsd-doc-writer -->
 # How It Works
 
 OpenWolf operates as invisible middleware between you and Claude Code. It has three layers: the `.wolf/` directory (state), hooks (enforcement), and optional features (Design QC, Reframe, daemon).

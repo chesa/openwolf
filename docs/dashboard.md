@@ -1,3 +1,4 @@
+<!-- generated-by: gsd-doc-writer -->
 # Dashboard
 
 OpenWolf includes a real-time web dashboard for visibility into your project's AI activity. It's a React SPA served by the daemon.

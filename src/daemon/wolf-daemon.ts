@@ -72,7 +72,7 @@ app.use(express.json());
 // In dist: dist/src/daemon/wolf-daemon.js → ../../../dist/dashboard/
 const dashboardDir = path.resolve(__dirname, "..", "..", "..", "dist", "dashboard");
 if (fs.existsSync(dashboardDir)) {
-  app.use(express.static(dashboardDir));
+  app.use(express.static(dashboardDir, { dotfiles: "deny" }));
 }
 
 // Constant-time token comparison — prevents timing side-channel attacks
