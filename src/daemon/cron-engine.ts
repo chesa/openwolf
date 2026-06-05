@@ -408,9 +408,22 @@ export class CronEngine {
           ...parsed,
         });
       } catch {
-        // Not JSON, might be a cerebrum update
+        // Not JSON, might be a cerebrum update — write to staging file for review
         if (result.includes("## User Preferences") || result.includes("## Key Learnings") || result.includes("# Cerebrum")) {
-          writeText(path.join(this.wolfDir, "cerebrum.md"), result);
+          const cerebrumPath = path.join(this.wolfDir, "cerebrum.md");
+          const draftPath = path.join(this.wolfDir, "cerebrum-draft.md");
+
+          // Create timestamped backup before any write (if original exists)
+          if (fs.existsSync(cerebrumPath)) {
+            const timestamp = new Date().toISOString().replace(/[:.Z]/g, "-");
+            const backupPath = path.join(this.wolfDir, `cerebrum.md.bak.${timestamp}`);
+            fs.copyFileSync(cerebrumPath, backupPath);
+            this.logger.info(`Backed up cerebrum.md to ${backupPath}`);
+          }
+
+          // Write to staging file for user review instead of direct overwrite
+          writeText(draftPath, result);
+          this.logger.warn(`⚠️  cerebrum.md draft generated at cerebrum-draft.md. Please review and promote manually to avoid unintended instruction changes.`);
         }
       }
     } catch (err) {
