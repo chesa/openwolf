@@ -59,6 +59,8 @@ interface SessionData {
 // Spy on stderr BEFORE importing stop.js so we capture any TypeError that
 // main() (called at module level) might write via its .catch() handler.
 // If the F-02 guard is ever removed, this spy will catch the regression.
+// Timing: `await import()` flushes the microtask queue, so main().catch()
+// has already fired by the time we snapshot _loadTimeCalls below.
 const _loadStderrSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
 const { finalizeSession } = await import("../../src/hooks/stop.js");
 const _loadTimeCalls = [..._loadStderrSpy.mock.calls];
@@ -169,7 +171,7 @@ describe("stop.ts robustness", () => {
         //   'OpenWolf stop: The "path" argument must be of type string. Received undefined'
         // The spy captured all stderr writes during module load; verify none match.
         const typeErrorCalls = _loadTimeCalls.filter(
-            (args) => typeof args[0] === "string" && (args[0] as string).includes("Received undefined")
+            (args) => String(args[0]).includes("Received undefined")
         );
         expect(typeErrorCalls).toHaveLength(0);
     });
