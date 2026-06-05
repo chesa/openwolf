@@ -165,11 +165,13 @@ export function safeCopyFile(src: string, dest: string): void {
     fs.renameSync(tmp, dest);
   } catch (err) {
     try { fs.unlinkSync(tmp); } catch (unlinkErr) {
-      // Temp file cleanup failed — log so the user knows a .tmp file was leaked.
-      // This can happen on EACCES or if the write itself never created the file.
-      process.stderr.write(
-        `[openwolf] safeCopyFile: failed to clean up temp file ${tmp}: ${unlinkErr instanceof Error ? unlinkErr.message : String(unlinkErr)}\n`
-      );
+      // ENOENT means the write never created the file — nothing to clean up, not a leak.
+      // Any other error (EACCES, etc.) means the temp file exists but can't be removed.
+      if ((unlinkErr as NodeJS.ErrnoException).code !== "ENOENT") {
+        process.stderr.write(
+          `[openwolf] safeCopyFile: failed to clean up temp file ${tmp}: ${unlinkErr instanceof Error ? unlinkErr.message : String(unlinkErr)}\n`
+        );
+      }
     }
     throw err;
   }
