@@ -10,6 +10,7 @@ import type { Logger } from "../utils/logger.js";
 interface CronAction {
   type: string;
   params?: Record<string, unknown>;
+  writes_to?: string[]; // Explicit list of .wolf/ files this task is allowed to modify
 }
 
 interface CronTask {
@@ -122,7 +123,7 @@ export class CronEngine {
     this.logger.info(`Executing task: ${task.name}`);
 
     try {
-      await this.runAction(task.action);
+      await this.runAction(task.action, task);
       const duration = Date.now() - startTime;
 
       // Log success
@@ -211,7 +212,7 @@ export class CronEngine {
     }
   }
 
-  private async runAction(action: CronAction): Promise<void> {
+  private async runAction(action: CronAction, task: CronTask): Promise<void> {
     switch (action.type) {
       case "scan_project":
         scanProject(this.wolfDir, this.projectRoot);
@@ -226,7 +227,7 @@ export class CronEngine {
         break;
 
       case "ai_task":
-        await this.runAiTask(action.params as { prompt: string; context_files: string[] });
+        await this.runAiTask(action.params as { prompt: string; context_files: string[] }, action);
         break;
 
       default:
@@ -324,7 +325,7 @@ export class CronEngine {
     }
   }
 
-  private async runAiTask(params: { prompt: string; context_files: string[] }): Promise<void> {
+  private async runAiTask(params: { prompt: string; context_files: string[] }, action: CronAction): Promise<void> {
     if (!this.hasClaude()) {
       throw new Error("Claude CLI not found. Install it from https://claude.ai/download or add it to PATH.");
     }
@@ -408,21 +409,18 @@ export class CronEngine {
           ...parsed,
         });
       } catch {
-        // Not JSON — check if it looks like a cerebrum update with proper header validation
-        // Only accept output with actual markdown headers at line start, not substrings
-        const lines = result.split("\n");
-        const hasHeadersAtStart = lines.some((line) =>
-          line.startsWith("## User Preferences") ||
-          line.startsWith("## Key Learnings") ||
-          line.startsWith("# Cerebrum")
-        );
-
-        if (hasHeadersAtStart) {
+        // Only write to instruction files if task explicitly declares it can (security gating)
+        if (action.writes_to?.includes("cerebrum-draft.md")) {
           const draftPath = path.join(this.wolfDir, "cerebrum-draft.md");
           // Write to staging file for user review instead of direct overwrite
           writeText(draftPath, result);
           this.logger.warn(
-            `⚠️  cerebrum.md draft generated at cerebrum-draft.md. Please review and promote manually to avoid unintended instruction changes.`
+            `⚠️  cerebrum.md draft generated at cerebrum-draft.md. Review and promote manually to avoid unintended instruction changes.`
+          );
+          // Also append to memory so the next Claude session sees the update
+          appendText(
+            path.join(this.wolfDir, "memory.md"),
+            `\n| cron | cerebrum-draft.md updated by AI task | cerebrum-draft.md | pending-review | ~tokens |`
           );
         }
       }

@@ -11,8 +11,8 @@ export function getWolfDir(from?: string): string {
 }
 
 export function resolveWolfFile(file: string, from?: string): string {
-  // Reject absolute paths and leading separators to prevent accidental root escape
-  if (path.isAbsolute(file) || file.startsWith("/") || file.startsWith("\\")) {
+  // Reject absolute paths to prevent escape from .wolf/ directory
+  if (path.isAbsolute(file)) {
     throw new Error(`Absolute paths not allowed in resolveWolfFile: ${file}`);
   }
   const wolfDir = getWolfDir(from);

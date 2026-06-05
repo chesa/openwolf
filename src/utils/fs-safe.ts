@@ -38,8 +38,8 @@ function deepMergeDefaults<T>(defaults: T, loaded: T): T {
     }
   }
   if (skipped.length > 0) {
-    console.warn(
-      `⚠️  deepMergeDefaults: Dropped potentially dangerous keys: ${skipped.join(", ")}`
+    process.stderr.write(
+      `[openwolf] ⚠️  deepMergeDefaults: Dropped potentially dangerous keys: ${skipped.join(", ")}\n`
     );
   }
   return result as T;
