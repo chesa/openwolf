@@ -166,6 +166,8 @@ async function main(): Promise<void> {
   ensureWolfDir();
   const wolfDir = getWolfDir();
   const sessionDir = getSessionDir();
+  // ensureWolfDir() exits when .wolf/ is absent; guard defensively for test isolation.
+  if (!wolfDir || !sessionDir) return;
   const sessionFile = path.join(sessionDir, "_session.json");
   const session = readJSON<SessionData>(sessionFile, {
     session_id: "",
