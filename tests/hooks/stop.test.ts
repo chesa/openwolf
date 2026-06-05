@@ -56,7 +56,13 @@ interface SessionData {
     stop_count: number;
 }
 
+// Spy on stderr BEFORE importing stop.js so we capture any TypeError that
+// main() (called at module level) might write via its .catch() handler.
+// If the F-02 guard is ever removed, this spy will catch the regression.
+const _loadStderrSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
 const { finalizeSession } = await import("../../src/hooks/stop.js");
+const _loadTimeCalls = [..._loadStderrSpy.mock.calls];
+_loadStderrSpy.mockRestore();
 
 describe("stop.ts robustness", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "ow-stop-"));
@@ -155,5 +161,16 @@ describe("stop.ts robustness", () => {
         expect(session.stop_count).toBe(0);
         finalizeSession(wolfDir, sessionDir, session);
         expect(session.stop_count).toBe(1);
+    });
+
+    it("F-02: main() does not emit TypeError to stderr when wolfDir/sessionDir are undefined", () => {
+        // The mock at module level returns undefined for getWolfDir()/getSessionDir().
+        // Without the F-02 guard, main().catch() writes:
+        //   'OpenWolf stop: The "path" argument must be of type string. Received undefined'
+        // The spy captured all stderr writes during module load; verify none match.
+        const typeErrorCalls = _loadTimeCalls.filter(
+            (args) => typeof args[0] === "string" && (args[0] as string).includes("Received undefined")
+        );
+        expect(typeErrorCalls).toHaveLength(0);
     });
 });

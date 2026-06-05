@@ -213,6 +213,18 @@ describe("safeCopyFile (fs-safe.ts)", () => {
     const tmpFiles = fs.readdirSync(tmpDir).filter(f => f.endsWith(".tmp"));
     expect(tmpFiles).toHaveLength(0);
   });
+
+  it("emits no stderr when source is missing (ENOENT cleanup is not a leak)", () => {
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    try {
+      const src = path.join(tmpDir, "nonexistent2.txt");
+      const dest = path.join(tmpDir, "dest-no-stderr.txt");
+      expect(() => safeCopyFile(src, dest)).toThrow();
+      expect(stderrSpy).not.toHaveBeenCalled();
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
