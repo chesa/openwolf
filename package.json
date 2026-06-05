@@ -57,11 +57,11 @@
   "author": "Cytostack Pvt Ltd",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cytostack/openwolf.git"
+    "url": "https://github.com/chesa/openwolf.git"
   },
-  "homepage": "https://github.com/cytostack/openwolf",
+  "homepage": "https://github.com/chesa/openwolf",
   "bugs": {
-    "url": "https://github.com/cytostack/openwolf/issues"
+    "url": "https://github.com/chesa/openwolf/issues"
   },
   "keywords": [
     "claude",

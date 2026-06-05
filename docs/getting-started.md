@@ -43,7 +43,7 @@ Before installing OpenWolf, make sure you have the following installed:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/cytostack/openwolf.git
+   git clone https://github.com/chesa/openwolf.git
    cd openwolf
    ```
 

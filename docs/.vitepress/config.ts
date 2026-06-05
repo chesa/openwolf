@@ -123,10 +123,10 @@ export default defineConfig({
       },
     ],
     socialLinks: [
-      { icon: "github", link: "https://github.com/cytostack/openwolf" },
+      { icon: "github", link: "https://github.com/chesa/openwolf" },
     ],
     footer: {
-      message: 'AGPL-3.0 · Made by <a href="https://github.com/cytostack" target="_blank">Cytostack</a>',
+      message: 'AGPL-3.0 · Made by <a href="https://github.com/chesa" target="_blank">Cytostack</a>',
       copyright: 'Copyright 2026 Cytostack Pvt Ltd',
     },
     search: {

@@ -11,7 +11,7 @@ How to set up, build, and contribute to OpenWolf.
 1. Fork and clone the repository:
 
    ```bash
-   git clone https://github.com/cytostack/openwolf.git
+   git clone https://github.com/chesa/openwolf.git
    cd openwolf
    ```
 
@@ -77,7 +77,7 @@ tsc --noEmit -p tsconfig.hooks.json
 
 ## Branch Conventions
 
-Branch from `develop`. `main` is the stable release branch and is updated via merges from `develop`.
+Branch from `develop`.
 
 Use conventional commit style for commit messages:
 
