@@ -133,4 +133,4 @@
 - `src/dashboard/app/lib/wolf-client.ts` — WebSocket client, `Authorization: Bearer` header transport
 - `src/dashboard/app/hooks/useWolfData.ts` — Reads `wolf_token` from `sessionStorage`, passes to `WolfClient`
 - `src/dashboard/app/main.tsx` — Bootstrap: reads token from URL param, stores as `wolf_token` in `sessionStorage`
-- `.wolf/config.json` — `openwolf.dashboard.enabled`, `openwolf.dashboard.port`, `openwolf.daemon.port`
+- `.wolf/config.json` — `openwolf.dashboard.enabled`, `openwolf.dashboard.port`

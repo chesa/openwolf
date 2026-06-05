@@ -11,7 +11,7 @@ How to set up, build, and contribute to OpenWolf.
 1. Fork and clone the repository:
 
    ```bash
-   git clone https://github.com/cytostack/openwolf.git
+   git clone https://github.com/chesa/openwolf.git
    cd openwolf
    ```
 

@@ -85,7 +85,7 @@ src/
 
 ## Pull Request Guidelines
 
-- Branch from `main`.
+- Branch from `develop`. `main` is the stable release branch and is updated via merges from `develop`.
 - Use conventional commit style for commit messages:
   `type(scope): description` (e.g., `fix(cli): handle missing .wolf dir`).
 - Keep pull requests focused on a single concern.
