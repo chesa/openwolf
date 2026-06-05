@@ -77,7 +77,7 @@ tsc --noEmit -p tsconfig.hooks.json
 
 ## Branch Conventions
 
-Branch from `develop`. `main` is the stable release branch and is updated via merges from `develop`.
+Branch from `develop`.
 
 Use conventional commit style for commit messages:
 
