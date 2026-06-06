@@ -26,6 +26,16 @@ Verify the installation:
 openwolf --version
 ```
 
+### Development Setup
+
+For **contributors** working on the CHESA OpenWolf fork, use the automated setup script:
+
+```bash
+./scripts/install-dev.sh
+```
+
+The script verifies Node.js >= 20, pnpm, and git repository prerequisites, installs dependencies, builds the project, links the CLI globally, and configures the upstream git remote for fork divergence management.
+
 ## Quick start
 
 1. Navigate to your project directory:

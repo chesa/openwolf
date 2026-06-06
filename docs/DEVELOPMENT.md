@@ -14,15 +14,19 @@ How to set up, build, and contribute to OpenWolf.
    cd openwolf
    ```
 
-2. Install dependencies:
+2. Run the automated setup script (recommended):
+
+   ```bash
+   ./scripts/install-dev.sh
+   ```
+
+   This installs dependencies, builds the project, links the CLI globally,
+   and configures the upstream git remote for fork divergence management.
+
+3. **Manual fallback** — If you prefer to run steps individually:
 
    ```bash
    pnpm install
-   ```
-
-3. Build the project:
-
-   ```bash
    pnpm build
    ```
 
