@@ -29,6 +29,7 @@ function getVersion(): string {
 const ALWAYS_OVERWRITE = [
   "OPENWOLF.md",
   "reframe-frameworks.md",
+  ".gitignore",
 ];
 
 // Files that contain user/session data — only create if missing, never overwrite.
@@ -129,6 +130,7 @@ function writeIdentity(projectRoot: string, wolfDir: string): void {
   fs.writeFileSync(identityPath, identity, "utf-8");
 }
 
+/** @deprecated Replaced by .wolf/.gitignore template (D-04). Call is removed from initCommand(). */
 function writeGitIgnore(projectRoot: string): void {
   const gitignorePath = path.join(projectRoot, ".gitignore");
   let gitignore = "";
@@ -378,8 +380,7 @@ export async function initCommand(): Promise<void> {
     seedStatus(wolfDir, projectRoot);
   }
 
-  // --- Project files ---
-  writeGitIgnore(projectRoot);
+  // --- .wolf/.gitignore (handled by ALWAYS_OVERWRITE template above) ---
 
   // --- Scan ---
   let fileCount = 0;
