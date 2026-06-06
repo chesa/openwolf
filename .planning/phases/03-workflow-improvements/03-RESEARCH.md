@@ -411,7 +411,7 @@ export function getWolfDir(): string {
 
 **If this table is empty:** All claims in this research were verified or cited — no user confirmation needed.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Lock scope: apply to CLI-side writeJSON (fs-safe.ts) too?**
    - What we know: D-01 specifically targets the hook-side writeJSON in wolf-json.ts. CLI commands (init, update, cron) are user-invoked serial operations.
