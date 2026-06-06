@@ -2,18 +2,20 @@
 
 # Configuration
 
-OpenWolf is configured through a JSON file in the project workspace and a small set of environment variables. All settings have sensible defaults, so no configuration is required for normal use.
+OpenWolf is configured through a JSON file in the project workspace and a small set of environment variables. All settings have sensible defaults, so no configuration is required for normal use. Advanced deployment scenarios may benefit from `OPENWOLF_METADATA_DIR` (alternate metadata storage location) and `WITH_FILE_LOCK_TTL_MS` (advisory file lock staleness threshold).
 
 ## Environment variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
+| `OPENWOLF_METADATA_DIR` | Optional | `<project>/.wolf/` | Absolute path to an alternate metadata storage location. If set, OpenWolf stores config, state, and knowledge files at this path instead of the project's `.wolf/` directory. Useful for shared network drives, dedicated volumes, or multi-project setups. Must be an absolute path — relative paths are rejected with a warning and fall back to the default. Hook scripts remain at `<project>/.wolf/hooks/`. |
 | `OPENWOLF_PROJECT_ROOT` | Optional | Auto-detected | Absolute path to the project root. The CLI sets this when spawning the daemon and dashboard so they resolve the correct `.wolf/` directory regardless of working directory. |
 | `CLAUDE_PROJECT_DIR` | Optional | `process.cwd()` | Set by Claude Code to the active project directory. Hooks read this to locate the `.wolf/` folder and write session data. |
 | `PROGRAMFILES` | Optional | `C:\Program Files` | Windows only. Used by DesignQC to discover Chrome or Edge installations. |
 | `PROGRAMFILES(X86)` | Optional | `C:\Program Files (x86)` | Windows only. Used by DesignQC to discover 32-bit browser installations. |
 | `LOCALAPPDATA` | Optional | — | Windows only. Used by DesignQC to discover user-local Chrome installations. |
 | `ANTHROPIC_API_KEY` | Optional | — | If present in the environment, the cron engine removes it before invoking `claude -p` so that OAuth subscription credentials are used instead of a potentially depleted API key. |
+| `WITH_FILE_LOCK_TTL_MS` | Optional | `30000` | Staleness threshold (milliseconds) for the advisory file lock used by concurrent hook processes. When a hook process crashes while holding a lock, the lock file remains. After this TTL expires, the lock is considered stale and automatically broken. Increase for very slow filesystems; decrease for faster lock recovery. |
 
 ## Config file format
 
@@ -153,3 +155,33 @@ Default values are defined in `src/templates/config.json` and used as templates 
 ## Per-environment overrides
 
 OpenWolf does not use `.env.*` files or `NODE_ENV`-based configuration layers. Per-environment behavior is controlled through `.wolf/config.json` directly. Because `.wolf/` is typically gitignored, each checkout or deployment can maintain its own `.wolf/config.json`.
+
+### `.wolf/.gitignore` (mixed commit strategy)
+
+OpenWolf ships with a default `.wolf/.gitignore` template that implements a "mixed commit strategy": only configuration files are tracked in git, while session state and runtime data remain ignored.
+
+**Default template (`src/templates/.gitignore`):**
+
+```
+*
+!.gitignore
+!OPENWOLF.md
+!identity.md
+!config.json
+```
+
+- `*` — ignore everything in `.wolf/` by default
+- `!.gitignore` — track the gitignore itself so users who clone the repo get the correct ignore rules
+- `!OPENWOLF.md` — track the project context document (this is a manually curated file worth sharing)
+- `!config.json` — track the configuration (port assignments, scan intervals, exclude patterns)
+- `!identity.md` — track the project identity (name, description, creation date)
+
+To track additional files (e.g., `cerebrum.md` for team-wide learnings), add a `!` line to `.wolf/.gitignore`:
+
+```gitignore
+!cerebrum.md
+```
+
+To revert to the "ignore everything" behavior (the old approach), delete all `!` lines except `!.gitignore` — or simply add `.wolf/` to your project-root `.gitignore`.
+
+The template is overwritten on every `openwolf init` or `openwolf update`. If you customize it, re-apply your changes after upgrading.
