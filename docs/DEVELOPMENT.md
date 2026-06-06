@@ -30,6 +30,14 @@ How to set up, build, and contribute to OpenWolf.
    pnpm build
    ```
 
+### Troubleshooting
+
+If `pnpm link --global` fails with a path error, ensure the pnpm bin directory is included in your `PATH` environment variable. You can often resolve this by running:
+
+   ```bash
+   pnpm setup
+   ```
+
 4. Verify the CLI works:
 
    After building, verify with `node dist/bin/openwolf.js --help`
