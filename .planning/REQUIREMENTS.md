@@ -14,5 +14,5 @@
 - [ ] Fix `HOOK_FILES` deployment gap (include all `wolf-*.js`).
 - [ ] Implement `withFileLock` for concurrent `.wolf/` write safety.
 - [ ] Enable `OPENWOLF_METADATA_DIR` environment variable for flexible metadata location.
-- [ ] Add `.wolf/.gitignore` template for mixed commit strategy and update `init.ts` logic.
+- [x] Add `.wolf/.gitignore` template for mixed commit strategy and update `init.ts` logic.
 - [ ] Document configuration (`docs/configuration.md`) and mixed strategy (`docs/getting-started.md`).
