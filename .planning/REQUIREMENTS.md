@@ -6,9 +6,9 @@
 - [ ] Document installation in `README.md`.
 
 ## Pillar 2: Fork Divergence Management
-- [ ] Configure `upstream` git remote automatically.
-- [ ] Create `scripts/sync-upstream.sh` for divergence reporting.
-- [ ] Document fork management in `README.md`.
+- [x] Configure `upstream` git remote automatically.
+- [x] Create `scripts/sync-upstream.sh` for divergence reporting.
+- [x] Document fork management in `README.md`.
 
 ## Pillar 3: .wolf/ Team Workflow Improvements
 - [ ] Fix `HOOK_FILES` deployment gap (include all `wolf-*.js`).
