@@ -50,7 +50,8 @@ const CREATE_IF_MISSING = [
   "suggestions.json",
 ];
 
-import { HOOK_SETTINGS, HOOK_FILES, isOpenWolfHook, replaceOpenWolfHooks } from "./hook-settings.js";
+import { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks } from "./hook-settings.js";
+import { findHookSourceDir, copyHookFiles, writeHooksPackageJson } from "./hook-copy.js";
 import { findTemplatesDir } from "./templates.js";
 export { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks };
 
@@ -69,45 +70,17 @@ function writeHooks(wolfDir: string): void {
   const hooksDir = path.join(wolfDir, "hooks");
   ensureDir(hooksDir);
 
-  // Find compiled hooks — check multiple locations relative to __dirname (dist/cli/)
-  const candidates = [
-    path.resolve(__dirname, "../hooks"),
-    path.resolve(__dirname, "../../dist/hooks"),
-  ];
-  let sourceDir = "";
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate) && fs.existsSync(path.join(candidate, "shared.js"))) {
-      sourceDir = candidate;
-      break;
-    }
-  }
-
+  const sourceDir = findHookSourceDir();
   if (!sourceDir) {
     console.warn("  ⚠ No compiled hooks found. Run 'pnpm build:hooks' and re-run init.");
     return;
   }
 
-  let copiedCount = 0;
-  for (const file of HOOK_FILES) {
-    const srcPath = path.join(sourceDir, file);
-    const destPath = path.join(hooksDir, file);
-    if (fs.existsSync(srcPath)) {
-      safeCopyFile(srcPath, destPath);
-      copiedCount++;
-    } else {
-      console.warn(`  ⚠ Hook not found: ${file}`);
-    }
-  }
+  const copiedCount = copyHookFiles(sourceDir, hooksDir);
+  writeHooksPackageJson(hooksDir);
 
-  // ESM hooks need type:module to work in CJS projects
-  fs.writeFileSync(
-    path.join(hooksDir, "package.json"),
-    JSON.stringify({ type: "module" }, null, 2) + "\n",
-    "utf-8"
-  );
-
-  if (copiedCount < HOOK_FILES.length) {
-    console.warn(`  ⚠ Only ${copiedCount}/${HOOK_FILES.length} hooks copied.`);
+  if (copiedCount === 0) {
+    console.warn("  ⚠ No hook scripts found to copy.");
   }
 }
 
@@ -421,13 +394,13 @@ export async function initCommand(): Promise<void> {
   if (isUpgrade) {
     console.log(`  ✓ OpenWolf upgraded to v${version}`);
     console.log(`  ✓ All .wolf data preserved (${skippedCount} files: cerebrum, memory, anatomy, buglog, ledger)`);
-    console.log(`  ✓ Hook scripts updated (6 hooks)`);
+    console.log(`  ✓ Hook scripts updated`);
     console.log(`  ✓ ${createdCount} config files updated`);
     console.log(`  ✓ Anatomy: ${fileCount} files tracked (unchanged)`);
   } else {
     console.log(`  ✓ OpenWolf v${version} initialized`);
     console.log(`  ✓ .wolf/ created with ${createdCount} files`);
-    console.log(`  ✓ Claude Code hooks registered (6 hooks)`);
+    console.log(`  ✓ Claude Code hooks registered`);
     console.log(`  ✓ CLAUDE.md updated`);
     console.log(`  ✓ .claude/rules/openwolf.md created`);
     console.log(`  ✓ Anatomy scan: ${fileCount} files indexed`);

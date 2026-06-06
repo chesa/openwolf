@@ -54,7 +54,8 @@ const BACKUP_FILES = [
   ...USER_DATA_FILES,
 ];
 
-import { HOOK_SETTINGS, HOOK_FILES, replaceOpenWolfHooks } from "./hook-settings.js";
+import { HOOK_SETTINGS, replaceOpenWolfHooks } from "./hook-settings.js";
+import { findHookSourceDir, copyHookFiles, writeHooksPackageJson } from "./hook-copy.js";
 import { findTemplatesDir } from "./templates.js";
 
 interface UpdateResult {
@@ -322,32 +323,11 @@ function copyHookScripts(wolfDir: string): void {
   const hooksDir = path.join(wolfDir, "hooks");
   ensureDir(hooksDir);
 
-  const candidates = [
-    path.join(__dirname, "..", "hooks"),
-    path.resolve(__dirname, "..", "..", "hooks"),
-    path.resolve(__dirname, "..", "..", "dist", "hooks"),
-  ];
-
-  let sourceDir = "";
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate) && fs.existsSync(path.join(candidate, "shared.js"))) {
-      sourceDir = candidate;
-      break;
-    }
-  }
-
+  const sourceDir = findHookSourceDir();
   if (sourceDir) {
-    for (const file of HOOK_FILES) {
-      const src = path.join(sourceDir, file);
-      if (fs.existsSync(src)) {
-        safeCopyFile(src, path.join(hooksDir, file));
-      }
-    }
+    copyHookFiles(sourceDir, hooksDir);
   }
-
-  // Always ensure package.json with type:module
-  const hooksPkgPath = path.join(hooksDir, "package.json");
-  fs.writeFileSync(hooksPkgPath, JSON.stringify({ type: "module" }, null, 2) + "\n", "utf-8");
+  writeHooksPackageJson(hooksDir);
 }
 
 /**
