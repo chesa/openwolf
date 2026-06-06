@@ -10,8 +10,10 @@
 - [ ] 01-fork-install/01-01-PLAN.md — Automated local development environment setup
 
 ## Phase 2: Fork Divergence Management
-- Configure `upstream` remote.
-- Create `scripts/sync-upstream.sh` and update documentation.
+**Goal:** Enable the CHESA team to track and manage divergence between their fork (`chesa/openwolf`) and upstream (`cytostack/openwolf`).
+
+**Plans:** 1 plan
+- [ ] 02-divergence-management/02-01-PLAN.md — Divergence reporting script and documentation
 
 ## Phase 3: .wolf/ Team Workflow Improvements
 - Implement `withFileLock` and wrap `writeJSON`.
