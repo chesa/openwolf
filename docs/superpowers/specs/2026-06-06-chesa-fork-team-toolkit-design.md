@@ -24,6 +24,20 @@ This spec covers three pillars designed together:
    `OPENWOLF_METADATA_DIR` env var, `.wolf/.gitignore` template for mixed
    commit strategy
 
+### Prerequisite: Fix `HOOK_FILES` deployment gap
+
+The existing `HOOK_FILES` array in `src/cli/hook-settings.ts` only lists 8
+files (6 hook scripts + `shared.js` + `worktree-helper.js`). The 6 internal
+`wolf-*.js` modules (`wolf-anatomy.js`, `wolf-describe.js`, `wolf-files.js`,
+`wolf-json.js`, `wolf-misc.js`, `wolf-paths.js`) are NOT listed and therefore
+are not copied to `.wolf/hooks/` during `openwolf init` or `openwolf update`.
+This is a pre-existing bug — fresh installs that don't have manually-copied
+wolf-* files will crash with `ERR_MODULE_NOT_FOUND`.
+
+**This must be fixed before implementing Pillar 3a.** The new `wolf-lock.js`
+module inherits this gap. The fix: add all `wolf-*.js` modules to `HOOK_FILES`
+in a standalone commit before any Pillar 3 work begins.
+
 ### What's deferred
 
 **"Propose" mode for learnings** — hooks would buffer cerebrum/memory
@@ -117,6 +131,10 @@ The repo gets a second git remote tracking the original upstream:
 git remote add upstream https://github.com/cytostack/openwolf.git
 ```
 
+HTTPS is used intentionally — the upstream remote is read-only (fetch only,
+never push), so no SSH key is needed. The CHESA fork clone itself uses SSH
+(`git@github.com:chesa/openwolf.git`) because developers push to it.
+
 This is:
 - Added automatically by `scripts/install-global.sh` (if not present)
 - Documented in README and CONTRIBUTING.md
@@ -188,8 +206,13 @@ prevent read-modify-write races (last writer wins).
    a. Read the lock file contents and parse the embedded `Date.now()`
       timestamp (second line). Use the embedded timestamp, not file mtime,
       because mtime is unreliable on network filesystems.
-   b. If lock is older than 10 seconds, consider it stale — remove and retry
-   c. Otherwise, wait 100ms and retry (up to 3 attempts)
+   b. If lock is older than 10 seconds, consider it stale — remove it and
+      immediately retry the `wx` create (step 1). This is one atomic retry
+      step: remove + re-attempt. If the re-attempt fails with `EEXIST`
+      again (another process grabbed the lock between remove and create),
+      fall through to step 2c.
+   c. Otherwise (lock is fresh), wait 100ms and retry (up to 3 attempts
+      total including stale-removal retries)
 3. After 3 failed attempts, proceed without lock and write a warning to stderr:
    `"OpenWolf: could not acquire lock for <file>, proceeding unlocked"`
 
@@ -205,9 +228,14 @@ was killed or timed out.
 The `wx`-flag lockfile pattern is portable (macOS, Linux, Windows), requires
 no native dependencies, and is the standard Node.js approach (npm uses it).
 
-**Scope:** Only wraps functions that do read-modify-write:
-- `appendMarkdown()` in `wolf-files.ts`
-- `writeJSON()` in `wolf-json.ts` (when called with an existing file)
+**Scope:** Only wraps functions that do read-modify-write cycles:
+- `writeJSON()` in `wolf-json.ts` — the primary read-modify-write path
+  (buglog dedup, token ledger updates, config merges)
+
+`appendMarkdown()` is NOT locked — `fs.appendFileSync` is a single atomic
+append on local POSIX filesystems. Two concurrent appends to `memory.md`
+interleave lines but don't lose data. Locking it would add 100ms+ retry
+latency for no benefit.
 
 The lock is per-file — two hooks writing to different files don't block
 each other.
@@ -222,8 +250,8 @@ each other.
 |------|--------|
 | `src/hooks/wolf-lock.ts` | Create — `withFileLock()` implementation |
 | `src/hooks/shared.ts` | Add re-export of `withFileLock` |
-| `src/hooks/wolf-files.ts` | Wrap `appendMarkdown` with lock |
 | `src/hooks/wolf-json.ts` | Wrap `writeJSON` with lock |
+| `src/cli/hook-settings.ts` | Add `wolf-lock.js` + all `wolf-*.js` to `HOOK_FILES` (prerequisite fix) |
 
 ### 3b. `OPENWOLF_METADATA_DIR` environment variable
 
@@ -258,9 +286,22 @@ first. If set, it returns that path directly — no git detection needed.
      2>/dev/null && pwd || echo "$CLAUDE_PROJECT_DIR")}"
    ```
 
+4. **Init/Update** (`src/cli/init.ts`, `src/cli/update.ts`):
+   Both hardcode `path.join(projectRoot, ".wolf")` for `wolfDir`. Update
+   to check `process.env.OPENWOLF_METADATA_DIR` first, same as hooks.
+   The worktree guard in `init.ts` (lines 301-313) must also use the
+   env var resolution — if the env var is set, the worktree guard is
+   irrelevant (the metadata dir is explicit, not derived from git).
+
 **Validation:**
-- If env var is set but directory doesn't exist: hooks exit 0 silently (same
-  as missing `.wolf/`), CLI commands print a warning
+- If env var is set but directory doesn't exist:
+  - **Hooks:** `ensureWolfDir()` creates the directory with
+    `mkdirSync({ recursive: true })` when the env var is set. This is
+    different from the "no .wolf/ means not an OpenWolf project" check
+    (which exits silently). When the env var is set, the user explicitly
+    asked for this path — creating it is the right default.
+  - **CLI commands:** same behavior — create if env var is set, print
+    warning otherwise
 - The env var must be an absolute path; relative paths are resolved against
   `process.cwd()`
 
@@ -273,8 +314,11 @@ the custom path. If not in a worktree, session dir equals the metadata dir.
 | File | Action |
 |------|--------|
 | `src/hooks/wolf-paths.ts` | Check env var in `getWolfDir()` |
+| `src/hooks/wolf-files.ts` | `ensureWolfDir()` creates dir when env var is set |
 | `src/utils/paths.ts` | Check env var in `getWolfDir()` |
 | `src/cli/hook-settings.ts` | Update `WOLF_ROOT_SHELL` |
+| `src/cli/init.ts` | Check env var for `wolfDir` resolution |
+| `src/cli/update.ts` | Check env var for `wolfDir` resolution |
 | `docs/configuration.md` | Document env var |
 
 ### 3c. `.wolf/.gitignore` template for mixed commit strategy
@@ -304,6 +348,9 @@ suggestions.json
 backups/
 sessions/
 
+# Transient lock files from concurrent-write protection
+*.lock
+
 # Shared knowledge files are NOT listed here, so they ARE committed:
 #   anatomy.md        — project file map
 #   cerebrum.md       — learned conventions and do-not-repeat list
@@ -311,10 +358,10 @@ sessions/
 #   config.json       — project configuration
 #   buglog.json       — known bugs and fixes
 #   identity.md       — project identity
-#   STATUS.md         — project status
+#   STATUS.md         — project status (may be per-dev depending on workflow)
 #   hooks/            — compiled hook scripts
 #   reframe-frameworks.md
-#   cron-manifest.json
+#   cron-manifest.json  — cron config (cron-state.json is per-dev, above)
 ```
 
 **Changes to `writeGitIgnore()` in `init.ts`:**
@@ -358,13 +405,16 @@ scripts/
 src/hooks/
   wolf-lock.ts               # Pillar 3a: withFileLock() utility (NEW)
   wolf-paths.ts              # Pillar 3b: OPENWOLF_METADATA_DIR check
-  wolf-files.ts              # Pillar 3a: lock-wrapped appendMarkdown
+  wolf-files.ts              # Pillar 3b: ensureWolfDir() auto-create when env var set
   wolf-json.ts               # Pillar 3a: lock-wrapped writeJSON
   shared.ts                  # Re-export withFileLock
 
 src/cli/
-  hook-settings.ts           # Pillar 3b: WOLF_ROOT_SHELL env var check
-  init.ts                    # Pillar 3c: .wolf/.gitignore, root gitignore notice
+  hook-settings.ts           # Pillar 3a: add wolf-*.js to HOOK_FILES (prereq fix)
+                              # Pillar 3b: WOLF_ROOT_SHELL env var check
+  init.ts                    # Pillar 3b: env var in wolfDir resolution
+                              # Pillar 3c: .wolf/.gitignore, root gitignore notice
+  update.ts                  # Pillar 3b: env var in wolfDir resolution
 
 src/utils/
   paths.ts                   # Pillar 3b: OPENWOLF_METADATA_DIR check
