@@ -41,6 +41,19 @@ function detectWorktreeContext(): WorktreeContext {
 }
 
 export function getWolfDir(): string {
+  // OPENWOLF_METADATA_DIR overrides default .wolf/ location (D-03)
+  const envDir = process.env.OPENWOLF_METADATA_DIR;
+  if (envDir && envDir.trim().length > 0) {
+    // Reject relative paths — path.resolve would make them absolute from cwd,
+    // but the user intent is ambiguous. Log warning and fall back to .wolf/.
+    if (!path.isAbsolute(envDir.trim())) {
+      process.stderr.write(
+        `OpenWolf: OPENWOLF_METADATA_DIR must be an absolute path, got "${envDir.trim()}". Falling back to .wolf/\n`,
+      );
+    } else {
+      return path.resolve(envDir.trim());
+    }
+  }
   const ctx = detectWorktreeContext();
   return path.join(ctx.mainRepoRoot, ".wolf");
 }
