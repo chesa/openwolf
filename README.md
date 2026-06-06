@@ -152,6 +152,45 @@ openwolf restore [backup]  Restore .wolf/ from a backup
 - [Development](docs/DEVELOPMENT.md)
 - [Testing](docs/TESTING.md)
 
+## Fork Management
+
+This repository is a **fork** of [cytostack/openwolf](https://github.com/cytostack/openwolf), used by the CHESA team to add worktree support, team workflow improvements, and concurrent-write safety features.
+
+### Upstream Remote
+
+The fork tracks the original repository via a read-only `upstream` remote:
+
+```bash
+git remote add upstream https://github.com/cytostack/openwolf.git
+```
+
+This is configured automatically when you run [scripts/install-dev.sh](#development-setup) or use the divergence report script directly.
+
+### Check Divergence
+
+To see how your fork compares to upstream:
+
+```bash
+bash scripts/sync-upstream.sh
+```
+
+To check a different branch (e.g., `develop`):
+
+```bash
+bash scripts/sync-upstream.sh --branch develop
+```
+
+### Report States
+
+| Status     | Meaning                                                     | Next Steps                                     |
+|------------|-------------------------------------------------------------|------------------------------------------------|
+| **IN SYNC**  | Your branch matches upstream                                | Nothing to do                                  |
+| **AHEAD**    | You have commits not present in upstream                    | Push to origin or submit PRs                   |
+| **BEHIND**   | Upstream has new commits you don't have                     | Review changes and sync                        |
+| **DIVERGED** | Both upstream and your branch have unique commits           | Review side-by-side before merging or rebasing |
+
+> **Read-only safety:** This script is read-only. It never merges or rebases automatically. Review upstream changes and choose your sync strategy manually.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
