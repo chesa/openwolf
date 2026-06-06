@@ -25,7 +25,7 @@
 
 **Goal:** Deploy all hook modules reliably, protect concurrent write safety, support flexible metadata locations, establish a mixed commit strategy, and document the new capabilities.
 
-**Plans:** 4/5 plans complete
+**Plans:** 3/3 plans complete
 
 Plans:
 
