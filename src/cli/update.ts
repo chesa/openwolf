@@ -146,10 +146,26 @@ async function updateProject(
   dryRun: boolean
 ): Promise<UpdateResult> {
   const { root, name } = project;
-  const wolfDir = path.join(root, ".wolf");
+
+  // OPENWOLF_METADATA_DIR overrides default .wolf/ location (D-03)
+  const metadataDirEnv = process.env.OPENWOLF_METADATA_DIR;
+  let wolfDir: string;
+  if (metadataDirEnv && metadataDirEnv.trim().length > 0) {
+    if (!path.isAbsolute(metadataDirEnv.trim())) {
+      console.warn(`  ⚠ OPENWOLF_METADATA_DIR must be an absolute path, got "${metadataDirEnv.trim()}". Using default .wolf/`);
+      wolfDir = path.join(root, ".wolf");
+    } else {
+      wolfDir = path.resolve(metadataDirEnv.trim());
+    }
+  } else {
+    wolfDir = path.join(root, ".wolf");
+  }
+
+  // Hooks always deploy to projectRoot/.wolf/hooks/ per D-03
+  const projectWolfDir = path.join(root, ".wolf");
 
   // Validate project still exists
-  if (!fs.existsSync(wolfDir)) {
+  if (!fs.existsSync(wolfDir) && !fs.existsSync(projectWolfDir)) {
     return { project, status: "skipped", message: ".wolf/ directory not found" };
   }
 
@@ -172,7 +188,7 @@ async function updateProject(
 
   try {
     // 1. Create backup
-    const backupDir = createBackup(wolfDir);
+    const backupDir = createBackup(wolfDir, projectWolfDir);
     console.log(`    ✓ Backup: ${path.basename(backupDir)}`);
 
     // 2. Update template files (OPENWOLF.md, reframe-frameworks.md)
@@ -194,8 +210,8 @@ async function updateProject(
       console.log(`    ✓ config.json seeded (first time)`);
     }
 
-    // 3. Update hook scripts
-    copyHookScripts(wolfDir);
+    // 3. Update hook scripts (always under projectRoot/.wolf/hooks/ per D-03)
+    copyHookScripts(projectWolfDir);
     console.log(`    ✓ Hook scripts updated`);
 
     // 4. Update .claude/settings.json hooks
@@ -258,8 +274,11 @@ async function updateProject(
 
 /**
  * Create a timestamped backup of all .wolf files into .wolf/backups/YYYY-MM-DD_HHMMSS/
+ *
+ * @param wolfDir - Metadata directory path (from env var or default .wolf/)
+ * @param projectWolfDir - Always under projectRoot/.wolf/ for hooks per D-03
  */
-function createBackup(wolfDir: string): string {
+function createBackup(wolfDir: string, projectWolfDir: string): string {
   const now = new Date();
   const stamp = now.toISOString().replace(/[:.]/g, "").slice(0, 15); // 20260315T013000
   const backupDir = path.join(wolfDir, "backups", stamp);
@@ -273,8 +292,8 @@ function createBackup(wolfDir: string): string {
     }
   }
 
-  // Also backup hooks
-  const hooksDir = path.join(wolfDir, "hooks");
+  // Also backup hooks (always under projectRoot/.wolf/hooks/ per D-03)
+  const hooksDir = path.join(projectWolfDir, "hooks");
   if (fs.existsSync(hooksDir)) {
     const hooksBackup = path.join(backupDir, "hooks");
     ensureDir(hooksBackup);
@@ -290,7 +309,7 @@ function createBackup(wolfDir: string): string {
   }
 
   // Also backup .claude/settings.json and rules
-  const projectRoot = path.dirname(wolfDir);
+  const projectRoot = path.dirname(projectWolfDir);
   const claudeSettings = path.join(projectRoot, ".claude", "settings.json");
   if (fs.existsSync(claudeSettings)) {
     const claudeBackup = path.join(backupDir, ".claude");
