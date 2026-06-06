@@ -1,108 +1,80 @@
 # Technology Stack
 
-**Analysis Date:** 2026-05-14
+**Analysis Date:** [YYYY-MM-DD]
 
 ## Languages
 
 **Primary:**
-- TypeScript 5.7 - CLI, core, daemon, hooks, dashboard source
-- JavaScript - Compiled output (ESM modules), configuration files
+- TypeScript - Core logic, CLI, Dashboard
+- JavaScript (Node.js) - Tooling, Scripts
 
 **Secondary:**
-- CSS/SCSS - Dashboard styling (TailwindCSS 4)
-- Markdown - Documentation, templates, configuration
+- HTML/CSS (via Tailwind CSS) - Dashboard UI
 
 ## Runtime
 
 **Environment:**
-- Node.js >= 20.0.0 (tsconfig.json targets ES2022, module: Node16)
-- Browser (React 19 dashboard)
+- Node.js >= 20.0.0
 
 **Package Manager:**
-- pnpm (primary)
-- npm (fallback, lock files present)
-- Lockfiles: `pnpm-lock.yaml`, `package-lock.json`
+- pnpm
+- Lockfile: `pnpm-lock.yaml`
 
 ## Frameworks
 
 **Core:**
-- Commander 12.0.0 - CLI argument parsing and subcommand routing
-- Express 5.0.0 - HTTP API server for daemon
+- Commander - CLI command handling
+- Express - Dashboard server
+- ws - WebSockets
+- chokidar - File system watcher
+- node-cron - Task scheduling
 
-**Frontend:**
-- React 19.0.0 - Dashboard UI components
-- Vite 6.0.0 - Dashboard build tool and dev server
-- VitePress 1.6.4 - Documentation site
-- TailwindCSS 4.0.0 - Utility CSS framework
-- Recharts 2.15.0 - Chart/graph visualizations
-
-**Backend Services:**
-- node-cron 3.0.3 - Cron task scheduling (5-field expressions)
-- ws 8.18.0 - WebSocket server for live dashboard updates
-- chokidar 4.0.0 - File system watcher (watches .wolf/ for changes)
-- open 10.0.0 - Opens browser to dashboard URL
+**UI (Dashboard):**
+- React - UI components
+- Tailwind CSS - Styling
+- Recharts - Data visualization
 
 **Testing:**
-- Vitest 4.1.5 - Test runner and assertion library (Node environment)
-- TypeScript strict mode - Type checking
+- Vitest - Test runner and framework
+
+**Build/Dev:**
+- Vite - Build tool for dashboard
+- Vitepress - Documentation framework
+- TypeScript (tsc) - TypeScript compiler
 
 ## Key Dependencies
 
 **Critical:**
-- chalk 5.3.0 - Terminal color output for CLI messages
-- puppeteer-core 24.39.1 (optional) - Headless browser for design QC screenshot capture
+- `commander`: CLI interface framework
+- `express`: Dashboard backend
+- `ws`: Real-time communication
+- `chokidar`: Real-time file system monitoring
+- `node-cron`: Cron-style job scheduling
+- `puppeteer-core`: Optional browser automation
 
-**Infrastructure:**
-- @types/* packages (express, react, node, node-cron, ws) - TypeScript type definitions
-- @tailwindcss/vite 4.0.0 - TailwindCSS Vite integration
-- @vitejs/plugin-react 4.0.0 - React JSX transpilation for Vite
+**UI:**
+- `react`, `react-dom`: UI library
+- `recharts`: Charting
 
 ## Configuration
 
-**TypeScript:**
-- `tsconfig.json` - Main CLI + core (ES2022, strict mode, ESM)
-  - Excludes: `src/dashboard/app` (separate Vite build)
-  - Outputs: `dist/` directory
-- `tsconfig.hooks.json` - Separate build for hooks (`src/hooks/**/*.ts` → `dist/hooks/`)
-  - No source maps (hooks run from `.wolf/hooks/` after `openwolf update`)
-  - Same strict settings
+**Environment:**
+- Standard Node.js environment variables (no specialized auth/config provider)
 
 **Build:**
-- `package.json` scripts:
-  - `build`: Full build (tsc + hooks + dashboard + templates)
-  - `build:hooks`: Compile hooks to `dist/hooks/`
-  - `build:dashboard`: Vite build for SPA (src/dashboard/app → dist/dashboard/)
-  - `build:templates`: Copy template files to `dist/templates/`
-  - `dev`: TypeScript watch mode (CLI only, not hooks or dashboard)
-
-**Testing:**
-- `vitest.config.ts` - Node environment, includes `src/**/*.test.ts`
-
-**Environment:**
-- `src/utils/paths.ts` respects `CLAUDE_PROJECT_DIR` env var for multi-worktree support
-- `src/daemon/wolf-daemon.ts` reads `OPENWOLF_PROJECT_ROOT` (set by CLI commands)
-- `.wolf/config.json` defines daemon port, log level, cron heartbeat interval
+- `tsconfig.json`, `tsconfig.hooks.json`
+- `vite.config.ts` (dashboard)
+- `vitest.config.ts`
 
 ## Platform Requirements
 
 **Development:**
-- Node.js 20+
-- pnpm (recommended) or npm
-- Git (required for worktree detection in `src/utils/worktree.ts`)
-- TypeScript compiler (`tsc`)
+- Node.js >= 20.0.0
+- pnpm
 
-**Production/CLI:**
-- Node.js 20+
-- No external process dependencies (npm/git not required at runtime)
-
-**Dashboard (Optional):**
-- Modern browser with ES2022 + React 19 support (Chrome, Firefox, Safari, Edge)
-- Running daemon at `localhost:18790` (default, configurable)
-
-**Design QC (Optional):**
-- Puppeteer Core (optional dependency) for headless browser screenshot capture
-- Requires running dev server or `--url` parameter
+**Production:**
+- Node.js runtime environment as a CLI tool
 
 ---
 
-*Stack analysis: 2026-05-14*
+*Stack analysis: [YYYY-MM-DD]*
