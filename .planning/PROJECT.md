@@ -14,7 +14,7 @@ The CHESA Fork Team Toolkit is a set of enhancements for the OpenWolf project (f
 - Pillar 3: .wolf/ Team Workflow Improvements
 
 ## Status
-Draft.
+Phase 1 complete — automated dev environment setup shipped (scripts/install-dev.sh, package.json install:dev, README + docs/DEVELOPMENT.md updated). Ready for Phase 2: Fork Divergence Management.
 
 ## Reference
 - Specification: `docs/superpowers/specs/2026-06-06-chesa-fork-team-toolkit-design.md`
