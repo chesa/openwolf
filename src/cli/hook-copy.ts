@@ -31,7 +31,7 @@ export function findHookSourceDir(): string | null {
 
 /**
  * Dynamically discover all `.js` files in a directory.
- * Replaces the static HOOK_FILES iteration with a live directory scan.
+ * Replaces the static file-list iteration with a live directory scan.
  */
 export function getHookFileNames(sourceDir: string): string[] {
   return fs.readdirSync(sourceDir)

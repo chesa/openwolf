@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { findProjectRoot } from "../scanner/project-root.js";
 import { readJSON, readText } from "../utils/fs-safe.js";
 import { detectWorktreeContext } from "../utils/worktree.js";
-import { HOOK_FILES } from "./hook-settings.js";
+
 
 export async function statusCommand(): Promise<void> {
   const projectRoot = findProjectRoot();
@@ -60,16 +60,18 @@ export async function statusCommand(): Promise<void> {
     console.log(`  ✓ All ${sharedFiles.length} shared knowledge files present`);
   }
 
-  // Hook scripts check
+  // Hook scripts check — dynamic directory scan
   const hooksDir = path.join(wolfDir, "hooks");
-  let hooksMissing = 0;
-  for (const file of HOOK_FILES) {
-    if (!fs.existsSync(path.join(hooksDir, file))) hooksMissing++;
-  }
-  if (hooksMissing === 0) {
-    console.log(`  ✓ All ${HOOK_FILES.length} hook scripts present`);
+  let hookScriptCount = 0;
+  try {
+    if (fs.existsSync(hooksDir)) {
+      hookScriptCount = fs.readdirSync(hooksDir).filter(f => f.endsWith(".js")).length;
+    }
+  } catch { /* ignore */ }
+  if (hookScriptCount > 0) {
+    console.log(`  ✓ ${hookScriptCount} hook scripts present`);
   } else {
-    console.log(`  ✗ Missing ${hooksMissing} hook scripts`);
+    console.log(`  ✗ No hook scripts found`);
   }
 
   // Claude settings check
