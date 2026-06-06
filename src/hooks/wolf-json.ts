@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import { withFileLock } from "./wolf-lock.js";
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return (
@@ -52,33 +53,35 @@ export function readJSON<T = unknown>(filePath: string, fallback: T): T {
 }
 
 export function writeJSON(filePath: string, data: unknown): void {
-  const dir = path.dirname(filePath);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  const tmp = filePath + "." + crypto.randomBytes(4).toString("hex") + ".tmp";
-  const payload = JSON.stringify(data, null, 2);
-  try {
-    fs.writeFileSync(tmp, payload, "utf-8");
-    fs.renameSync(tmp, filePath);
-    return;
-  } catch (renameErr) {
-    // Only fall back for cases where another process (Windows) holds a handle
-    // or the move crosses devices. Any other failure is structural and should
-    // surface, not be silently retried.
-    const code = (renameErr as NodeJS.ErrnoException).code;
-    if (code !== "EBUSY" && code !== "EACCES" && code !== "EPERM" && code !== "EXDEV") {
-      try { fs.unlinkSync(tmp); } catch { /* tmp may not exist */ }
-      throw renameErr;
-    }
+  withFileLock(filePath, () => {
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const tmp = filePath + "." + crypto.randomBytes(4).toString("hex") + ".tmp";
+    const payload = JSON.stringify(data, null, 2);
     try {
-      fs.writeFileSync(filePath, payload, "utf-8");
-    } catch (fallbackErr) {
-      const orig = renameErr instanceof Error ? renameErr.message : String(renameErr);
-      const after = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
-      process.stderr.write(
-        `OpenWolf: failed to write ${filePath} (rename: ${orig}; fallback: ${after})\n`,
-      );
-    } finally {
-      try { fs.unlinkSync(tmp); } catch { /* tmp may not exist */ }
+      fs.writeFileSync(tmp, payload, "utf-8");
+      fs.renameSync(tmp, filePath);
+      return;
+    } catch (renameErr) {
+      // Only fall back for cases where another process (Windows) holds a handle
+      // or the move crosses devices. Any other failure is structural and should
+      // surface, not be silently retried.
+      const code = (renameErr as NodeJS.ErrnoException).code;
+      if (code !== "EBUSY" && code !== "EACCES" && code !== "EPERM" && code !== "EXDEV") {
+        try { fs.unlinkSync(tmp); } catch { /* tmp may not exist */ }
+        throw renameErr;
+      }
+      try {
+        fs.writeFileSync(filePath, payload, "utf-8");
+      } catch (fallbackErr) {
+        const orig = renameErr instanceof Error ? renameErr.message : String(renameErr);
+        const after = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+        process.stderr.write(
+          `OpenWolf: failed to write ${filePath} (rename: ${orig}; fallback: ${after})\n`,
+        );
+      } finally {
+        try { fs.unlinkSync(tmp); } catch { /* tmp may not exist */ }
+      }
     }
-  }
+  });
 }

@@ -17,6 +17,8 @@ export { ensureSessionDir, ensureWolfDir, isWolfFile, readMarkdown, appendMarkdo
 
 export { readJSON, writeJSON } from "./wolf-json.js";
 
+export { withFileLock } from "./wolf-lock.js";
+
 export { AnatomyEntry, parseAnatomy, serializeAnatomy } from "./wolf-anatomy.js";
 
 export { extractDescription } from "./wolf-describe.js";
