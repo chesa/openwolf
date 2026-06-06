@@ -270,9 +270,26 @@ export async function initCommand(): Promise<void> {
 
   const projectRoot = findProjectRoot();
 
-  // Worktree guard — init must run from the main checkout
+  // OPENWOLF_METADATA_DIR overrides default .wolf/ metadata location (D-03)
+  const metadataDirEnv = process.env.OPENWOLF_METADATA_DIR;
+  let wolfDir: string;
+  if (metadataDirEnv && metadataDirEnv.trim().length > 0) {
+    if (!path.isAbsolute(metadataDirEnv.trim())) {
+      console.warn(`  ⚠ OPENWOLF_METADATA_DIR must be an absolute path, got "${metadataDirEnv.trim()}". Using default .wolf/`);
+      wolfDir = path.join(projectRoot, ".wolf");
+    } else {
+      wolfDir = path.resolve(metadataDirEnv.trim());
+    }
+  } else {
+    wolfDir = path.join(projectRoot, ".wolf");
+  }
+
+  // Hooks always deploy to projectRoot/.wolf/hooks/ per D-03
+  const projectWolfDir = path.join(projectRoot, ".wolf");
+
+  // Worktree guard — only applies when using default .wolf/ location
   const wtCtx = detectWorktreeContext(projectRoot);
-  if (wtCtx.isWorktree) {
+  if (wtCtx.isWorktree && wolfDir === projectWolfDir) {
     const mainWolfDir = path.join(wtCtx.mainRepoRoot, ".wolf");
     if (fs.existsSync(mainWolfDir)) {
       console.log(`OpenWolf is already initialized at: ${wtCtx.mainRepoRoot}`);
@@ -287,7 +304,6 @@ export async function initCommand(): Promise<void> {
   }
   console.log(`Project root: ${projectRoot}`);
 
-  const wolfDir = path.join(projectRoot, ".wolf");
   const isUpgrade = fs.existsSync(wolfDir);
 
   const version = getVersion();
@@ -296,9 +312,10 @@ export async function initCommand(): Promise<void> {
     console.log(`Upgrading OpenWolf to v${version}...`);
   }
 
-  // Create .wolf/ directory
+  // Create metadata directory
   ensureDir(wolfDir);
-  ensureDir(path.join(wolfDir, "hooks"));
+  // Hooks always deploy under projectRoot/.wolf/hooks/
+  ensureDir(path.join(projectWolfDir, "hooks"));
 
   // Find templates directory
   const actualTemplatesDir = findTemplatesDir();
@@ -326,8 +343,8 @@ export async function initCommand(): Promise<void> {
     }
   }
 
-  // --- Hooks ---
-  writeHooks(wolfDir);
+  // --- Hooks (always under projectRoot/.wolf/hooks/ per D-03) ---
+  writeHooks(projectWolfDir);
 
   // --- Token ledger created_at ---
   const ledgerPath = path.join(wolfDir, "token-ledger.json");
@@ -391,14 +408,16 @@ export async function initCommand(): Promise<void> {
 
   // --- Summary ---
   console.log("");
+  // Indicate when metadata dir differs from default .wolf/ location
+  const metadataDirDisplay = wolfDir !== projectWolfDir ? ` (OPENWOLF_METADATA_DIR: ${wolfDir})` : "";
   if (isUpgrade) {
-    console.log(`  ✓ OpenWolf upgraded to v${version}`);
+    console.log(`  ✓ OpenWolf upgraded to v${version}${metadataDirDisplay}`);
     console.log(`  ✓ All .wolf data preserved (${skippedCount} files: cerebrum, memory, anatomy, buglog, ledger)`);
     console.log(`  ✓ Hook scripts updated`);
     console.log(`  ✓ ${createdCount} config files updated`);
     console.log(`  ✓ Anatomy: ${fileCount} files tracked (unchanged)`);
   } else {
-    console.log(`  ✓ OpenWolf v${version} initialized`);
+    console.log(`  ✓ OpenWolf v${version} initialized${metadataDirDisplay}`);
     console.log(`  ✓ .wolf/ created with ${createdCount} files`);
     console.log(`  ✓ Claude Code hooks registered`);
     console.log(`  ✓ CLAUDE.md updated`);
