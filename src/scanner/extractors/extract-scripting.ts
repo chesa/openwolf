@@ -79,8 +79,9 @@ function extractPhp(content: string, basename: string, filePath: string): string
     Policy: "Authorization policy", Observer: "Model observer", Rule: "Validation rule",
     Cast: "Attribute cast", Scope: "Query scope",
   };
+  const implementsList = (classM?.[3] || "").split(/\s*,\s*/).map(s => s.trim()).filter(Boolean);
   for (const [p, label] of Object.entries(types)) {
-    if (parent === p || basename.endsWith(`${p}.php`)) return `${label}: ${className}`;
+    if (parent === p || implementsList.includes(p) || basename.endsWith(`${p}.php`)) return `${label}: ${className}`;
   }
 
   // Interface / Trait
