@@ -129,6 +129,11 @@ export function extractDescription(filePath: string): string {
 
   if (KNOWN_FILES[basename]) return KNOWN_FILES[basename];
 
+  // Also check directory-prefixed entries (e.g., ".github/workflows/ci.yml")
+  // against the full path — basename alone won't match these.
+  const dirKey = Object.keys(KNOWN_FILES).find(k => k.includes("/") && filePath.endsWith(k));
+  if (dirKey) return KNOWN_FILES[dirKey];
+
   let content: string;
   try {
     const fd = fs.openSync(filePath, "r");
