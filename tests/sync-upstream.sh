@@ -51,14 +51,16 @@ test_1_missing_upstream_remote() {
   setup_test_repo
   (
     cd "$TEST_TMP_DIR"
-    output=$(bash "$SCRIPT" 2>&1 || true)
-    if echo "$output" | grep -q "Added upstream remote"; then
+    set +e
+    output=$(bash "$SCRIPT" 2>&1); exit_code=$?
+    set -e
+    if [ "$exit_code" -ne 0 ] && echo "$output" | grep -q "Added upstream remote"; then
       if git remote get-url upstream | grep -q "github.com/cytostack/openwolf.git"; then
         print_result PASS "Test 1: Missing upstream remote - adds HTTPS remote" ""
         return
       fi
     fi
-    print_result FAIL "Test 1: Missing upstream remote" "Did not add upstream remote or wrong URL"
+    print_result FAIL "Test 1: Missing upstream remote" "exit code $exit_code, did not add upstream remote or wrong URL"
   )
 }
 
@@ -68,12 +70,14 @@ test_2_existing_upstream_remote() {
   (
     cd "$TEST_TMP_DIR"
     git remote add upstream https://github.com/cytostack/openwolf.git
-    output=$(bash "$SCRIPT" 2>&1 || true)
-    if echo "$output" | grep -q "Using existing upstream remote"; then
+    set +e
+    output=$(bash "$SCRIPT" 2>&1); exit_code=$?
+    set -e
+    if [ "$exit_code" -ne 0 ] && echo "$output" | grep -q "Using existing upstream remote"; then
       print_result PASS "Test 2: Existing upstream - uses existing" ""
       return
     fi
-    print_result FAIL "Test 2: Existing upstream" "Did not detect existing upstream remote"
+    print_result FAIL "Test 2: Existing upstream" "exit code $exit_code, did not detect existing upstream remote"
   )
 }
 
@@ -83,12 +87,14 @@ test_3_fetch_failure() {
   (
     cd "$TEST_TMP_DIR"
     git remote add upstream https://github.com/nonexistent-user/nonexistent-repo.git
-    output=$(bash "$SCRIPT" 2>&1 || true)
-    if echo "$output" | grep -qi "error\|failed"; then
+    set +e
+    output=$(bash "$SCRIPT" 2>&1); exit_code=$?
+    set -e
+    if [ "$exit_code" -ne 0 ] && echo "$output" | grep -qi "error\|failed"; then
       print_result PASS "Test 3: Fetch failure - exits with error" ""
       return
     fi
-    print_result FAIL "Test 3: Fetch failure" "Script did not report error when fetch failed"
+    print_result FAIL "Test 3: Fetch failure" "exit code $exit_code, script did not report error when fetch failed"
   )
 }
 
@@ -100,14 +106,16 @@ test_4_default_branch_header() {
     git init --bare "$TEST_TMP_DIR/upstream-bare"
     git push "$TEST_TMP_DIR/upstream-bare" HEAD:main
     git remote add upstream "$TEST_TMP_DIR/upstream-bare"
-    output=$(bash "$SCRIPT" 2>&1 || true)
-    if echo "$output" | grep -q "Fork Divergence Report"; then
+    set +e
+    output=$(bash "$SCRIPT" 2>&1); exit_code=$?
+    set -e
+    if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "Fork Divergence Report"; then
       if echo "$output" | grep -q "upstream/main"; then
         print_result PASS "Test 4: Default branch - main vs upstream/main" ""
         return
       fi
     fi
-    print_result FAIL "Test 4: Default branch header" "Missing Fork Divergence Report or upstream/main reference"
+    print_result FAIL "Test 4: Default branch header" "exit code $exit_code, missing Fork Divergence Report or upstream/main reference"
   )
 }
 
@@ -120,12 +128,14 @@ test_5_ahead_status() {
     git push "$TEST_TMP_DIR/upstream-bare" HEAD:main
     git remote add upstream "$TEST_TMP_DIR/upstream-bare"
     git commit --allow-empty -m "Ahead commit"
-    output=$(bash "$SCRIPT" 2>&1 || true)
-    if echo "$output" | grep -q "Status: AHEAD"; then
+    set +e
+    output=$(bash "$SCRIPT" 2>&1); exit_code=$?
+    set -e
+    if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "Status: AHEAD"; then
       print_result PASS "Test 5: AHEAD status" ""
       return
     fi
-    print_result FAIL "Test 5: AHEAD status" "Did not detect AHEAD status"
+    print_result FAIL "Test 5: AHEAD status" "exit code $exit_code, did not detect AHEAD status"
   )
 }
 
@@ -139,12 +149,14 @@ test_6_behind_status() {
     git push "$TEST_TMP_DIR/upstream-bare" HEAD:main
     git remote add upstream "$TEST_TMP_DIR/upstream-bare"
     git reset --hard HEAD~1
-    output=$(bash "$SCRIPT" 2>&1 || true)
-    if echo "$output" | grep -q "Status: BEHIND"; then
+    set +e
+    output=$(bash "$SCRIPT" 2>&1); exit_code=$?
+    set -e
+    if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "Status: BEHIND"; then
       print_result PASS "Test 6: BEHIND status" ""
       return
     fi
-    print_result FAIL "Test 6: BEHIND status" "Did not detect BEHIND status"
+    print_result FAIL "Test 6: BEHIND status" "exit code $exit_code, did not detect BEHIND status"
   )
 }
 
@@ -164,12 +176,14 @@ test_7_diverged_status() {
     cd "$TEST_TMP_DIR"
     rm -rf "$TEST_TMP_DIR/upstream-temp"
     git fetch upstream
-    output=$(bash "$SCRIPT" 2>&1 || true)
-    if echo "$output" | grep -q "Status: DIVERGED"; then
+    set +e
+    output=$(bash "$SCRIPT" 2>&1); exit_code=$?
+    set -e
+    if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "Status: DIVERGED"; then
       print_result PASS "Test 7: DIVERGED status" ""
       return
     fi
-    print_result FAIL "Test 7: DIVERGED status" "Did not detect DIVERGED status"
+    print_result FAIL "Test 7: DIVERGED status" "exit code $exit_code, did not detect DIVERGED status"
   )
 }
 
@@ -181,12 +195,14 @@ test_8_in_sync_status() {
     git init --bare "$TEST_TMP_DIR/upstream-bare"
     git push "$TEST_TMP_DIR/upstream-bare" HEAD:main
     git remote add upstream "$TEST_TMP_DIR/upstream-bare"
-    output=$(bash "$SCRIPT" 2>&1 || true)
-    if echo "$output" | grep -q "Status: IN SYNC"; then
+    set +e
+    output=$(bash "$SCRIPT" 2>&1); exit_code=$?
+    set -e
+    if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "Status: IN SYNC"; then
       print_result PASS "Test 8: IN SYNC status" ""
       return
     fi
-    print_result FAIL "Test 8: IN SYNC status" "Did not detect IN SYNC status"
+    print_result FAIL "Test 8: IN SYNC status" "exit code $exit_code, did not detect IN SYNC status"
   )
 }
 
@@ -199,12 +215,14 @@ test_9_feature_branch_warning() {
     git push "$TEST_TMP_DIR/upstream-bare" HEAD:main
     git checkout -b feature/my-feature
     git remote add upstream "$TEST_TMP_DIR/upstream-bare"
-    output=$(bash "$SCRIPT" 2>&1 || true)
-    if echo "$output" | grep -q "Warning:"; then
+    set +e
+    output=$(bash "$SCRIPT" 2>&1); exit_code=$?
+    set -e
+    if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "Warning:"; then
       print_result PASS "Test 9: Feature branch warning" ""
       return
     fi
-    print_result FAIL "Test 9: Feature branch warning" "Script did not print warning when on feature branch"
+    print_result FAIL "Test 9: Feature branch warning" "exit code $exit_code, script did not print warning when on feature branch"
   )
 }
 
@@ -214,12 +232,14 @@ test_10_help_flag() {
     print_result FAIL "Test 10: --help flag" "Script not found at $SCRIPT"
     return
   fi
-  output=$(bash "$SCRIPT" --help 2>&1) || true
-  if echo "$output" | grep -qi "usage"; then
+  set +e
+  output=$(bash "$SCRIPT" --help 2>&1); exit_code=$?
+  set -e
+  if [ "$exit_code" -eq 0 ] && echo "$output" | grep -qi "usage"; then
     print_result PASS "Test 10: --help flag" ""
     return
   fi
-  print_result FAIL "Test 10: --help flag" "No usage/help message printed. Output: ${output:0:80}"
+  print_result FAIL "Test 10: --help flag" "exit code $exit_code, no usage/help message printed. Output: ${output:0:80}"
 }
 
 # Test 11: --version flag prints version and exits 0
@@ -228,13 +248,15 @@ test_11_version_flag() {
     print_result FAIL "Test 11: --version flag" "Script not found at $SCRIPT"
     return
   fi
-  output=$(bash "$SCRIPT" --version 2>&1) || true
+  set +e
+  output=$(bash "$SCRIPT" --version 2>&1); exit_code=$?
+  set -e
   # Match only the expected version format, not the path in error messages
-  if echo "$output" | grep -qE "^sync-upstream\.sh [0-9]+\.[0-9]+\.[0-9]+"; then
+  if [ "$exit_code" -eq 0 ] && echo "$output" | grep -qE "^sync-upstream\.sh [0-9]+\.[0-9]+\.[0-9]+"; then
     print_result PASS "Test 11: --version flag" ""
     return
   fi
-  print_result FAIL "Test 11: --version flag" "No valid version string. Output: ${output:0:80}"
+  print_result FAIL "Test 11: --version flag" "exit code $exit_code, no valid version string. Output: ${output:0:80}"
 }
 
 # Test 12: --branch develop compares upstream/develop
@@ -246,12 +268,14 @@ test_12_branch_flag() {
     git push "$TEST_TMP_DIR/upstream-bare" HEAD:main
     git push "$TEST_TMP_DIR/upstream-bare" HEAD:refs/heads/develop
     git remote add upstream "$TEST_TMP_DIR/upstream-bare"
-    output=$(bash "$SCRIPT" --branch develop 2>&1 || true)
-    if echo "$output" | grep -q "upstream/develop"; then
+    set +e
+    output=$(bash "$SCRIPT" --branch develop 2>&1); exit_code=$?
+    set -e
+    if [ "$exit_code" -eq 0 ] && echo "$output" | grep -q "upstream/develop"; then
       print_result PASS "Test 12: --branch develop" ""
       return
     fi
-    print_result FAIL "Test 12: --branch develop" "Script did not use upstream/develop"
+    print_result FAIL "Test 12: --branch develop" "exit code $exit_code, script did not use upstream/develop"
   )
 }
 
