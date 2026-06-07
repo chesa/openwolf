@@ -25,9 +25,16 @@ describe("session-start.ts ledger init", () => {
         // Redirect .wolf/ writes to temp dir so the module-level main() call
         // during import doesn't touch the real project's .wolf/ directory.
         process.env.OPENWOLF_METADATA_DIR = dir;
-        // Prevent main() from running by catching the exit
-        vi.spyOn(process, "exit").mockImplementation((code?: number | string | null) => {
-            // swallow exit calls
+        // Prevent main() from running by throwing on exit
+        // The first process.exit(0) from the module-level main() throws,
+        // halting execution. The .catch() handler on main() calls
+        // process.exit(0) a second time — mockImplementation handles that
+        // by returning normally (no unhandled rejection).
+        const exitMock = vi.spyOn(process, "exit");
+        exitMock.mockImplementationOnce((code?: number | string | null) => {
+            throw new Error(`exit:${code}`);
+        });
+        exitMock.mockImplementation(() => {
             return undefined as never;
         });
     });
