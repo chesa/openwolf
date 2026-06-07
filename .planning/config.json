@@ -2,7 +2,9 @@
   "project_name": "chesa-fork-team-toolkit",
   "version": "1.0.5-beta",
   "workflow": {
-    "_auto_chain_active": true
+    "_auto_chain_active": true,
+    "nyquist_validation": true,
+    "ai_integration_phase": true
   },
   "auto_mode": true
 }
