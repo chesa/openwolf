@@ -54,6 +54,13 @@ All 5 phases complete.
 - `pnpm clean` script added to `package.json` with explicit path guards
 - `.DS_Store` files deleted from repo root and `.claude/`
 
+## Project Reference
+
+See: .planning/PROJECT.md (updated 2026-06-07)
+
+**Core value:** Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and manageable to keep synced with upstream.
+**Current focus:** Planning next milestone
+
 ## Current Position
 
 Phase: Milestone v1.0 complete
