@@ -22,6 +22,9 @@ describe("session-start.ts ledger init", () => {
     beforeEach(() => {
         dir = realpathSync(mkdtempSync(path.join(tmpdir(), "ow-sess-start-")));
         ledgerPath = path.join(dir, "token-ledger.json");
+        // Redirect .wolf/ writes to temp dir so the module-level main() call
+        // during import doesn't touch the real project's .wolf/ directory.
+        process.env.OPENWOLF_METADATA_DIR = dir;
         // Prevent main() from running by catching the exit
         vi.spyOn(process, "exit").mockImplementation((code?: number | string | null) => {
             // swallow exit calls
@@ -31,6 +34,7 @@ describe("session-start.ts ledger init", () => {
 
     afterEach(() => {
         vi.restoreAllMocks();
+        delete process.env.OPENWOLF_METADATA_DIR;
         rmSync(dir, { recursive: true, force: true });
     });
 
