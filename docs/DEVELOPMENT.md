@@ -28,6 +28,7 @@ How to set up, build, and contribute to OpenWolf.
    ```bash
    pnpm install
    pnpm build
+   pnpm link --global    # optional: makes 'openwolf' available globally
    ```
 
 ### Troubleshooting
