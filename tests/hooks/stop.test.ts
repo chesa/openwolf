@@ -94,9 +94,9 @@ describe("stop.ts robustness", () => {
     it("increments stop_count even when ledger write throws", () => {
         const session = {
             session_id: "test",
-            started: "",
-            files_read: {},
-            files_written: [],
+            started: new Date().toISOString(),
+            files_read: { "/tmp/f.go": { count: 1, tokens: 100, first_read: "2026-01-01T00:00:00Z" } },
+            files_written: [{ file: "/tmp/f.go", action: "edit", tokens: 50, at: "2026-01-01T00:00:00Z" }],
             edit_counts: {},
             anatomy_hits: 0,
             anatomy_misses: 0,
@@ -105,10 +105,11 @@ describe("stop.ts robustness", () => {
             stop_count: 0,
         };
 
-        // Pass a sessionDir that has a malformed ledger to force a throw
-        // during the ledger write path. finalizeSession should still
-        // have incremented stop_count on the session object.
-        expect(() => finalizeSession(dir, dir, session)).not.toThrow();
+        // Use a sessionDir that requires creating intermediate directories
+        // to ensure the ledger write path is exercised (not short-circuited
+        // by the early return when files_read/files_written are empty).
+        const badDir = path.join(dir, "nonexistent", "deep");
+        expect(() => finalizeSession(dir, badDir, session)).not.toThrow();
         expect(session.stop_count).toBeGreaterThanOrEqual(1);
     });
 
