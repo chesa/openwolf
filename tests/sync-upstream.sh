@@ -260,18 +260,18 @@ echo "=== sync-upstream.sh Test Suite ==="
 echo ""
 
 echo "Behavioral Tests:"
-test_10_help_flag
-test_11_version_flag
-test_12_branch_flag
-test_1_missing_upstream_remote
-test_2_existing_upstream_remote
-test_3_fetch_failure
-test_4_default_branch_header
-test_9_feature_branch_warning
-test_5_ahead_status
-test_6_behind_status
-test_7_diverged_status
-test_8_in_sync_status
+test_10_help_flag || true
+test_11_version_flag || true
+test_12_branch_flag || true
+test_1_missing_upstream_remote || true
+test_2_existing_upstream_remote || true
+test_3_fetch_failure || true
+test_4_default_branch_header || true
+test_9_feature_branch_warning || true
+test_5_ahead_status || true
+test_6_behind_status || true
+test_7_diverged_status || true
+test_8_in_sync_status || true
 
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed, $SKIP skipped ==="
