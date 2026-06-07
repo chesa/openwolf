@@ -4,8 +4,15 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 
 async function freshSessionStart() {
+    // Unset CLAUDE_PROJECT_DIR during import so the module-level main() call
+    // doesn't access real project files (e.g., .wolf/ directories) when the
+    // env var happens to be set in CI or developer shell config.
+    const orig = process.env.CLAUDE_PROJECT_DIR;
+    delete process.env.CLAUDE_PROJECT_DIR;
     vi.resetModules();
-    return import("../../src/hooks/session-start.js");
+    const mod = await import("../../src/hooks/session-start.js");
+    if (orig !== undefined) process.env.CLAUDE_PROJECT_DIR = orig;
+    return mod;
 }
 
 describe("session-start.ts ledger init", () => {
