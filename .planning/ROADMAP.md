@@ -2,7 +2,12 @@
 
 ## Phase 0: Prerequisite Fix
 
-- Fix `HOOK_FILES` deployment gap in `src/cli/hook-settings.ts`.
+**Goal:** Remove vestigial HOOK_FILES constant and migrate tests to dynamic discovery verification.
+**Plans:** 1 plan
+**Status:** 🔄 Planned
+
+Plans:
+- [ ] 00-01-PLAN.md — Remove HOOK_FILES and update tests for dynamic discovery
 
 ## Phase 1: Fork Installation & Team Onboarding
 
