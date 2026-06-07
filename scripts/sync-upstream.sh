@@ -124,8 +124,8 @@ fetch_upstream() {
 
 validate_branch_name() {
   local branch="$1"
-  if ! printf "%s" "$branch" | grep -qE '^[a-zA-Z0-9][a-zA-Z0-9._/-]*$'; then
-    printf "Error: Invalid branch name '%s'. Use alphanumeric characters, dots, underscores, hyphens, and forward slashes only.\n" "$branch" >&2
+  if ! git check-ref-format --branch "$branch" 2>/dev/null; then
+    printf "Error: Invalid branch name '%s'.\n" "$branch" >&2
     exit 1
   fi
 }
