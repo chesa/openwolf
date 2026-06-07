@@ -106,22 +106,81 @@ test_4_default_branch_header() {
 
 # Test 5: When ahead > 0 and behind == 0, status prints "AHEAD"
 test_5_ahead_status() {
-  print_result SKIP "Test 5: AHEAD status" "Requires controlled git divergence; verified in real run"
+  setup_test_repo
+  (
+    cd "$TEST_TMP_DIR"
+    git init --bare "$TEST_TMP_DIR/upstream-bare"
+    git push "$TEST_TMP_DIR/upstream-bare" HEAD:main
+    git remote add upstream "$TEST_TMP_DIR/upstream-bare"
+    git commit --allow-empty -m "Ahead commit"
+    output=$(bash "$SCRIPT" 2>&1 || true)
+    if echo "$output" | grep -q "Status: AHEAD"; then
+      print_result PASS "Test 5: AHEAD status" ""
+      return
+    fi
+    print_result FAIL "Test 5: AHEAD status" "Did not detect AHEAD status"
+  )
 }
 
 # Test 6: When ahead == 0 and behind > 0, status prints "BEHIND"
 test_6_behind_status() {
-  print_result SKIP "Test 6: BEHIND status" "Requires upstream fetch; verified in real run"
+  setup_test_repo
+  (
+    cd "$TEST_TMP_DIR"
+    git commit --allow-empty -m "Second commit"
+    git init --bare "$TEST_TMP_DIR/upstream-bare"
+    git push "$TEST_TMP_DIR/upstream-bare" HEAD:main
+    git remote add upstream "$TEST_TMP_DIR/upstream-bare"
+    git reset --hard HEAD~1
+    output=$(bash "$SCRIPT" 2>&1 || true)
+    if echo "$output" | grep -q "Status: BEHIND"; then
+      print_result PASS "Test 6: BEHIND status" ""
+      return
+    fi
+    print_result FAIL "Test 6: BEHIND status" "Did not detect BEHIND status"
+  )
 }
 
 # Test 7: DIVERGED status
 test_7_diverged_status() {
-  print_result SKIP "Test 7: DIVERGED status" "Requires controlled divergence; verified in real run"
+  setup_test_repo
+  (
+    cd "$TEST_TMP_DIR"
+    git init --bare "$TEST_TMP_DIR/upstream-bare"
+    git push "$TEST_TMP_DIR/upstream-bare" HEAD:main
+    git remote add upstream "$TEST_TMP_DIR/upstream-bare"
+    git commit --allow-empty -m "Local commit"
+    git clone "$TEST_TMP_DIR/upstream-bare" "$TEST_TMP_DIR/upstream-temp"
+    cd "$TEST_TMP_DIR/upstream-temp"
+    git -c user.name="Upstream" -c user.email="up@test.com" commit --allow-empty -m "Upstream-only commit"
+    git push origin main
+    cd "$TEST_TMP_DIR"
+    rm -rf "$TEST_TMP_DIR/upstream-temp"
+    git fetch upstream
+    output=$(bash "$SCRIPT" 2>&1 || true)
+    if echo "$output" | grep -q "Status: DIVERGED"; then
+      print_result PASS "Test 7: DIVERGED status" ""
+      return
+    fi
+    print_result FAIL "Test 7: DIVERGED status" "Did not detect DIVERGED status"
+  )
 }
 
 # Test 8: IN SYNC status
 test_8_in_sync_status() {
-  print_result SKIP "Test 8: IN SYNC status" "Requires matching refs; verified in real run"
+  setup_test_repo
+  (
+    cd "$TEST_TMP_DIR"
+    git init --bare "$TEST_TMP_DIR/upstream-bare"
+    git push "$TEST_TMP_DIR/upstream-bare" HEAD:main
+    git remote add upstream "$TEST_TMP_DIR/upstream-bare"
+    output=$(bash "$SCRIPT" 2>&1 || true)
+    if echo "$output" | grep -q "Status: IN SYNC"; then
+      print_result PASS "Test 8: IN SYNC status" ""
+      return
+    fi
+    print_result FAIL "Test 8: IN SYNC status" "Did not detect IN SYNC status"
+  )
 }
 
 # Test 9: Feature branch warning
