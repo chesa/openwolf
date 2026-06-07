@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
@@ -56,19 +56,25 @@ interface SessionData {
     stop_count: number;
 }
 
-// Spy on stderr BEFORE importing stop.js so we capture any TypeError that
-// main() (called at module level) might write via its .catch() handler.
-// If the F-02 guard is ever removed, this spy will catch the regression.
-// Timing: `await import()` flushes the microtask queue, so main().catch()
-// has already fired by the time we snapshot _loadTimeCalls below.
-const _loadStderrSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
-const { finalizeSession } = await import("../../src/hooks/stop.js");
-const _loadTimeCalls = [..._loadStderrSpy.mock.calls];
-_loadStderrSpy.mockRestore();
+// Declare at module scope — assigned inside beforeAll so the stderr spy
+// is scoped to this test suite and not left active as a module-level side
+// effect that could capture writes from other test files (see WR-04).
+let finalizeSession: (wolfDir: string, sessionDir: string, session: SessionData) => void;
+let _loadTimeCalls: string[][];
 
 describe("stop.ts robustness", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "ow-stop-"));
     const sessionFile = path.join(dir, "_session.json");
+
+    beforeAll(async () => {
+        // Spy on stderr BEFORE importing stop.js so we capture any TypeError
+        // that main() (called at module level) might write via .catch().
+        const spy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+        const mod = await import("../../src/hooks/stop.js");
+        finalizeSession = mod.finalizeSession;
+        _loadTimeCalls = [...spy.mock.calls];
+        spy.mockRestore();
+    });
 
     beforeEach(() => {
         const fs = require("node:fs");
