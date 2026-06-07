@@ -29,7 +29,7 @@ function getVersion(): string {
 const ALWAYS_OVERWRITE = [
   "OPENWOLF.md",
   "reframe-frameworks.md",
-  ".gitignore",
+  "wolf-gitignore",
 ];
 
 // Files that contain user/session data — only create if missing, never overwrite.
@@ -56,9 +56,17 @@ import { findHookSourceDir, copyHookFiles, writeHooksPackageJson } from "./hook-
 import { findTemplatesDir } from "./templates.js";
 export { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks };
 
+// Template name → destination filename mapping.
+// Template files use plain names but some destinations need a different name
+// (e.g. wolf-gitignore → .gitignore).
+const TEMPLATE_NAME_MAP: Record<string, string> = {
+  "wolf-gitignore": ".gitignore",
+};
+
 function writeTemplateFile(templatesDir: string, wolfDir: string, file: string): void {
   const srcPath = path.join(templatesDir, file);
-  const destPath = path.join(wolfDir, file);
+  const destName = TEMPLATE_NAME_MAP[file] ?? file;
+  const destPath = path.join(wolfDir, destName);
   if (fs.existsSync(srcPath)) {
     const content = fs.readFileSync(srcPath, "utf-8");
     fs.writeFileSync(destPath, content, "utf-8");
@@ -146,6 +154,22 @@ function writeGitIgnore(projectRoot: string): void {
   if (!gitignore.includes(".wolf/")) {
     gitignore += "\n\n# OpenWolf\n.wolf/\n";
     fs.writeFileSync(gitignorePath, gitignore, "utf-8");
+  }
+}
+
+function checkRootGitIgnore(projectRoot: string): void {
+  const gitignorePath = path.join(projectRoot, ".gitignore");
+  try {
+    const content = fs.readFileSync(gitignorePath, "utf-8");
+    if (content.includes(".wolf/")) {
+      console.log("");
+      console.log("  ℹ Your .gitignore contains '.wolf/' which blocks all wolf files.");
+      console.log("    To use the mixed commit strategy (recommended for teams), remove");
+      console.log("    the '.wolf/' line — the new .wolf/.gitignore handles per-file");
+      console.log("    exclusions.");
+    }
+  } catch {
+    // No .gitignore or can't read — not an error
   }
 }
 
@@ -380,7 +404,8 @@ export async function initCommand(): Promise<void> {
     seedStatus(wolfDir, projectRoot);
   }
 
-  // --- .wolf/.gitignore (handled by ALWAYS_OVERWRITE template above) ---
+  // --- Check root .gitignore for .wolf/ entry ---
+  checkRootGitIgnore(projectRoot);
 
   // --- Scan ---
   let fileCount = 0;

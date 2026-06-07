@@ -15,7 +15,6 @@ OpenWolf is configured through a JSON file in the project workspace and a small 
 | `PROGRAMFILES(X86)` | Optional | `C:\Program Files (x86)` | Windows only. Used by DesignQC to discover 32-bit browser installations. |
 | `LOCALAPPDATA` | Optional | — | Windows only. Used by DesignQC to discover user-local Chrome installations. |
 | `ANTHROPIC_API_KEY` | Optional | — | If present in the environment, the cron engine removes it before invoking `claude -p` so that OAuth subscription credentials are used instead of a potentially depleted API key. |
-| `WITH_FILE_LOCK_TTL_MS` | Optional | `30000` | Staleness threshold (milliseconds) for the advisory file lock used by concurrent hook processes. When a hook process crashes while holding a lock, the lock file remains. After this TTL expires, the lock is considered stale and automatically broken. Increase for very slow filesystems; decrease for faster lock recovery. |
 
 ## Config file format
 

@@ -1,0 +1,25 @@
+# OpenWolf — .wolf/.gitignore
+# Per-developer state (don't commit)
+memory.md
+token-ledger.json
+cron-state.json
+designqc-captures/
+designqc-report.json
+suggestions.json
+backups/
+sessions/
+
+# Transient lock files from concurrent-write protection
+*.lock
+
+# Shared knowledge files are NOT listed here, so they ARE committed:
+#   anatomy.md        — project file map
+#   cerebrum.md       — learned conventions and do-not-repeat list
+#   OPENWOLF.md       — operating protocol
+#   config.json       — project configuration
+#   buglog.json       — known bugs and fixes
+#   identity.md       — project identity
+#   STATUS.md         — project status
+#   hooks/            — compiled hook scripts
+#   reframe-frameworks.md
+#   cron-manifest.json  — cron config (cron-state.json is per-dev, above)
