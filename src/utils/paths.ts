@@ -6,6 +6,10 @@ export function normalizePath(p: string): string {
 }
 
 export function getWolfDir(from?: string): string {
+  const envDir = process.env.OPENWOLF_METADATA_DIR;
+  if (envDir && envDir.trim().length > 0) {
+    return path.resolve(envDir.trim());
+  }
   const base = from ?? process.cwd();
   return path.join(base, ".wolf");
 }
