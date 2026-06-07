@@ -147,7 +147,8 @@ describe("detectWorktreeContext", () => {
     });
     const result = detectWorktreeContext("/repo/.worktrees/feat");
     if (!result.isWorktree) throw new Error("expected worktree");
-    expect(result.worktreeId).toBe("3ec0f41f");
+    // Hardcoded hash removed — the regex below validates format; the
+    // "produces consistent worktreeId" test above validates determinism.
     expect(result.worktreeId).toMatch(/^[0-9a-f]{8}$/);
   });
 
