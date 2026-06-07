@@ -131,7 +131,9 @@ export function extractDescription(filePath: string): string {
 
   // Also check directory-prefixed entries (e.g., ".github/workflows/ci.yml")
   // against the full path — basename alone won't match these.
-  const dirKey = Object.keys(KNOWN_FILES).find(k => k.includes("/") && filePath.endsWith(k));
+  const dirKey = Object.keys(KNOWN_FILES).find(
+    k => k.includes("/") && (filePath === k || filePath.endsWith(path.sep + k) || filePath.endsWith("/" + k))
+  );
   if (dirKey) return KNOWN_FILES[dirKey];
 
   let content: string;
