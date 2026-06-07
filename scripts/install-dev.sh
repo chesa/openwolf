@@ -128,6 +128,9 @@ if ! git rev-parse --git-dir >/dev/null 2>&1; then
 fi
 printf '  git repo OK\n'
 
+cd "$(git rev-parse --show-toplevel)"
+printf '  Changed to repository root: %s\n' "$(pwd)"
+
 # --- Global openwolf conflict warning ------------------------------------ #
 
 if command -v openwolf >/dev/null 2>&1; then
