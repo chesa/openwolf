@@ -24,6 +24,19 @@ set -euo pipefail
 readonly SCRIPT_VERSION="1.0.0"
 readonly UPSTREAM_URL="https://github.com/cytostack/openwolf.git"
 
+# --- Cleanup trap --------------------------------------------------------- #
+
+CLEANUP_TRAP_RAN=false
+_cleanup() {
+  if [ "$CLEANUP_TRAP_RAN" = "true" ]; then return; fi
+  CLEANUP_TRAP_RAN=true
+  if [ -d dist ]; then
+    printf '\nSetup failed. Removing incomplete build artifacts...\n' >&2
+    rm -rf dist 2>/dev/null || true
+  fi
+}
+trap _cleanup EXIT ERR
+
 # --- Help ----------------------------------------------------------------- #
 
 show_help() {
