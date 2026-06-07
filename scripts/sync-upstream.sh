@@ -21,7 +21,10 @@
 # INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING IN ANY WAY
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 # DAMAGE.
-set -euo pipefail
+set -eu
+if ! set -o pipefail 2>/dev/null; then
+  echo "Warning: pipefail not supported (bash < 4.0). Pipeline errors may be masked." >&2
+fi
 
 # pragma mark *** Constants ***
 

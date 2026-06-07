@@ -1,7 +1,10 @@
 #!/bin/bash
 # Test suite for scripts/sync-upstream.sh
 # Runs 12 behavior tests defined in PLAN.md
-set -euo pipefail
+set -eu
+if ! set -o pipefail 2>/dev/null; then
+  echo "Warning: pipefail not supported (bash < 4.0). Pipeline errors may be masked." >&2
+fi
 
 PASS=0
 FAIL=0
