@@ -1,6 +1,6 @@
 ---
 phase: 01-fork-install
-reviewed: 2026-06-07T18:30:00Z
+reviewed: 2026-06-07T20:00:00Z
 depth: standard
 files_reviewed: 2
 files_reviewed_list:
@@ -8,134 +8,125 @@ files_reviewed_list:
   - docs/DEVELOPMENT.md
 findings:
   critical: 0
-  warning: 3
+  warning: 2
   info: 3
-  total: 6
+  total: 5
 status: issues_found
 ---
 
-# Phase 01: Code Review Report — Fork Install
+# Phase 01: Code Review Report — Fork Install Setup
 
-**Reviewed:** 2026-06-07T18:30:00Z
-**Depth:** standard
-**Files Reviewed:** 2
+**Reviewed:** 2026-06-07T20:00:00Z  
+**Depth:** standard  
+**Files Reviewed:** 2  
 **Status:** issues_found
 
 ## Summary
 
-Reviewed `scripts/install-dev.sh` and `docs/DEVELOPMENT.md` at standard depth. The shell script is well-structured with proper error handling (`set -euo pipefail`, argument validation, version checks). The documentation is accurate and all cross-references point to existing files. No security vulnerabilities, injection vectors, or critical logic bugs were found. Three warnings were identified — primarily concerning inconsistent version sanitization, incomplete help/usage documentation, and a misleading conflict warning. Three informational items note minor improvements for defensive coding and documentation completeness.
+Reviewed the automated dev environment setup script (`scripts/install-dev.sh`) and the development documentation (`docs/DEVELOPMENT.md`). The script is well-structured with proper `set -euo pipefail`, clear argument parsing, and version checks for Node.js and pnpm. The documentation accurately describes the build commands, branch conventions, and testing workflow, and cross-references against the actual repository state (`package.json`, `.github/workflows/docs.yml`, `tests/` directory) confirm the claims are correct.
+
+Two warnings and three info items were identified. No critical security vulnerabilities or blocker bugs were found.
 
 ---
 
 ## Warnings
 
-### WR-01: pnpm version string not sanitized for potential `v` prefix
+### WR-01: No cleanup trap on script failure leaves partial artifacts (scripts/install-dev.sh)
 
-**File:** `scripts/install-dev.sh:117`
-**Issue:** The Node.js version check strips the `v` prefix with `sed 's/^v//'` (line 99), but the pnpm version check on lines 116–117 does not. While `pnpm --version` currently outputs an unprefixed version (e.g., `9.0.0`), several Node.js tool version commands (nvm, fnm, Corepack wrappers) can produce `v`-prefixed output in some configurations. If the pnpm version string contained a `v` prefix, `cut -d. -f1` would yield `v8` and the `-lt 8` integer comparison would produce a shell error (stderr message + exit code 2), causing the `||` chain to enter the error branch with a false-positive "pnpm >= 8.0.0 required" message.
+**File:** `scripts/install-dev.sh`  
+**Lines:** (no trap exists anywhere in the file)  
+**Severity:** Warning  
 
-**Fix:** Apply consistent `sed 's/^v//'` prefix stripping to the pnpm version string before the numeric comparison:
+**Issue:** The script relies solely on `set -e` for error handling but has no `trap` for cleanup. If `pnpm install` fails midway, `node_modules/` may be partially populated. If `pnpm build` fails after a partial compilation, `dist/` can contain stale or incomplete build artifacts. A subsequent re-run of the script (or manual commands) could link a broken build via `pnpm link --global` on line 154 without warning the user.
 
-```bash
-PNPM_MAJOR=$(printf '%s' "$PNPM_VERSION" | sed 's/^v//' | cut -d. -f1)
-```
-
-Alternatively, validate that the extracted major version is numeric before comparison:
+**Fix:** Add a cleanup trap that removes the `dist/` directory on failure. Since `node_modules/` is large and expensive to reinstall, target only the build output:
 
 ```bash
-if ! [ "$PNPM_MAJOR" -eq "$PNPM_MAJOR" ] 2>/dev/null; then
-  printf 'Error: unexpected pnpm version format: %s\n' "$PNPM_VERSION" >&2
-  exit 1
-fi
+# Add near line 23, after the readonly constants
+CLEANUP_TRAP_RAN=false
+_cleanup() {
+  if [ "$CLEANUP_TRAP_RAN" = "true" ]; then return; fi
+  CLEANUP_TRAP_RAN=true
+  if [ -d dist ]; then
+    printf '\nSetup failed. Removing incomplete build artifacts...\n' >&2
+    rm -rf dist 2>/dev/null || true
+  fi
+}
+trap _cleanup EXIT ERR
 ```
 
 ---
 
-### WR-02: Help and usage text omit `-h`/`-v` shorthands
+### WR-02: Troubleshooting advice for pnpm PATH silently insufficient (docs/DEVELOPMENT.md)
 
-**File:** `scripts/install-dev.sh:14-16,33-36`
-**Issue:** The script's:
-- Header comment block (lines 14–16): only shows `--help` and `--version`
-- `show_help()` function (lines 33–36): only shows `--help` and `--version`
-- Error fallback message (line 83): only shows `--help` and `--version`
+**File:** `docs/DEVELOPMENT.md`  
+**Lines:** 40–46  
+**Severity:** Warning  
 
-However, the argument parser on lines 72–79 also handles `-h` and `-v` as case alternatives. Users reading the help text won't discover these shorthands.
+**Issue:** The troubleshooting section recommends `pnpm setup` to resolve PATH issues with `pnpm link --global`. However, `pnpm setup` modifies shell rc files (`.bashrc`, `.zshrc`) — it does **not** reload the current shell session. After running `pnpm setup`, the user's `PATH` in the current terminal remains unchanged. If they immediately re-run `./scripts/install-dev.sh`, `pnpm link --global` will fail with the same error, causing confusion.
 
-**Fix:** Update all three locations to include the short flags. For example in `show_help()`:
-
-```
-USAGE:
-  ./scripts/install-dev.sh                     Full setup
-  ./scripts/install-dev.sh [-h | --help]       Show this help message
-  ./scripts/install-dev.sh [-v | --version]    Show version
-```
-
-And the error fallback (line 83):
-```
-printf 'Usage: ./scripts/install-dev.sh [--help|-h] [--version|-v]\n' >&2
-```
-
----
-
-### WR-03: Global conflict warning doesn't explain script continuation
-
-**File:** `scripts/install-dev.sh:136-142`
-**Issue:** The warning block instructs users to "uninstall the existing global package first" with `npm uninstall -g openwolf` / `pnpm unlink --global openwolf`. It does not clarify that the script **will continue execution** regardless, and that the `pnpm link --global` on line 153 will override any existing global installation anyway. Users unfamiliar with the script may interpret this as a hard failure and either stop the script or attempt to resolve the conflict unnecessarily.
-
-**Fix:** Add an explicit continuation note after the uninstall instructions:
+**Fix:** Add a step advising the user to source their shell config after `pnpm setup`:
 
 ```bash
-if command -v openwolf >/dev/null 2>&1; then
-  printf 'Warning: openwolf is already globally installed.\n' >&2
-  printf '  The script will continue and link the local build globally,\n' >&2
-  printf '  overriding the existing installation. To avoid potential\n' >&2
-  printf '  confusion, you may uninstall the existing package first:\n' >&2
-  printf '    npm uninstall -g openwolf\n' >&2
-  printf '    pnpm unlink --global openwolf\n' >&2
-fi
+pnpm setup
+# After running pnpm setup, reload your shell configuration:
+source ~/.zshrc   # or ~/.bashrc, depending on your shell
 ```
 
 ---
 
 ## Info
 
-### IN-01: No post-link verification step
+### IN-01: Subprocess pipeline for version extraction (scripts/install-dev.sh)
 
-**File:** `scripts/install-dev.sh:153-177`
-**Issue:** After `pnpm link --global` succeeds, the script tells the user to run `node dist/bin/openwolf.js --help` manually (line 177) but does not verify the link itself. If the global `pnpm` bin directory is not in `PATH` (common on systems where `pnpm setup` hasn't been run), the link step succeeds silently but the CLI won't be accessible. The script could optionally run a quick verification:
+**File:** `scripts/install-dev.sh`  
+**Lines:** 99, 116  
+**Severity:** Info  
 
+**Issue:** Lines 99 and 116 use a pipeline of `printf | sed | cut` (three subprocesses) to extract the major version number from `node --version` and `pnpm --version` output:
 ```bash
-printf 'Verifying global link...\n'
-node dist/bin/openwolf.js --help >/dev/null 2>&1 && \
-  printf '  openwolf linked successfully.\n' || \
-  printf '  Warning: link verification failed. Ensure pnpm bin dir is in PATH.\n'
+NODE_MAJOR=$(printf '%s' "$NODE_VERSION" | sed 's/^v//' | cut -d. -f1)
 ```
-
----
-
-### IN-02: Version prefix handling inconsistency (maintenance trap)
-
-**File:** `scripts/install-dev.sh:99,116-117`
-**Issue:** The Node.js version check strips the leading `v` with `sed 's/^v//'` before extracting the major version (line 99). The pnpm version check does not apply this stripping (line 116). While both are correct for current tool output, the inconsistency is a maintenance trap — a future contributor might copy one pattern to the other context incorrectly, or update one path but not the other when accommodating a change in tool output format. Defensive coding would apply the same sanitization pattern to both.
-
----
-
-### IN-03: DEVELOPMENT.md doesn't document setup script flags
-
-**File:** `docs/DEVELOPMENT.md:20`
-**Issue:** The local setup section recommends `./scripts/install-dev.sh` without mentioning that the script accepts `--help`/`--version` (and the undocumented `-h`/`-v`). Users reading only the development docs won't know about these options unless they run the script or read its code.
-
-**Fix:** Consider adding a brief note:
-```markdown
-2. Run the automated setup script (recommended):
-   ```bash
-   ./scripts/install-dev.sh
-   ```
-   Run `./scripts/install-dev.sh --help` for available options.
+Since the shebang is `#!/bin/bash`, bash built-in parameter expansion can achieve the same result more efficiently and with fewer failure modes:
+```bash
+NODE_MAJOR="${NODE_VERSION#v}"   # strip leading 'v'
+NODE_MAJOR="${NODE_MAJOR%%.*}"   # keep only major number
 ```
+Not a correctness bug, but unnecessary subprocess spawning for trivial string manipulation.
+
+**Fix:** Replace the pipeline with bash parameter expansion on lines 99 and 116.
 
 ---
 
-_Reviewed: 2026-06-07T18:30:00Z_
-_Reviewer: gsd-code-reviewer_
+### IN-02: Inconsistent error-handling pattern between Node.js and pnpm checks (scripts/install-dev.sh)
+
+**File:** `scripts/install-dev.sh`  
+**Lines:** 93–103 vs 109–120  
+**Severity:** Info  
+
+**Issue:** The Node.js check (lines 93–103) captures the version via `node --version 2>/dev/null || true` and then tests `-z "$NODE_VERSION"` to detect missing Node. The pnpm check (lines 109–120) first validates the command exists via `command -v pnpm` then captures the version. Both approaches work, but the `-z "$PNPM_VERSION"` guard on line 117 is redundant because `command -v` on line 109 already confirmed the command exists. The inconsistency could lead to maintenance errors.
+
+**Fix:** Align both checks to the same pattern — either both use `command -v` first (more explicit), or both rely on the version command with a `-z` guard.
+
+---
+
+### IN-03: Hook update command ordering dependency subtly contradictory (docs/DEVELOPMENT.md)
+
+**File:** `docs/DEVELOPMENT.md`  
+**Line:** 69  
+**Severity:** Info  
+
+**Issue:** The docs present the following as the canonical hook-update workflow:
+> `pnpm build:hooks && node dist/bin/openwolf.js update`  
+> (The `dist/bin/openwolf.js` file is generated by `pnpm build` and does not exist until after the build completes.)
+
+The first part reads like a runnable one-liner, but the parenthetical contradicts it — `dist/bin/openwolf.js` doesn't exist after just `pnpm build:hooks`. A developer who has only run `pnpm build:hooks` (not a full `pnpm build`) will hit a `ENOENT` error. The note explains the issue but presenting it as a `&&` chain is misleading.
+
+**Fix:** Rephrase to make the dependency explicit:
+> After a full `pnpm build`, recompile hooks with `pnpm build:hooks` and copy them into `.wolf/hooks/` by running `node dist/bin/openwolf.js update`.
+
+---
+
+_Reviewed: 2026-06-07T20:00:00Z_  
+_Reviewer: gsd-code-reviewer agent_  
 _Depth: standard_
