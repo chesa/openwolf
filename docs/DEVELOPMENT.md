@@ -33,7 +33,9 @@ How to set up, build, and contribute to OpenWolf.
 
 ### Troubleshooting
 
-If `pnpm link --global` fails with a path error, ensure the pnpm bin directory is included in your `PATH` environment variable. You can often resolve this by running:
+If the automated setup script (`./scripts/install-dev.sh`) fails during the global link step,
+or if you manually ran `pnpm link --global` and encountered a path error, ensure the pnpm bin
+directory is included in your `PATH`:
 
    ```bash
    pnpm setup
