@@ -1,216 +1,156 @@
 ---
 phase: 02-divergence-management
-reviewed: 2026-06-07T00:00:00Z
+reviewed: 2026-06-07T17:00:00Z
 depth: standard
-files_reviewed: 3
+files_reviewed: 2
 files_reviewed_list:
-  - README.md
   - scripts/sync-upstream.sh
   - tests/sync-upstream.sh
 findings:
   critical: 0
   warning: 4
-  info: 2
-  total: 6
+  info: 4
+  total: 8
 status: issues_found
 ---
 
-# Phase 02: Code Review Report — Iteration 2
+# Phase 02: Code Review Report
 
-**Reviewed:** 2026-06-07T00:00:00Z
+**Reviewed:** 2026-06-07T17:00:00Z
 **Depth:** standard
-**Files Reviewed:** 3
+**Files Reviewed:** 2
 **Status:** issues_found
 
 ## Summary
 
-Re-review of the fork divergence management implementation after previous findings (2 critical, 4 warning, 2 info) were addressed in 5 commits. All previously scoped fixes (CR-01, CR-02, WR-01, WR-02, WR-03, WR-04) are confirmed applied. The production script (`scripts/sync-upstream.sh`) is functionally sound with no blocker-level issues remaining.
+Reviewed `scripts/sync-upstream.sh` (249 lines) and `tests/sync-upstream.sh` (280 lines) — a fork divergence reporting utility and its test suite. The main script is well-structured with `set -euo pipefail`, clear function boundaries, input validation, and read-only semantics (no merge/rebase). The test suite covers 12 behavior scenarios with isolated temp repos.
 
-However, 4 new warning-grade findings and 2 info items were identified in the test suite and production script:
-
-- **Temp directory leak** — `setup_test_repo()` overwrites the global `TEST_TMP_DIR` on each call, leaving N-1 temp directories behind per run
-- **Network-dependent tests** — Tests 4, 9, 12 rely on GitHub network access; they fail deterministically in offline CI
-- **No test error resilience** — Test function calls lack `|| true` guards; a single subshell failure aborts the entire suite
-- **Silent "IN SYNC" on missing upstream branch** — When the specified upstream branch doesn't exist, `git rev-list --count` fails silently and both ahead/behind default to 0, producing a misleading "IN SYNC" status
-- **License inconsistency** — BSD 3-clause header in the script vs AGPL-3.0 project license
-- **Minor BRE portability** — Test 3 uses `\|` alternation without `-E` flag; works on modern greps but is technically non-standard
+Key concerns: the divergence computation silently produces "IN SYNC" when the local branch doesn't exist; the branch name validator allows characters that git itself rejects; tests verify output strings but never assert exit codes.
 
 ---
 
 ## Warnings
 
-### WR-05: Temp directory leak — `setup_test_repo()` overwrites global `$TEST_TMP_DIR`
+### WR-01: Silent "IN SYNC" when local branch does not exist
 
-**File:** `tests/sync-upstream.sh:33-42,12-17`
+**File:** `scripts/sync-upstream.sh:154-155`
+**Issue:** If a user passes `--branch nonexistent-branch` (validated name syntax but no local ref), both `git rev-list` commands fail, and the `|| echo "0"` fallback silently sets ahead=0 and behind=0, producing a "Status: IN SYNC" result. This is logically incorrect — a nonexistent branch is not "in sync" with anything. The misleading IN SYNC status masks the configuration error.
 
-**Issue:** The `setup_test_repo()` function (line 33) sets the global variable `TEST_TMP_DIR` to a new `mktemp` path each time it is called. The `cleanup()` trap on EXIT (line 12) only removes the directory referenced by `$TEST_TMP_DIR` at exit time. Since `setup_test_repo()` is called 10 times (once per test), each call overwrites the previous value, and only the last temp directory is ever cleaned up.
+The script validates the branch name format (line 127) and checks the upstream ref exists (line 148), but never verifies that the local branch exists before computing divergence. The upstream-ref check at line 148 will exit with an unhelpful "Upstream branch was not found on remote" message — blaming the remote when the real problem is the missing local branch.
 
-This leaks up to 9 temp directories per test run (`/tmp/sync-upstream-test-XXXXXX`), each containing a git repository (~200-300 KB). Over CI runs or repeated local development, these accumulate.
+**Fix:** Add a local branch existence check early in `report_divergence()` before computing counts:
 
-**Root cause:** Tests that need isolated git repositories all call `setup_test_repo()`, which unconditionally assigns a new directory to the global `TEST_TMP_DIR`. The cleanup trap has no mechanism to track multiple directories.
-
-**Fix:** Clean up the previous temp directory before allocating a new one, or track created directories in an array:
-
-**Option A — Clean up before re-assigning:**
 ```bash
-setup_test_repo() {
-  # Clean up previous temp dir before creating a new one
-  if [ -n "$TEST_TMP_DIR" ] && [ -d "$TEST_TMP_DIR" ]; then
-    rm -rf "$TEST_TMP_DIR"
-  fi
-  TEST_TMP_DIR=$(mktemp -d /tmp/sync-upstream-test-XXXXXX)
-  # ... rest of setup
-}
+# In report_divergence(), before line 148:
+if ! git show-ref --verify "refs/heads/${branch}" >/dev/null 2>&1; then
+  printf "Error: Local branch '%s' does not exist.\n" "$branch" >&2
+  printf "Use 'git branch' to list available branches.\n" >&2
+  exit 1
+fi
 ```
 
-**Option B — Track all dirs in an array (most robust):**
+Alternatively, make the `git rev-list` failure explicit — remove the `|| echo "0"` fallback so that a failing `git rev-list` propagates the error instead of masking it:
+
 ```bash
-# At top level
-TEST_TMP_DIRS=()
-
-cleanup() {
-  local d
-  for d in "${TEST_TMP_DIRS[@]}"; do
-    [ -d "$d" ] && rm -rf "$d"
-  done
-}
-
-setup_test_repo() {
-  local tmpdir
-  tmpdir=$(mktemp -d /tmp/sync-upstream-test-XXXXXX)
-  TEST_TMP_DIRS+=("$tmpdir")
-  TEST_TMP_DIR="$tmpdir"
-  cd "$tmpdir"
-  # ... rest of setup
-}
+ahead=$(git rev-list --count "${upstream_ref}..${branch}" 2>/dev/null)
+behind=$(git rev-list --count "${branch}..${upstream_ref}" 2>/dev/null)
 ```
+
+This causes the script to exit on failure (due to `set -e`), surfacing the error immediately.
 
 ---
 
-### WR-06: Tests 4, 9, 12 are network-dependent and fail in offline CI
+### WR-02: Branch name validation is weaker than git's rules
 
-**File:** `tests/sync-upstream.sh:91-105, 186-200, 232-244`
+**File:** `scripts/sync-upstream.sh:127`
+**Issue:** The regex `^[a-zA-Z0-9][a-zA-Z0-9._/-]*$` allows branch names that git itself rejects. Specifically:
+- Double-dot (`..`) is allowed but invalid in git refspecs
+- Trailing `.` (dot) is allowed but invalid in git branch names
+- Trailing `.lock` suffix is allowed (reserved by git)
+- Names starting with `/` or containing `@{` are prevented by the regex, which is good, but the allowed false positives above create a false sense of security — the user sees "branch name validated" but git will still reject the name.
 
-**Issue:** Three tests set the upstream remote to `https://github.com/cytostack/openwolf.git` and run the full script. The script's `fetch_upstream()` function (line 107) attempts a `git fetch` from that URL. If network access to GitHub is unavailable (offline CI, air-gapped environment, rate limiting, DNS failure), the fetch fails and the script exits before reaching the output sections these tests check:
-
-| Test | Checks for | Printed by | Runs after fetch? |
-|------|-----------|-----------|-------------------|
-| Test 4 (header) | "Fork Divergence Report", "upstream/main" | `report_divergence()` | **YES — fails on network error** |
-| Test 9 (warning) | "Warning:" | `report_divergence()` | **YES — fails on network error** |
-| Test 12 (branch) | "upstream/develop" | `report_divergence()` | **YES — fails on network error** |
-
-Tests 1 and 2 add the same GitHub URL but pass in offline environments because they check output produced by `ensure_upstream_remote()`, which runs *before* `fetch_upstream()`. This inconsistency is confusing — three tests silently depend on network access while two coincidentally don't.
-
-The controlled divergence tests (5-8) demonstrate the correct pattern: use a local bare repository as the upstream remote, which works deterministically without network access.
-
-**Fix:** Replace the real GitHub URL with a local bare repository in tests 4, 9, and 12, following the same pattern as tests 5-8:
+**Fix:** Tighten the regex to match git's actual branch name rules:
 
 ```bash
-# Test 4 (modified to use local bare repo):
-test_4_default_branch_header() {
+# Reject names that git would reject:
+# - No two consecutive dots
+# - No trailing .lock or .
+# - No leading or trailing /
+# - No @{
+if ! printf "%s" "$branch" | grep -qE '^[a-zA-Z0-9][a-zA-Z0-9._/-]*$' ||
+   printf "%s" "$branch" | grep -qE '\.\.|\.lock$|\.$|/$|@{'; then
+```
+
+Or use git itself for canonical validation:
+
+```bash
+if ! git check-ref-format --branch "$branch" 2>/dev/null; then
+  printf "Error: Invalid branch name '%s'.\n" "$branch" >&2
+  exit 1
+fi
+```
+
+Using `git check-ref-format --branch` eliminates the need to maintain a parallel regex entirely.
+
+---
+
+### WR-03: Tests never assert exit codes
+
+**File:** `tests/sync-upstream.sh`
+**Issue:** Every behavioral test checks only string output (e.g., grepping for "AHEAD", "BEHIND", "Error:", etc.) but never verifies the script's exit code. A test could:
+- Match "BEHIND" in output but the script could have exited 1 instead of 0
+- Match "Error:" in output without confirming the exit code is non-zero
+- Pass spuriously if the wrong output message coincidentally contains the grep target
+
+Noteable examples:
+- Test 3 (`test_3_fetch_failure`, line 86-91): Checks for "error" or "failed" in output but never asserts non-zero exit. The `|| true` on line 86 discards the exit code entirely.
+- Test 5 (`test_5_ahead_status`, line 123-128): Checks for "AHEAD" but doesn't verify exit 0.
+
+**Fix:** Capture exit code and assert it alongside output checks. Example for test 3:
+
+```bash
+test_3_fetch_failure() {
   setup_test_repo
   (
     cd "$TEST_TMP_DIR"
-    git init --bare "$TEST_TMP_DIR/upstream-bare"
-    git push "$TEST_TMP_DIR/upstream-bare" HEAD:main
-    git remote add upstream "$TEST_TMP_DIR/upstream-bare"
-    output=$(bash "$SCRIPT" 2>&1 || true)
-    if echo "$output" | grep -q "Fork Divergence Report"; then
-      if echo "$output" | grep -q "upstream/main"; then
-        print_result PASS "Test 4: Default branch - main vs upstream/main" ""
-        return
-      fi
+    git remote add upstream https://github.com/nonexistent-user/nonexistent-repo.git
+    set +e
+    bash "$SCRIPT" 2>&1; exit_code=$?
+    set -e
+    output=$(bash "$SCRIPT" 2>&1) || true
+    if [ "$exit_code" -ne 0 ] && echo "$output" | grep -qi "error"; then
+      print_result PASS "Test 3: Fetch failure - exits with error" ""
+      return
     fi
-    print_result FAIL "Test 4: Default branch header" "Missing Fork Divergence Report or upstream/main reference"
+    print_result FAIL "Test 3: Fetch failure" "exit code $exit_code, error not reported"
   )
 }
 ```
 
-The same pattern applies to tests 9 and 12 — initialize a bare repo, push to it, set it as upstream, then run the script. The `git fetch` then targets a local path and succeeds immediately.
-
 ---
 
-### WR-07: Test function calls lack `|| true` guards — single failure aborts entire suite
+### WR-04: `ensure_upstream_remote` does not verify remote URL matches expected
 
-**File:** `tests/sync-upstream.sh:251-262`
+**File:** `scripts/sync-upstream.sh:95-103`
+**Issue:** `ensure_upstream_remote` confirms an `upstream` remote exists but does not verify its URL matches `UPSTREAM_URL`. If a user has an `upstream` remote pointing to a different fork (e.g., their colleague's fork, or a stale URL after a repo transfer), the script silently uses the wrong remote for divergence comparison. The function prints the URL for awareness, but doesn't warn when it differs from the expected URL. This could produce a meaningful but incorrect divergence report against the wrong repository.
 
-**Issue:** The test functions are called at the top level (lines 251-262) without `|| true` or similar error containment. With `set -euo pipefail` at line 4, if any test function returns a non-zero exit code (e.g., because a `git` command fails inside its subshell), the entire script exits immediately. Remaining tests never run.
-
-Consider this scenario:
-1. `setup_test_repo()` at line 34 does `cd "$TEST_TMP_DIR"` — if `$TEST_TMP_DIR` is empty (mktemp failure), `cd` fails, and with `set -e`, the function returns non-zero
-2. The calling function (`test_12_branch_flag`) also returns non-zero
-3. Line 253 calls `test_12_branch_flag` without `|| true` — `set -e` kills the suite
-4. Even if test 12 would have reported FAIL, tests 1-8 never execute
-
-Similarly, a failure inside any subshell that isn't guarded by `|| true` propagates upward. The tests that use `|| true` on `bash "$SCRIPT"` are safe for that line, but other `git` operations (clone, push, reset, branch) are not guarded.
-
-**Fix:** Guard all test function calls with `|| true` to contain failures, and report them through the test framework's pass/fail tracking:
+**Fix:** Add a URL comparison and warn (or exit) on mismatch:
 
 ```bash
-test_10_help_flag || true
-test_11_version_flag || true
-test_12_branch_flag || true
-test_1_missing_upstream_remote || true
-# ...
-
-# At exit, use stored FAIL count (already tracked by $FAIL global):
-exit $FAIL
-```
-
-Alternatively, invert the pattern: collect test return codes and let the suite always run to completion:
-
-```bash
-run_test() {
-  local test_name="$1"
-  shift
-  "$@" || FAIL=$((FAIL + 1))
-}
-
-run_test "Test 10" test_10_help_flag
-run_test "Test 11" test_11_version_flag
-# ...
-```
-
----
-
-### WR-08: Silent "IN SYNC" when upstream branch does not exist
-
-**File:** `scripts/sync-upstream.sh:147-148,192-194`
-
-**Issue:** When the user specifies `--branch develop` but `upstream/develop` does not exist on the remote, the script silently reports "IN SYNC". This happens because:
-
-1. `git fetch upstream` succeeds (fetching refs, but `upstream/develop` is never created)
-2. `git rev-list --count "upstream/develop..main" 2>/dev/null` fails — ref `upstream/develop` doesn't exist
-3. Stderr is suppressed (`2>/dev/null`), error code caught by `|| echo "0"`
-4. Both `ahead` and `behind` default to `0`
-5. The `else` branch (line 192) executes: "Status: IN SYNC"
-
-This is misleading. The user asked to compare against a branch that doesn't exist upstream, and the script says "everything is in sync" without any warning that the comparison couldn't be performed.
-
-The same issue can occur silently in other scenarios — if the remote was renamed, if the branch was deleted upstream, or if the branch name has a typo.
-
-**Fix:** Verify that the upstream ref exists before attempting the comparison:
-
-```bash
-report_divergence() {
-  local branch="$1"
-  local current_branch
-  current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
-  local upstream_ref="upstream/${branch}"
-
-  # Verify the upstream ref exists
-  if ! git show-ref --verify "refs/remotes/${upstream_ref}" >/dev/null 2>&1; then
-    printf "\n"
-    printf "=== Fork Divergence Report ===\n"
-    printf "Local branch:  %s\n" "$current_branch"
-    printf "Upstream ref:  %s\n" "$upstream_ref"
-    printf "\n"
-    printf "Error: Upstream branch '%s' was not found on remote.\n" "$upstream_ref" >&2
-    printf "The branch may not exist upstream, or the branch name may be incorrect.\n" >&2
-    exit 1
+ensure_upstream_remote() {
+  local url
+  if url=$(git remote get-url upstream 2>/dev/null); then
+    if [ "$url" != "$UPSTREAM_URL" ]; then
+      printf "Warning: Existing upstream remote URL differs from expected.\n" >&2
+      printf "  Expected: %s\n" "$UPSTREAM_URL" >&2
+      printf "  Found:    %s\n" "$url" >&2
+      printf "Continuing with existing remote URL. Use --verbose for details.\n" >&2
+    fi
+    printf "Using existing upstream remote: %s\n" "$url"
+  else
+    git remote add upstream "$UPSTREAM_URL"
+    printf "Added upstream remote: %s\n" "$UPSTREAM_URL"
   fi
-
-  # ... rest of function
 }
 ```
 
@@ -218,80 +158,74 @@ report_divergence() {
 
 ## Info
 
-### IN-03: License header in script conflicts with project-wide AGPL-3.0 license
+### IN-01: `validate_branch_name` only checks syntax, not branch existence
 
-**File:** `scripts/sync-upstream.sh:4-23`
+**File:** `scripts/sync-upstream.sh:125-131`
+**Issue:** The function validates the branch name format but doesn't verify the branch exists locally. If a user typos a branch name (e.g., `--branch devel` instead of `--branch develop`), the name format check passes but the script fails later at the upstream ref check with a misleading error message ("Upstream branch was not found on remote" when really the local branch is the problem).
 
-**Issue:** The script carries a 20-line BSD 3-clause license header (lines 4-23) while the overall project is licensed under AGPL-3.0 (README line 200). This creates a licensing inconsistency — a contributor or downstream consumer reading just this file would see BSD 3-clause terms, while the rest of the project is AGPL-3.0. The project's license file (`LICENSE`) contains the AGPL-3.0 terms.
+Related to WR-01; documenting separately as the root cause is the missing validity check rather than the downstream symptom.
 
-BSD 3-clause is more permissive than AGPL-3.0, so this likely doesn't create legal risk for the copyright holder. However, it's confusing and inconsistent. Either:
-- Remove the BSD header and rely on the project-wide LICENSE file
-- Or add a note that this file is part of the OpenWolf project licensed under AGPL-3.0
+**Fix:** See WR-01 fix — add `git show-ref --verify "refs/heads/${branch}"` check in `report_divergence()`.
 
-Both approaches should reference `SPDX-License-Identifier: AGPL-3.0-only` for clarity.
+---
 
-**Fix:** Replace the BSD 3-clause header with a short SPDX annotation:
+### IN-02: Non-sequential test execution order
+
+**File:** `tests/sync-upstream.sh:263-274`
+**Issue:** Tests are called in a mixed order (10, 11, 12, 1, 2, 3, 4, 9, 5, 6, 7, 8) rather than sequentially. While this doesn't affect correctness (tests are isolated), it makes the output harder to follow and makes it harder to map test functions to their numbered calls. A reader seeing "Test 8: IN SYNC status" after "Test 4: Default branch header" expects sequential ordering.
+
+**Fix:** Reorder calls to follow numeric order:
 
 ```bash
-#!/bin/bash
-# sync-upstream.sh - Report fork divergence from upstream cytostack/openwolf
-#
-# SPDX-License-Identifier: AGPL-3.0-only
-# This file is part of OpenWolf. See <root>/LICENSE for full terms.
-set -euo pipefail
+echo "Behavioral Tests:"
+test_1_missing_upstream_remote || true
+test_2_existing_upstream_remote || true
+test_3_fetch_failure || true
+test_4_default_branch_header || true
+test_5_ahead_status || true
+test_6_behind_status || true
+test_7_diverged_status || true
+test_8_in_sync_status || true
+test_9_feature_branch_warning || true
+test_10_help_flag || true
+test_11_version_flag || true
+test_12_branch_flag || true
 ```
 
 ---
 
-### IN-04: Test 3 uses `\|` BRE alternation without `-E` flag
+### IN-03: Unused variable `TEST_TMP_DIR`
 
-**File:** `tests/sync-upstream.sh:82`
+**File:** `tests/sync-upstream.sh:10-11`
+**Issue:** `TEST_TMP_DIR` is declared as an empty string at line 10, but its value is always overwritten by `setup_test_repo()` before any read. The initial assignment is dead code — the variable's first meaningful value comes from `setup_test_repo`. This is harmless but unnecessary.
 
-**Issue:** Test 3 checks fetch failure output using `grep -qi "error\|failed"`. The `\|` alternation operator is a GNU extension to basic regular expressions (BRE). In strict POSIX BRE, `\|` is a literal backslash followed by a pipe character. While it works on modern GNU grep and BSD grep 2.6.0 (current macOS), it is technically non-portable to strict POSIX environments or older grep implementations.
-
-The correct, portable approach is to use `-E` for extended regular expressions:
+**Fix:** Remove the initial assignment:
 
 ```bash
-if echo "$output" | grep -qiE "error|failed"; then
+TEST_TMP_DIR=""
 ```
 
-This was the same pattern found in the original CR-02 (test 10), which was fixed by simplification. The fix here is the same — use `-E` or simplify to check only the deterministic error string:
+Or remove the variable entirely and use `TEST_TMP_DIRS[-1]` to reference the latest temp dir (requires bash 4.3+). However, since the script uses `#!/bin/bash` and macOS might ship bash 3.2, the explicit variable should be kept — just remove the `=""` initialization to signal it's intentional.
+
+---
+
+### IN-04: Non-verbose fetch error message lacks diagnostic detail
+
+**File:** `scripts/sync-upstream.sh:115-118`
+**Issue:** When `VERBOSE` is `false` (default), `fetch_upstream` suppresses git's stderr output (`2>/dev/null`) and prints only a generic "Check network connectivity" message. If the fetch fails due to a non-connectivity reason (e.g., authentication failure, SSL certificate issue, remote URL change), the user sees no actionable diagnostic. The user must know to re-run with `--verbose` to see the real error.
+
+This is a deliberate tradeoff (clean output vs. verbosity), noted as info rather than a defect — but consider printing the error stderr inline when the fetch fails, even in non-verbose mode:
 
 ```bash
-# Option A: Add -E for portable ERE
-grep -qiE "error|failed"
-
-# Option B: Check only the deterministic message (most robust)
-grep -q "Failed to fetch from upstream remote"
+if ! git fetch upstream 2>/dev/null; then
+  printf "Error: Failed to fetch from upstream remote.\n" >&2
+  printf "Re-run with --verbose to see details.\n" >&2
+  exit 1
+fi
 ```
 
 ---
 
-## Files Reviewed
-
-| File | Lines | Type |
-|------|-------|------|
-| `scripts/sync-upstream.sh` | 242 | Bash script (divergence reporter) |
-| `tests/sync-upstream.sh` | 268 | Bash script (test suite) |
-| `README.md` | 200 | Documentation (Fork Management section) |
-
-## Fix Status Summary
-
-| Previous Finding | Status | Notes |
-|-----------------|--------|-------|
-| CR-01: Relative SCRIPT path  | ✅ Fixed | Absolute path resolves from `BASH_SOURCE` |
-| CR-02: BRE `\|` in test 10  | ✅ Fixed | Simplified to `grep -qi "usage"` |
-| WR-01: `-x` check in `script_exists()` | ✅ Fixed | Removed `-x`, only checks `-f` |
-| WR-02: `VERBOSE` not `local` | ✅ Fixed | Added `local` declaration |
-| WR-03: Core status tests skipped | ✅ Fixed | Tests 5-8 now implemented with bare repos |
-| WR-04: Leading hyphen in branch names | ✅ Fixed | Regex requires alphanumeric first char |
-| IN-01: Redundant grep alternation | ✅ Fixed | Same as CR-02 fix |
-| IN-02: Double newline | ⚠️ Unfixed | Trivial formatting, not re-filed |
-
-**New findings this iteration:** 4 warnings (WR-05 through WR-08), 2 info (IN-03, IN-04)
-
----
-
-_Reviewed: 2026-06-07T00:00:00Z_
-_Reviewer: gsd-code-reviewer_
+_Reviewed: 2026-06-07T17:00:00Z_
+_Reviewer: gsd-code-reviewer agent_
 _Depth: standard_
