@@ -111,7 +111,14 @@ if ! command -v pnpm >/dev/null 2>&1; then
   printf 'Install it with: npm install -g pnpm\n' >&2
   exit 1
 fi
-printf '  pnpm OK\n'
+
+PNPM_VERSION=$(pnpm --version 2>/dev/null || true)
+PNPM_MAJOR=$(printf '%s' "$PNPM_VERSION" | cut -d. -f1)
+if [ -z "$PNPM_VERSION" ] || [ "$PNPM_MAJOR" -lt 8 ]; then
+  printf 'Error: pnpm >= 8.0.0 required. Found: %s\n' "$PNPM_VERSION" >&2
+  exit 1
+fi
+printf '  pnpm %s OK\n' "$PNPM_VERSION"
 
 # --- Prerequisite: git repository ----------------------------------------- #
 
