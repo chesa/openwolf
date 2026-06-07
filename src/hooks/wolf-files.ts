@@ -29,7 +29,12 @@ export function ensureSessionDir(): void {
 export function ensureWolfDir(): void {
   const wolfDir = getWolfDir();
   if (!fs.existsSync(wolfDir)) {
-    process.exit(0);
+    const envDir = process.env.OPENWOLF_METADATA_DIR;
+    if (envDir && envDir.trim().length > 0) {
+      fs.mkdirSync(wolfDir, { recursive: true });
+    } else {
+      process.exit(0);
+    }
   }
 }
 
