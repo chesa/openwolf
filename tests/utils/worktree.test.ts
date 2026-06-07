@@ -14,12 +14,24 @@ function mockGitContext(opts: {
   branchError?: Error;
 }) {
   vi.mocked(execFileSync).mockImplementation((cmd: string, args?: readonly string[]) => {
-    const arg = (args ?? []).join(" ");
     // Combined call: git rev-parse --git-dir --git-common-dir
-    if (arg.includes("--git-dir") && arg.includes("--git-common-dir")) {
+    if (
+      cmd === "git" &&
+      args?.length === 3 &&
+      args[0] === "rev-parse" &&
+      args[1] === "--git-dir" &&
+      args[2] === "--git-common-dir"
+    ) {
       return `${opts.gitDir}\n${opts.commonDir}\n`;
     }
-    if (arg.includes("--abbrev-ref")) {
+    // Branch detection: git rev-parse --abbrev-ref HEAD
+    if (
+      cmd === "git" &&
+      args?.length === 3 &&
+      args[0] === "rev-parse" &&
+      args[1] === "--abbrev-ref" &&
+      args[2] === "HEAD"
+    ) {
       if (opts.branchError) throw opts.branchError;
       return opts.branch ?? "";
     }
