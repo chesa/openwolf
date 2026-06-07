@@ -60,6 +60,8 @@ directory is included in your `PATH`:
 | `pnpm build:dashboard` | Build Vite React dashboard only (`dist/dashboard/`) |
 | `pnpm build:templates` | Copy `src/templates/` to `dist/templates/` |
 | `pnpm dev` | Watch mode (TypeScript CLI only, not hooks/dashboard) |
+| `pnpm install:dev` | Run the automated setup script (`scripts/install-dev.sh`) |
+| `pnpm install:global` | Build and install globally via `npm install -g .` |
 | `pnpm clean` | Remove `dist/`, `.wolf/designqc-captures/`, and temp directories |
 
 OpenWolf has **three independently compiled parts** that must all be built for a working CLI:

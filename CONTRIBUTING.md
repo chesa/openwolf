@@ -76,12 +76,16 @@ src/
   tsc --noEmit -p tsconfig.hooks.json
   ```
 - **Tests:** All changes must keep the existing test suite passing. Test files
-  use the suffix `*.test.ts` (unit) or `*.integration.test.ts` (integration).
-  Run `pnpm test` before opening a pull request.
+  live under `tests/` and use the suffix `*.test.ts`. Run `pnpm test` before
+  opening a pull request.
 - **Style:** No automated linting or formatting tools (ESLint, Prettier, Biome)
   are currently configured. The project relies on TypeScript strict mode and
   manual consistency with the existing file organization in `src/` and the naming
   conventions already in use.
+- **CI status:** The project has no CI workflow for running tests or lint checks.
+  The only automation is a [docs deploy workflow](.github/workflows/docs.yml)
+  that builds and publishes docs on pushes to `main`. Local discipline (running
+  `pnpm test` and `tsc --noEmit`) is the sole gate.
 
 ## Pull Request Guidelines
 

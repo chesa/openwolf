@@ -26,6 +26,7 @@ The file is a single JSON object with a `version` key and an `openwolf` namespac
 {
   "version": 1,
   "openwolf": {
+    "enabled": true,
     "anatomy": { ... },
     "token_audit": { ... },
     "cron": { ... },
@@ -165,8 +166,9 @@ OpenWolf ships with a default `.wolf/.gitignore` template that implements a "mix
 *
 !.gitignore
 !OPENWOLF.md
-!identity.md
 !config.json
+!identity.md
+!wolf-gitignore
 ```
 
 - `*` — ignore everything in `.wolf/` by default
@@ -174,6 +176,7 @@ OpenWolf ships with a default `.wolf/.gitignore` template that implements a "mix
 - `!OPENWOLF.md` — track the project context document (this is a manually curated file worth sharing)
 - `!config.json` — track the configuration (port assignments, scan intervals, exclude patterns)
 - `!identity.md` — track the project identity (name, description, creation date)
+- `!wolf-gitignore` — track the per-developer state ignore list (ignores session state and runtime data while allowing shared knowledge files to be committed via `.wolf/.gitignore` `!` rules)
 
 To track additional files (e.g., `cerebrum.md` for team-wide learnings), add a `!` line to `.wolf/.gitignore`:
 

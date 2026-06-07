@@ -169,6 +169,9 @@ The only CI workflow is `.github/workflows/docs.yml`, which builds and deploys t
 | `tests/hooks/session-start.test.ts` | Session-start hook | Unit |
 | `tests/hooks/shared.test.ts` | Shared hook utilities | Unit |
 | `tests/hooks/stop.test.ts` | Stop hook / ledger finalize | Unit |
+| `tests/hooks/wolf-files.test.ts` | Wolf directory creation | Unit |
+| `tests/hooks/wolf-lock.test.ts` | File locking mechanism | Unit |
+| `tests/utils/paths.test.ts` | Path utilities (`getWolfDir`) | Unit |
 | `tests/utils/worktree.test.ts` | Worktree detection (mocked) | Unit |
 | `tests/utils/worktree.integration.test.ts` | Worktree detection (real git) | Integration |
 | `tests/security.test.ts` | Security guards | Structural / Unit |

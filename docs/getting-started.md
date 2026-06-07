@@ -28,7 +28,7 @@ Before installing OpenWolf, make sure you have the following installed:
    openwolf --version
    ```
 
-   You should see the installed version printed (e.g., `1.0.5-beta`).
+   You should see the installed version printed (e.g., `1.0.4`).
 
 3. (Optional) If you plan to use **Design QC**, install the optional dependency:
 
@@ -59,7 +59,7 @@ Before installing OpenWolf, make sure you have the following installed:
    pnpm build
    ```
 
-4. After building, verify the CLI works:
+4. After building, verify the CLI works (this file is a build artifact created by `pnpm build`):
 
    ```bash
    node dist/bin/openwolf.js --help
