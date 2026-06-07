@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from "vitest";
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
@@ -182,4 +182,8 @@ describe("stop.ts robustness", () => {
         );
         expect(typeErrorCalls).toHaveLength(0);
     });
+});
+
+afterAll(() => {
+    vi.restoreAllMocks();
 });
