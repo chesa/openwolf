@@ -147,7 +147,7 @@ test_10_help_flag() {
     return
   fi
   output=$(bash "$SCRIPT" --help 2>&1) || true
-  if echo "$output" | grep -qi "usage\|Usage\|Usage:"; then
+  if echo "$output" | grep -qi "usage"; then
     print_result PASS "Test 10: --help flag" ""
     return
   fi
