@@ -1,6 +1,6 @@
 ---
 phase: 01-fork-install
-reviewed: 2026-06-07T22:00:00Z
+reviewed: 2026-06-07T18:30:00Z
 depth: standard
 files_reviewed: 2
 files_reviewed_list:
@@ -8,91 +8,134 @@ files_reviewed_list:
   - docs/DEVELOPMENT.md
 findings:
   critical: 0
-  warning: 1
-  info: 2
-  total: 3
+  warning: 3
+  info: 3
+  total: 6
 status: issues_found
 ---
 
-# Phase 01: Code Review Report — Fork & Install Setup
+# Phase 01: Code Review Report — Fork Install
 
-**Reviewed:** 2026-06-07T22:00:00Z  
-**Depth:** standard  
-**Files Reviewed:** 2  
-**Status:** issues_found  
+**Reviewed:** 2026-06-07T18:30:00Z
+**Depth:** standard
+**Files Reviewed:** 2
+**Status:** issues_found
 
 ## Summary
 
-Reviewed `scripts/install-dev.sh` (174 lines) and `docs/DEVELOPMENT.md` (162 lines) at standard depth. The automated setup script is well-structured with proper error handling via `set -euo pipefail`, consistent `printf` usage, and meaningful exit codes. The development documentation is clear and well-organized.
-
-One **Warning** was found: the install script lacks a repository root guard, causing it to operate in the wrong directory when invoked from a subdirectory. Two **Info** items in the documentation are noted for consistency and clarity.
+Reviewed `scripts/install-dev.sh` and `docs/DEVELOPMENT.md` at standard depth. The shell script is well-structured with proper error handling (`set -euo pipefail`, argument validation, version checks). The documentation is accurate and all cross-references point to existing files. No security vulnerabilities, injection vectors, or critical logic bugs were found. Three warnings were identified — primarily concerning inconsistent version sanitization, incomplete help/usage documentation, and a misleading conflict warning. Three informational items note minor improvements for defensive coding and documentation completeness.
 
 ---
 
 ## Warnings
 
-### WR-01: Missing repository root guard causes silent wrong-directory operations
+### WR-01: pnpm version string not sanitized for potential `v` prefix
 
-**File:** `scripts/install-dev.sh:125-129` (git check), `144-150` (pnpm commands)  
-**Issue:** The script verifies it is inside a git repository (line 125: `git rev-parse --git-dir`) but never anchors execution to the repository root. `git rev-parse --git-dir` succeeds from any subdirectory, creating a false sense of correctness. If a user runs `./scripts/install-dev.sh` from a subdirectory (e.g., `src/` or `docs/`), the pnpm commands on lines 144–150 run in the subdirectory rather than the repo root, which causes:
+**File:** `scripts/install-dev.sh:117`
+**Issue:** The Node.js version check strips the `v` prefix with `sed 's/^v//'` (line 99), but the pnpm version check on lines 116–117 does not. While `pnpm --version` currently outputs an unprefixed version (e.g., `9.0.0`), several Node.js tool version commands (nvm, fnm, Corepack wrappers) can produce `v`-prefixed output in some configurations. If the pnpm version string contained a `v` prefix, `cut -d. -f1` would yield `v8` and the `-lt 8` integer comparison would produce a shell error (stderr message + exit code 2), causing the `||` chain to enter the error branch with a false-positive "pnpm >= 8.0.0 required" message.
 
-- `pnpm install` — fails with `ERR_PNPM_NO_PACKAGE_MANIFEST` because no `package.json` exists
-- `pnpm build` — never reached because install fails first
-- The upstream remote is never configured because the script exits on the install failure
-
-The error from pnpm is clear, but the user has no indication *why* it failed — they're in the wrong directory and the script didn't redirect.
-
-**Fix:** Add a `cd` to the repository root immediately after the git check succeeds, before any pnpm commands:
+**Fix:** Apply consistent `sed 's/^v//'` prefix stripping to the pnpm version string before the numeric comparison:
 
 ```bash
-# After line 129 ("printf '  git repo OK\n'"), insert:
-cd "$(git rev-parse --show-toplevel)"
-printf '  Changed to repository root: %s\n' "$(pwd)"
+PNPM_MAJOR=$(printf '%s' "$PNPM_VERSION" | sed 's/^v//' | cut -d. -f1)
 ```
 
-This ensures all subsequent commands execute from the repo root regardless of invocation directory.
+Alternatively, validate that the extracted major version is numeric before comparison:
+
+```bash
+if ! [ "$PNPM_MAJOR" -eq "$PNPM_MAJOR" ] 2>/dev/null; then
+  printf 'Error: unexpected pnpm version format: %s\n' "$PNPM_VERSION" >&2
+  exit 1
+fi
+```
+
+---
+
+### WR-02: Help and usage text omit `-h`/`-v` shorthands
+
+**File:** `scripts/install-dev.sh:14-16,33-36`
+**Issue:** The script's:
+- Header comment block (lines 14–16): only shows `--help` and `--version`
+- `show_help()` function (lines 33–36): only shows `--help` and `--version`
+- Error fallback message (line 83): only shows `--help` and `--version`
+
+However, the argument parser on lines 72–79 also handles `-h` and `-v` as case alternatives. Users reading the help text won't discover these shorthands.
+
+**Fix:** Update all three locations to include the short flags. For example in `show_help()`:
+
+```
+USAGE:
+  ./scripts/install-dev.sh                     Full setup
+  ./scripts/install-dev.sh [-h | --help]       Show this help message
+  ./scripts/install-dev.sh [-v | --version]    Show version
+```
+
+And the error fallback (line 83):
+```
+printf 'Usage: ./scripts/install-dev.sh [--help|-h] [--version|-v]\n' >&2
+```
+
+---
+
+### WR-03: Global conflict warning doesn't explain script continuation
+
+**File:** `scripts/install-dev.sh:136-142`
+**Issue:** The warning block instructs users to "uninstall the existing global package first" with `npm uninstall -g openwolf` / `pnpm unlink --global openwolf`. It does not clarify that the script **will continue execution** regardless, and that the `pnpm link --global` on line 153 will override any existing global installation anyway. Users unfamiliar with the script may interpret this as a hard failure and either stop the script or attempt to resolve the conflict unnecessarily.
+
+**Fix:** Add an explicit continuation note after the uninstall instructions:
+
+```bash
+if command -v openwolf >/dev/null 2>&1; then
+  printf 'Warning: openwolf is already globally installed.\n' >&2
+  printf '  The script will continue and link the local build globally,\n' >&2
+  printf '  overriding the existing installation. To avoid potential\n' >&2
+  printf '  confusion, you may uninstall the existing package first:\n' >&2
+  printf '    npm uninstall -g openwolf\n' >&2
+  printf '    pnpm unlink --global openwolf\n' >&2
+fi
+```
 
 ---
 
 ## Info
 
-### IN-01: Clone URL contradicts "Fork and clone" instruction
+### IN-01: No post-link verification step
 
-**File:** `docs/DEVELOPMENT.md:13`  
-**Issue:** Step 1 says "Fork and clone the repository" but provides the CHESA fork URL directly (`https://github.com/chesa/openwolf.git`). For external contributors, this is contradictory — forking upstream (cytostack/openwolf) yields a different URL. For CHESA team members who already have access, the URL is correct but the word "Fork" is misleading.
+**File:** `scripts/install-dev.sh:153-177`
+**Issue:** After `pnpm link --global` succeeds, the script tells the user to run `node dist/bin/openwolf.js --help` manually (line 177) but does not verify the link itself. If the global `pnpm` bin directory is not in `PATH` (common on systems where `pnpm setup` hasn't been run), the link step succeeds silently but the CLI won't be accessible. The script could optionally run a quick verification:
 
-**Fix:** Either use a placeholder suitable for both audiences:
-```diff
--   git clone https://github.com/chesa/openwolf.git
-+   git clone <your-fork-url>    # CHESA contributors: https://github.com/chesa/openwolf.git
-```
-Or restructure to separate fork-from-upstream from clone:
-```markdown
-1. Fork the [cytostack/openwolf](https://github.com/cytostack/openwolf) repository, then clone your fork:
-   ```bash
-   git clone https://github.com/<your-username>/openwolf.git
-   ```
-   (CHESA team members may clone directly from `https://github.com/chesa/openwolf.git`.)
-```
-
-### IN-02: No mention of ensuring script is executable
-
-**File:** `docs/DEVELOPMENT.md:20`  
-**Issue:** The instruction `./scripts/install-dev.sh` assumes the script has execute permission (`+x`). While `git clone` typically preserves the file mode (755), some workflows do not:
-- Zip downloads from GitHub (modes stripped)
-- Deatched `git archive` exports
-- Some CI artifact extraction methods
-
-**Fix:** Add a brief note after the script invocation:
-```diff
-    ```bash
-    ./scripts/install-dev.sh
-    ```
-+  If you encounter a "Permission denied" error, run `chmod +x scripts/install-dev.sh` first.
+```bash
+printf 'Verifying global link...\n'
+node dist/bin/openwolf.js --help >/dev/null 2>&1 && \
+  printf '  openwolf linked successfully.\n' || \
+  printf '  Warning: link verification failed. Ensure pnpm bin dir is in PATH.\n'
 ```
 
 ---
 
-_Reviewed: 2026-06-07T22:00:00Z_  
-_Reviewer: gsd-code-reviewer (standard depth)_  
+### IN-02: Version prefix handling inconsistency (maintenance trap)
+
+**File:** `scripts/install-dev.sh:99,116-117`
+**Issue:** The Node.js version check strips the leading `v` with `sed 's/^v//'` before extracting the major version (line 99). The pnpm version check does not apply this stripping (line 116). While both are correct for current tool output, the inconsistency is a maintenance trap — a future contributor might copy one pattern to the other context incorrectly, or update one path but not the other when accommodating a change in tool output format. Defensive coding would apply the same sanitization pattern to both.
+
+---
+
+### IN-03: DEVELOPMENT.md doesn't document setup script flags
+
+**File:** `docs/DEVELOPMENT.md:20`
+**Issue:** The local setup section recommends `./scripts/install-dev.sh` without mentioning that the script accepts `--help`/`--version` (and the undocumented `-h`/`-v`). Users reading only the development docs won't know about these options unless they run the script or read its code.
+
+**Fix:** Consider adding a brief note:
+```markdown
+2. Run the automated setup script (recommended):
+   ```bash
+   ./scripts/install-dev.sh
+   ```
+   Run `./scripts/install-dev.sh --help` for available options.
+```
+
+---
+
+_Reviewed: 2026-06-07T18:30:00Z_
+_Reviewer: gsd-code-reviewer_
 _Depth: standard_
