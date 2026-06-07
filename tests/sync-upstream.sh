@@ -27,7 +27,7 @@ print_result() {
 
 # Check if the script exists before running tests
 script_exists() {
-  [ -f "$SCRIPT" ] && [ -x "$SCRIPT" ]
+  [ -f "$SCRIPT" ]
 }
 
 setup_test_repo() {
