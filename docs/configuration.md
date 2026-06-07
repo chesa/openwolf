@@ -2,7 +2,7 @@
 
 # Configuration
 
-OpenWolf is configured through a JSON file in the project workspace and a small set of environment variables. All settings have sensible defaults, so no configuration is required for normal use. Advanced deployment scenarios may benefit from `OPENWOLF_METADATA_DIR` (alternate metadata storage location) and `WITH_FILE_LOCK_TTL_MS` (advisory file lock staleness threshold).
+OpenWolf is configured through a JSON file in the project workspace and a small set of environment variables. All settings have sensible defaults, so no configuration is required for normal use. Advanced deployment scenarios may benefit from `OPENWOLF_METADATA_DIR` (alternate metadata storage location).
 
 ## Environment variables
 
