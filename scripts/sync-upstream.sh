@@ -144,6 +144,13 @@ report_divergence() {
   printf "Upstream ref:  %s\n" "$upstream_ref"
   printf "\n"
 
+  # Verify the upstream ref exists before computing divergence
+  if ! git show-ref --verify "refs/remotes/${upstream_ref}" >/dev/null 2>&1; then
+    printf "Error: Upstream branch '%s' was not found on remote.\n" "$upstream_ref" >&2
+    printf "The branch may not exist upstream, or the branch name may be incorrect.\n" >&2
+    exit 1
+  fi
+
   ahead=$(git rev-list --count "${upstream_ref}..${branch}" 2>/dev/null || echo "0")
   behind=$(git rev-list --count "${branch}..${upstream_ref}" 2>/dev/null || echo "0")
 
