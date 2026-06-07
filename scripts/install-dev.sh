@@ -11,9 +11,9 @@
 #   5. Configures the upstream git remote for divergence management
 #
 # Usage:
-#   ./scripts/install-dev.sh          Full setup
-#   ./scripts/install-dev.sh --help   Show this help message
-#   ./scripts/install-dev.sh --version Show version
+#   ./scripts/install-dev.sh                     Full setup
+#   ./scripts/install-dev.sh [-h | --help]       Show this help message
+#   ./scripts/install-dev.sh [-v | --version]    Show version
 #
 # License: AGPL-3.0-only
 # Copyright (C) 2026 CHESA
@@ -31,9 +31,9 @@ show_help() {
 scripts/install-dev.sh — Automated OpenWolf development environment setup
 
 USAGE:
-  ./scripts/install-dev.sh          Full setup
-  ./scripts/install-dev.sh --help   Show this help message
-  ./scripts/install-dev.sh --version Show version
+  ./scripts/install-dev.sh                     Full setup
+  ./scripts/install-dev.sh [-h | --help]       Show this help message
+  ./scripts/install-dev.sh [-v | --version]    Show version
 
 DESCRIPTION:
   Automates local development setup for contributors working on the
@@ -80,7 +80,7 @@ if [ $# -gt 0 ]; then
       ;;
     *)
       printf 'Error: Unknown option: %s\n' "$1" >&2
-      printf 'Usage: ./scripts/install-dev.sh [--help|--version]\n' >&2
+      printf 'Usage: ./scripts/install-dev.sh [--help|-h] [--version|-v]\n' >&2
       exit 1
       ;;
   esac
