@@ -1,109 +1,169 @@
 ---
 phase: 01-fork-install
-reviewed: 2026-06-06T20:30:00Z
+reviewed: 2026-06-07T12:00:00Z
 depth: standard
-files_reviewed: 4
+files_reviewed: 2
 files_reviewed_list:
   - scripts/install-dev.sh
-  - package.json
-  - README.md
   - docs/DEVELOPMENT.md
 findings:
   critical: 0
-  warning: 2
-  info: 3
-  total: 5
+  warning: 4
+  info: 2
+  total: 6
 status: issues_found
 ---
 
-# Phase 01: Code Review Report — Fork Install &amp; Setup
+# Phase 01: Code Review Report — fork-install
 
-**Reviewed:** 2026-06-06T20:30:00Z
+**Reviewed:** 2026-06-07T12:00:00Z
 **Depth:** standard
-**Files Reviewed:** 4
+**Files Reviewed:** 2
 **Status:** issues_found
 
 ## Summary
 
-Reviewed four files from the OpenWolf fork install &amp; setup phase: the dev install script (`install-dev.sh`), the package manifest (`package.json`), the project README, and the development guide (`docs/DEVELOPMENT.md`). The code is generally well-structured with proper error handling in the shell script (uses `set -euo pipefail`, validates prerequisites, safe quoting). No security vulnerabilities (hardcoded secrets, injection vectors, eval usage) were found.
-
-The issues center on fork-identity confusion in metadata and documentation, a deprecated Node.js API in build scripts, and a CI/CD documentation gap relative to project conventions. No critical correctness defects were identified.
+Reviewed `scripts/install-dev.sh` (167 lines) and `docs/DEVELOPMENT.md` (159 lines) for the CHESA Fork Team Toolkit Phase 01. The shell script is well-structured, passes shellcheck cleanly, and handles the happy path correctly with `set -euo pipefail` for safety. The documentation is generally accurate with good cross-references. However, four warnings and two info items were identified, primarily around a broken numbered list structure in the docs and gaps between the manual fallback instructions and the troubleshooting section.
 
 ---
 
 ## Warnings
 
-### WR-01: Fork install instructions are misleading for repository URL
+### WR-01: Numbered list break between Step 3 and Step 4 in DEVELOPMENT.md
 
-**File:** `README.md:19-21`
-**Issue:** The primary install instruction `npm install -g openwolf` installs the upstream Cytostack npm package, not the CHESA fork's code. Since this repository's URL resolves to `github.com/chesa/openwolf` (the fork, per `package.json:61`), a user who clones this repo and follows the first install block will get the upstream package — not the forked code they just cloned. The development setup section (line 34) correctly points to `./scripts/install-dev.sh`, but the primary install path creates user confusion: clone the fork, then install the upstream.
-
-Additionally, the npm badge on line 9 points to `openwolf` on npmjs.com — if the fork publishes under a different scope (e.g., `@chesa/openwolf`) or doesn't publish at all, this badge is inaccurate.
-
-**Fix:** Either:
-- Add a context note above the install block clarifying that `npm install -g openwolf` installs the upstream package and to use `./scripts/install-dev.sh` for the fork, OR
-- Republish the fork under a scoped name and update both the install command and badge:
+**File:** `docs/DEVELOPMENT.md:33-41`
+**Issue:** A `### Troubleshooting` heading is placed between step 3 (line 32) and step 4 (line 41) of the numbered list. Markdown processors treat the heading as a list break, causing step 4 to either restart at "1" or render as an orphaned number, depending on the renderer.
 
 ```markdown
-> **Fork users:** This repository is the CHESA fork of OpenWolf.
-> For the upstream package, see [cytostack/openwolf](https://github.com/cytostack/openwolf).
-> For this fork's development setup, see [Development Setup](#development-setup) below.
+1. Fork and clone the repository:
+2. Run the automated setup script (recommended):
+3. **Manual fallback** — ...
+### Troubleshooting                          ← breaks the list
+4. Verify the CLI works:                    ← will restart at "1" in most renderers
 ```
 
-### WR-02: Author/repo metadata mismatch indicates fork identity gap
+**Fix:** Move the troubleshooting section to after the numbered list closes, or precede step 4 with a paragraph continuation (e.g., inline note) that doesn't break the list:
 
-**File:** `package.json:58`
-**Issue:** The `author` field reads `"Cytostack Pvt Ltd"` (the upstream project owner), while the `repository` URL points to `github.com/chesa/openwolf` (the fork). This creates ambiguity about ownership and may cause downstream issues with license compliance tracking, attribution, or automated tooling that reads the `author` field. The install-dev.sh header (line 3) states `CHESA Fork Team Toolkit`, signaling fork intent, but the package metadata does not reflect this.
-
-**Fix:** Update the `author` field to reflect fork attribution:
-
-```json
-"author": "Chesapeake Systems (CHESA) — fork of Cytostack OpenWolf",
-"repository": {
-  "type": "git",
-  "url": "https://github.com/chesa/openwolf.git"
-}
+```markdown
+3. **Manual fallback** — ...
+   > **Troubleshooting:** If `pnpm link --global` fails ... `pnpm setup`
+4. Verify the CLI works:
 ```
 
-This retains upstream credit while clarifying the fork's provenance.
+Alternatively, restructure to avoid interleaving:
+```markdown
+1. Fork and clone ...
+2. Run the automated setup script (recommended) ...
+3. Verify the CLI works ...
+   ...
+### Troubleshooting
+- If `pnpm link --global` fails ...
+```
+
+---
+
+### WR-02: Manual fallback steps omit `pnpm link --global`
+
+**File:** `docs/DEVELOPMENT.md:26-32`
+**Issue:** The "Manual fallback" section lists only `pnpm install` and `pnpm build`, omitting `pnpm link --global`. A developer using the manual path won't have the `openwolf` CLI available globally and won't be warned about it. The troubleshooting section that immediately follows (lines 33-39) discusses `pnpm link --global` failures, which is contextually confusing since the manual steps never ran that command.
+
+**Fix:** Add `pnpm link --global` as an explicit step in the manual fallback, or add a note that the global link is optional:
+
+```markdown
+3. **Manual fallback** — If you prefer to run steps individually:
+
+   ```bash
+   pnpm install
+   pnpm build
+   pnpm link --global    # optional: makes 'openwolf' available globally
+   ```
+```
+
+---
+
+### WR-03: Troubleshooting references command not in manual path
+
+**File:** `docs/DEVELOPMENT.md:33-39` (and `scripts/install-dev.sh:143`)
+**Issue:** The troubleshooting block discusses errors from `pnpm link --global`. This makes sense only for the automated script path (which runs this command at line 143). A developer following the "manual fallback" (step 3) never runs that command, so the troubleshooting section appears to address an error they didn't encounter. The section lacks a clear contextual anchor.
+
+**Fix:** Prepend a clarifying sentence to the troubleshooting block:
+
+```markdown
+### Troubleshooting
+
+If the automated setup script (`./scripts/install-dev.sh`) fails during the global link step,
+or if you manually ran `pnpm link --global` and encountered a path error, ensure the pnpm bin
+directory is included in your `PATH`:
+```
+
+---
+
+### WR-04: No pnpm minimum version validation
+
+**File:** `scripts/install-dev.sh:109-113`
+**Issue:** The script validates that `pnpm` is installed via `command -v pnpm`, but does not check its version. If the project requires a minimum pnpm version (e.g., pnpm >= 8 for workspaces or corepack integration), an older version could cause spurious build failures with confusing error messages. `pnpm --version` is trivial to check.
+
+**Fix:** Add a version check after the existence check:
+
+```bash
+PNPM_VERSION=$(pnpm --version 2>/dev/null || true)
+PNPM_MAJOR=$(printf '%s' "$PNPM_VERSION" | cut -d. -f1)
+if [ -z "$PNPM_VERSION" ] || [ "$PNPM_MAJOR" -lt 8 ]; then
+  printf 'Error: pnpm >= 8.0.0 required. Found: %s\n' "$PNPM_VERSION" >&2
+  exit 1
+fi
+printf '  pnpm %s OK\n' "$PNPM_VERSION"
+```
+
+(Adjust minimum version to match `package.json`'s `packageManager` field if corepack is used.)
 
 ---
 
 ## Info
 
-### IN-01: Deprecated `fs.existsSync()` in prebuild script
+### IN-01: Unquoted `$#` in argument count check
 
-**File:** `package.json:10`
-**Issue:** The `prebuild` script uses `fs.existsSync('dist')` then conditionally calls `fs.rmSync(...)`. `fs.existsSync` has been deprecated since Node.js 14. The simpler and non-deprecated approach is to call `fs.rmSync` with `{ force: true }`, which silently succeeds if the path does not exist:
+**File:** `scripts/install-dev.sh:71`
+**Issue:** `$#` is unquoted in `if [ $# -gt 0 ]`. While `$#` always resolves to a non-empty integer (so this is safe in practice with `set -u`), quoting positional and special parameters is a best practice per ShellCheck SC2254 to prevent word-splitting surprises in edge cases.
 
-```js
-// Before (deprecated):
-const fs=require('fs');if(fs.existsSync('dist'))fs.rmSync('dist',{recursive:true})
-
-// After (no deprecation):
-const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true})
+**Fix:**
+```bash
+if [ "$#" -gt 0 ]; then
 ```
 
-This also eliminates the TOCTOU window (theoretical in single-threaded scripts, but cleaner).
+---
 
-### IN-02: Deprecated `fs.existsSync()` in clean script
+### IN-02: Script assumes CWD is project root without verification
 
-**File:** `package.json:22`
-**Issue:** Same deprecated `fs.existsSync()` pattern in the `clean` script. The `.filter()` guard is unnecessary when `rmSync` already uses `{force:true}`. Apply the same fix as IN-01 for both the `dist` and `.wolf/designqc-captures` removals.
+**File:** `scripts/install-dev.sh:137`
+**Issue:** The script runs `pnpm install`, `pnpm build`, etc. without first verifying that the current working directory is the project root (i.e., contains `package.json`). If a user runs the script from outside the project root (e.g., `bash ../openwolf/scripts/install-dev.sh`), the commands will fail with confusing pnpm errors about missing `package.json`. The `pnpm` GitHub issue — users commonly run setup scripts from the wrong directory.
 
-### IN-03: CI docs reference GitHub Actions while conventions specify Bitbucket Pipelines
+**Fix:** Add an early guard at the top of the script (before or after the git repo check):
 
-**File:** `docs/DEVELOPMENT.md:127-134`
-**Issue:** The CI/CD section documents `.github/workflows/docs.yml` (GitHub Actions) as the only CI workflow. However, project conventions in `CLAUDE.md` specify **Bitbucket-Only Workflow Constraints** — CI/CD should use `bitbucket-pipelines.yml` and "Pipes," not `.github/workflows`. This documentation gap will confuse contributors who expect the fork's CI to follow project conventions. Whether the fork intends to migrate or retain GitHub Actions, the docs should explain the rationale.
+```bash
+if [ ! -f package.json ]; then
+  printf 'Error: package.json not found in %s.\n' "$(pwd)" >&2
+  printf '  Run this script from the project root directory.\n' >&2
+  exit 1
+fi
+```
+
+Or use `SCRIPT_DIR` to cd to the script's location robustly:
+```bash
+cd "$(dirname "$0")/.."   # if script is in scripts/
+```
 
 ---
 
-## Files with no issues found
+## Cross-File Observations
 
-- **`scripts/install-dev.sh`** — Clean implementation. Proper use of `set -euo pipefail`, fully quoted variable expansions, prerequisite validation with informative error messages, safe use of `|| true` to handle `set -e` in conditional checks. No injection vectors, no hardcoded secrets, no unchecked command substitutions.
+- The exit message from `scripts/install-dev.sh:167` ("Run `node dist/bin/openwolf.js --help`") matches `docs/DEVELOPMENT.md:43` — consistent. ✓
+- The prerequisite statement ("Node.js >= 20.0.0") is the same in both files — consistent. ✓
+- `package.json` line 2 confirms `"name": "openwolf"`, so `pnpm link --global` will correctly create a global `openwolf` alias. ✓
+- The CI/CD workflow at `.github/workflows/docs.yml` correctly uses `npm` (not `pnpm`) and matches the description in DEVELOPMENT.md line 141. ✓
 
 ---
 
-_Reviewed: 2026-06-06T20:30:00Z_
-_Reviewer: gsd-code-reviewer (standard depth)_
+_Reviewed: 2026-06-07T12:00:00Z_
+_Reviewer: gsd-code-reviewer (adversarial stance)_
 _Depth: standard_
