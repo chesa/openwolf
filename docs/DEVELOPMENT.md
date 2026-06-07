@@ -45,7 +45,7 @@ directory is included in your `PATH`:
    pnpm setup
    ```
 
-> **Prerequisites:** Node.js >= 20.0.0. See [Getting Started](getting-started.md) for full prerequisite details.
+> **Prerequisites:** Node.js >= 20.0.0, pnpm >= 8.0.0. See [Getting Started](getting-started.md) for full prerequisite details.
 
 ---
 
