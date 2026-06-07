@@ -8,11 +8,13 @@ FAIL=0
 SKIP=0
 SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scripts/sync-upstream.sh"
 TEST_TMP_DIR=""
+TEST_TMP_DIRS=()
 
 cleanup() {
-  if [ -n "$TEST_TMP_DIR" ] && [ -d "$TEST_TMP_DIR" ]; then
-    rm -rf "$TEST_TMP_DIR"
-  fi
+  local d
+  for d in "${TEST_TMP_DIRS[@]}"; do
+    [ -d "$d" ] && rm -rf "$d"
+  done
 }
 trap cleanup EXIT
 
@@ -31,8 +33,11 @@ script_exists() {
 }
 
 setup_test_repo() {
-  TEST_TMP_DIR=$(mktemp -d /tmp/sync-upstream-test-XXXXXX)
-  cd "$TEST_TMP_DIR"
+  local tmpdir
+  tmpdir=$(mktemp -d /tmp/sync-upstream-test-XXXXXX)
+  TEST_TMP_DIRS+=("$tmpdir")
+  TEST_TMP_DIR="$tmpdir"
+  cd "$tmpdir"
   git init
   git config user.email "test@test.com"
   git config user.name "Test User"
