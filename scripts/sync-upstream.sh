@@ -95,6 +95,12 @@ show_version() {
 ensure_upstream_remote() {
   local url
   if url=$(git remote get-url upstream 2>/dev/null); then
+    if [ "$url" != "$UPSTREAM_URL" ]; then
+      printf "Warning: Existing upstream remote URL differs from expected.\n" >&2
+      printf "  Expected: %s\n" "$UPSTREAM_URL" >&2
+      printf "  Found:    %s\n" "$url" >&2
+      printf "Continuing with existing remote URL. Use --verbose for details.\n" >&2
+    fi
     printf "Using existing upstream remote: %s\n" "$url"
   else
     git remote add upstream "$UPSTREAM_URL"
