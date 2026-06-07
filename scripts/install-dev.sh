@@ -113,7 +113,7 @@ if ! command -v pnpm >/dev/null 2>&1; then
 fi
 
 PNPM_VERSION=$(pnpm --version 2>/dev/null || true)
-PNPM_MAJOR=$(printf '%s' "$PNPM_VERSION" | cut -d. -f1)
+PNPM_MAJOR=$(printf '%s' "$PNPM_VERSION" | sed 's/^v//' | cut -d. -f1)
 if [ -z "$PNPM_VERSION" ] || [ "$PNPM_MAJOR" -lt 8 ]; then
   printf 'Error: pnpm >= 8.0.0 required. Found: %s\n' "$PNPM_VERSION" >&2
   exit 1
