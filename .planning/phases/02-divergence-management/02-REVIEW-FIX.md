@@ -3,8 +3,8 @@ phase: 02-divergence-management
 fixed_at: 2026-06-07T00:00:00Z
 review_path: .planning/phases/02-divergence-management/02-REVIEW.md
 iteration: 1
-findings_in_scope: 6
-fixed: 6
+findings_in_scope: 4
+fixed: 4
 skipped: 0
 status: all_fixed
 ---
@@ -16,75 +16,39 @@ status: all_fixed
 **Iteration:** 1
 
 **Summary:**
-- Findings in scope: 6
-- Fixed: 6
+- Findings in scope: 4
+- Fixed: 4
 - Skipped: 0
 
 ## Fixed Issues
 
-### CR-01: Tests silently fail because relative `$SCRIPT` path cannot be resolved from temp directory
+### WR-05: Temp directory leak — `setup_test_repo()` overwrites global `$TEST_TMP_DIR`
 
 **Files modified:** `tests/sync-upstream.sh`
-**Commit:** `6a05d66`
-**Applied fix:** Changed `SCRIPT="scripts/sync-upstream.sh"` to resolve the path
-absolutely using `"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scripts/sync-upstream.sh"`.
-This ensures the script is found regardless of the current working directory,
-fixing tests 1, 2, 3, 4, 9, and 12 which `cd` into a temp directory before
-invoking `bash "$SCRIPT"`.
+**Commit:** `4c6a9de`
+**Applied fix:** Changed `setup_test_repo()` to track temp directories in a `TEST_TMP_DIRS` array instead of overwriting a single global. The `cleanup()` trap now iterates over all tracked directories on exit, ensuring every temp directory created during the test run is cleaned up. Previously, `setup_test_repo()` overwrote `TEST_TMP_DIR` on each call, leaving N-1 temp directories leaked per run.
 
-### CR-02: `grep` regex uses BRE alternation (`\|`) without `-E` flag — always fails on macOS
+### WR-06: Tests 4, 9, 12 are network-dependent and fail in offline CI
 
 **Files modified:** `tests/sync-upstream.sh`
-**Commit:** `4e304a8`
-**Applied fix:** Simplified the grep pattern in test 10 (`--help` flag) from
-`grep -qi "usage\|Usage\|Usage:"` to `grep -qi "usage"`. The `-i` flag already
-provides case-insensitive matching, so the alternation was redundant and,
-on macOS BSD grep, the `\|` BRE extension is not supported, causing the
-pattern to look for a literal `|` character.
-
-### WR-01: `script_exists()` requires execute permission but tests use `bash` directly
-
-**Files modified:** `tests/sync-upstream.sh`
-**Commit:** `74599c6`
-**Applied fix:** Removed the `-x` check from `script_exists()` since every test
-invocation uses `bash "$SCRIPT"` which reads the file directly (execute
-permission is unnecessary). The function now only checks `[ -f "$SCRIPT" ]`.
-
-### WR-02: Global variable `VERBOSE` not declared with `local` in `main()`
-
-**Files modified:** `scripts/sync-upstream.sh`
-**Commit:** `d0e9079`
-**Applied fix:** Added `local` keyword to the `VERBOSE="false"` declaration in
-`main()` alongside the existing `local branch="$DEFAULT_BRANCH"`. This prevents
-unintended global scope leakage and ensures proper dynamic scoping.
-
-### WR-03: Core divergence status logic is entirely untested (5 of 12 tests skipped)
-
-**Files modified:** `tests/sync-upstream.sh`
-**Commit:** `3c279d1`
-**Applied fix:** Implemented controlled divergence tests for AHEAD, BEHIND,
-DIVERGED, and IN SYNC status (tests 5-8) using local bare repositories as
-simulated upstream remotes. Each test:
+**Commit:** `0a6538b`
+**Applied fix:** Replaced the real GitHub upstream URL (`https://github.com/cytostack/openwolf.git`) with a local bare repository in tests 4, 9, and 12, following the same pattern used by tests 5-8. Each test now:
 - Creates a local bare repo as a simulated upstream
-- Pushes the initial commit to establish a shared base
-- Sets up the upstream remote pointing to the local bare repo
-- Manipulates commits to create the desired divergence state
-- Runs the script (which fetches from the local bare repo successfully)
-- Checks for the expected status string in the output
+- Pushes the initial commit (and develop branch for test 12) to establish refs
+- Sets the upstream remote to the local bare repo
+- Runs the script against the local repo, which fetches deterministically without network access
 
-This approach avoids network dependencies and ensures deterministic test
-results. The bare repos are created inside `$TEST_TMP_DIR` and are
-automatically cleaned up by the existing `cleanup()` trap.
+### WR-07: Test function calls lack `|| true` guards — single failure aborts entire suite
 
-### WR-04: Branch name validation regex allows leading hyphen
+**Files modified:** `tests/sync-upstream.sh`
+**Commit:** `c2eb633`
+**Applied fix:** Added `|| true` guards to all 12 test function calls at the top level of the test suite. With `set -euo pipefail`, any unhandled non-zero return from a test function (e.g., from `setup_test_repo()` failing or a subshell crash) would previously abort the entire suite. Now each test runs independently: a failure in one test does not prevent the remaining tests from executing. The `FAIL` counter is already tracked by `print_result()` calls within each test, so `exit $FAIL` at the end still reports the correct failure count.
+
+### WR-08: Silent "IN SYNC" when upstream branch does not exist
 
 **Files modified:** `scripts/sync-upstream.sh`
-**Commit:** `9842ac2`
-**Applied fix:** Changed the branch name regex from
-`^[a-zA-Z0-9._/-]+$` to `^[a-zA-Z0-9][a-zA-Z0-9._/-]*$`. The first
-character class requires an alphanumeric start, and the second allows zero
-or more additional valid characters. This prevents branch names like
-`--help` or `-L` from passing validation.
+**Commit:** `134b926`
+**Applied fix:** Added a `git show-ref --verify` check in `report_divergence()` before computing ahead/behind counts. If the specified upstream ref does not exist (e.g., `upstream/develop` was never created on the remote, was deleted, or has a typo), the script now prints a clear error message and exits with code 1 instead of silently reporting "Status: IN SYNC" (which happened because both `rev-list` commands errored, fell through to `|| echo "0"`, and produced 0/0 counts).
 
 ---
 
