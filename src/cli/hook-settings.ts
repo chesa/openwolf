@@ -17,7 +17,7 @@
 // the resolved absolute root. Falls back to $CLAUDE_PROJECT_DIR if anything
 // fails (non-git dir, missing git, etc).
 export const WOLF_ROOT_SHELL =
-  'WOLF_ROOT="$(cd "$CLAUDE_PROJECT_DIR" 2>/dev/null && cd "$(dirname "$(git rev-parse --git-common-dir 2>/dev/null)")" 2>/dev/null && pwd || echo "$CLAUDE_PROJECT_DIR")"';
+  'WOLF_ROOT=$(node -e \'const path = require("path"); const { execSync } = require("child_process"); try { const gitDir = execSync("git rev-parse --git-common-dir", { stdio: "pipe" }).toString().trim(); console.log(path.resolve(process.env.CLAUDE_PROJECT_DIR || process.cwd(), gitDir, "..")); } catch (e) { console.log(process.env.CLAUDE_PROJECT_DIR || process.cwd()); }\')';
 
 const hookCmd = (script: string): string =>
   `${WOLF_ROOT_SHELL} && node "$WOLF_ROOT/.wolf/hooks/${script}"`;
