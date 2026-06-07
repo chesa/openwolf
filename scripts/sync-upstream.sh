@@ -167,8 +167,8 @@ report_divergence() {
     exit 1
   fi
 
-  ahead=$(git rev-list --count "${upstream_ref}..${branch}" 2>/dev/null)
-  behind=$(git rev-list --count "${branch}..${upstream_ref}" 2>/dev/null)
+  ahead=$(git rev-list --count "${upstream_ref}..${branch}")
+  behind=$(git rev-list --count "${branch}..${upstream_ref}")
 
   printf "Commits ahead of upstream:  %s\n" "$ahead"
   printf "Commits behind upstream:    %s\n" "$behind"
