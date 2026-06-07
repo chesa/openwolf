@@ -135,8 +135,9 @@ printf '  Changed to repository root: %s\n' "$(pwd)"
 
 if command -v openwolf >/dev/null 2>&1; then
   printf 'Warning: openwolf is already globally installed.\n' >&2
-  printf '  To avoid conflicts with the local development build, uninstall the\n' >&2
-  printf '  existing global package first:\n' >&2
+  printf '  The script will continue and link the local build globally,\n' >&2
+  printf '  overriding the existing installation. To avoid potential\n' >&2
+  printf '  confusion, you may uninstall the existing package first:\n' >&2
   printf '    npm uninstall -g openwolf\n' >&2
   printf '    pnpm unlink --global openwolf\n' >&2
 fi
