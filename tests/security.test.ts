@@ -51,10 +51,11 @@ describe("Path Traversal Guard", () => {
    * changed without the tests knowing.
    */
   function isPathAllowed(projectRoot: string, file: string): boolean {
-    const filePath = path.resolve(projectRoot, file);
+    const resolvedRoot = path.resolve(projectRoot);
+    const filePath = path.resolve(resolvedRoot, file);
     const resolvedNorm = filePath.toLowerCase();
-    const rootWithSep = (projectRoot + path.sep).toLowerCase();
-    const rootNorm = projectRoot.toLowerCase();
+    const rootWithSep = (resolvedRoot + path.sep).toLowerCase();
+    const rootNorm = resolvedRoot.toLowerCase();
     return resolvedNorm.startsWith(rootWithSep) || resolvedNorm === rootNorm;
   }
 
