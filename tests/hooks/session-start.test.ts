@@ -9,10 +9,12 @@ async function freshSessionStart() {
 }
 
 describe("session-start.ts ledger init", () => {
-    const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "ow-sess-start-")));
-    const ledgerPath = path.join(dir, "token-ledger.json");
+    let dir: string;
+    let ledgerPath: string;
 
     beforeEach(() => {
+        dir = realpathSync(mkdtempSync(path.join(tmpdir(), "ow-sess-start-")));
+        ledgerPath = path.join(dir, "token-ledger.json");
         // Prevent main() from running by catching the exit
         vi.spyOn(process, "exit").mockImplementation((code?: number | string | null) => {
             // swallow exit calls

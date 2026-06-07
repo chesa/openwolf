@@ -265,8 +265,10 @@ describe("hook-file copy list", () => {
     // Exact list — if this changes, update both this test and the constant.
     expect([...HOOK_FILES].sort()).toEqual([
       "post-read.js", "post-write.js", "pre-read.js", "pre-write.js",
-      "session-start.js", "shared.js", "stop.js", "worktree-helper.js",
-    ]);
+      "session-start.js", "shared.js", "stop.js", "wolf-anatomy.js",
+      "wolf-describe.js", "wolf-files.js", "wolf-json.js", "wolf-lock.js",
+      "wolf-misc.js", "wolf-paths.js", "worktree-helper.js",
+    ].sort());
   });
 });
 
