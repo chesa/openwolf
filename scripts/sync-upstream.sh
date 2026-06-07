@@ -1,265 +1,71 @@
-#!/bin/bash
-# sync-upstream.sh - Report fork divergence from upstream cytostack/openwolf
-#
-# Copyright (c) 2026 CHESA. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-# 1. Redistributions of source code must retain the above copyright notice,
-#    this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-#    this list of conditions and the following disclaimer in the documentation
-#    and/or other materials provided with the distribution.
-# 3. Neither the name of the copyright holder nor the names of its contributors
-#    may be used to endorse or promote products derived from this software
-#    without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER "AS IS" AND ANY EXPRESS OR
-# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
-# EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING IN ANY WAY
-# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-# DAMAGE.
-set -eu
-if ! set -o pipefail 2>/dev/null; then
-  echo "Warning: pipefail not supported (bash < 4.0). Pipeline errors may be masked." >&2
+#!/usr/bin/env bash
+set -euo pipefail
+
+# OpenWolf CHESA Fork — upstream divergence report
+# Shows commits ahead/behind upstream/main and recommends actions.
+# This script is read-only — no merging or rebasing.
+# Usage: bash scripts/sync-upstream.sh
+
+cd "$(git rev-parse --show-toplevel 2>/dev/null || { echo "Error: not in a git repository"; exit 1; })"
+
+# --- Ensure upstream remote ---
+if ! git remote get-url upstream >/dev/null 2>&1; then
+  echo "Adding upstream remote (read-only)..."
+  git remote add upstream https://github.com/cytostack/openwolf.git
 fi
 
-# pragma mark *** Constants ***
+# --- Fetch ---
+echo "Fetching upstream..."
+git fetch upstream
 
-VERSION="1.0.0"
-UPSTREAM_URL="https://github.com/cytostack/openwolf.git"
-DEFAULT_BRANCH="main"
+# --- Divergence report ---
+AHEAD=$(git rev-list --count upstream/main..main 2>/dev/null || echo "0")
+BEHIND=$(git rev-list --count main..upstream/main 2>/dev/null || echo "0")
 
-# pragma mark *** Validation ***
+echo ""
+echo "=== Divergence Report ==="
+echo "  Ahead of upstream:  ${AHEAD} commits"
+echo "  Behind upstream:    ${BEHIND} commits"
+echo ""
 
-validate_dependencies() {
-  if ! command -v git >/dev/null 2>&1; then
-    printf "Error: git is not installed.\n" >&2
-    printf "\n" >&2
-    printf "Install git using one of these methods:\n" >&2
-    printf "  macOS:   brew install git\n" >&2
-    printf "  Ubuntu:  sudo apt-get install git\n" >&2
-    printf "  Fedora:  sudo dnf install git\n" >&2
-    printf "  Windows: https://git-scm.com/download/win\n" >&2
-    exit 1
-  fi
-}
+if [ "$AHEAD" -gt 0 ]; then
+  echo "--- CHESA commits not in upstream ---"
+  git log --oneline upstream/main..main
+  echo ""
+fi
 
-# pragma mark *** Help and Version ***
+if [ "$BEHIND" -gt 0 ]; then
+  echo "--- Upstream changes not in fork ---"
+  git log --oneline main..upstream/main
+  echo ""
+fi
 
-show_help() {
-  cat <<'HELP'
-sync-upstream.sh - Report fork divergence from upstream cytostack/openwolf
+# --- Upstream tags ---
+UPSTREAM_TAGS=$(git tag --list --merged upstream/main 2>/dev/null | head -20)
+if [ -n "$UPSTREAM_TAGS" ]; then
+  echo "--- Upstream tags (recent) ---"
+  echo "$UPSTREAM_TAGS"
+  echo ""
+fi
 
-Shows how many commits your fork is ahead of or behind the upstream
-repository (cytostack/openwolf). The script is read-only — it never
-merges, rebases, or modifies branches.
-
-Usage:
-  bash scripts/sync-upstream.sh [OPTIONS]
-
-Options:
-  --help              Show this help message and exit
-  --version           Show version and exit
-  --branch BRANCH     Compare against upstream/BRANCH (default: main)
-  --verbose           Print detailed git output (e.g., fetch errors)
-
-Examples:
-  bash scripts/sync-upstream.sh
-      Compare main to upstream/main
-
-  bash scripts/sync-upstream.sh --branch develop
-      Compare develop to upstream/develop
-
-  bash scripts/sync-upstream.sh --verbose
-      Show detailed output including git fetch errors
-
-States:
-  IN SYNC   Local branch matches upstream — no action needed.
-  AHEAD     Local has commits not in upstream (unpushed changes or
-            fork-specific modifications).
-  BEHIND    Upstream has new commits not in local — consider syncing.
-  DIVERGED  Both local and upstream have unique commits — review
-            side-by-side before syncing.
-
-The script is read-only. It never merges or rebases automatically.
-Review upstream changes and choose your sync strategy manually.
-HELP
-}
-
-show_version() {
-  printf "sync-upstream.sh %s\n" "$VERSION"
-}
-
-# pragma mark *** Remote Setup ***
-
-ensure_upstream_remote() {
-  local url
-  if url=$(git remote get-url upstream 2>/dev/null); then
-    if [ "$url" != "$UPSTREAM_URL" ]; then
-      printf "Warning: Existing upstream remote URL differs from expected.\n" >&2
-      printf "  Expected: %s\n" "$UPSTREAM_URL" >&2
-      printf "  Found:    %s\n" "$url" >&2
-      printf "Continuing with existing remote URL. Use --verbose for details.\n" >&2
-    fi
-    printf "Using existing upstream remote: %s\n" "$url"
-  else
-    git remote add upstream "$UPSTREAM_URL"
-    printf "Added upstream remote: %s\n" "$UPSTREAM_URL"
-  fi
-}
-
-# pragma mark *** Fetch ***
-
-fetch_upstream() {
-  if [ "$VERBOSE" = "true" ]; then
-    if ! git fetch upstream; then
-      printf "Error: Failed to fetch from upstream remote.\n" >&2
-      printf "Check network connectivity and remote URL: %s\n" "$UPSTREAM_URL" >&2
-      exit 1
-    fi
-  else
-    if ! git fetch upstream 2>/dev/null; then
-      printf "Error: Failed to fetch from upstream remote.\n" >&2
-      printf "Check network connectivity.\n" >&2
-      exit 1
-    fi
-  fi
-}
-
-# pragma mark *** Divergence Report ***
-
-validate_branch_name() {
-  local branch="$1"
-  if ! git check-ref-format --branch "$branch" 2>/dev/null; then
-    printf "Error: Invalid branch name '%s'.\n" "$branch" >&2
-    exit 1
-  fi
-}
-
-report_divergence() {
-  local branch="$1"
-  local current_branch
-  current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
-  local upstream_ref="upstream/${branch}"
-  local ahead=0
-  local behind=0
-
-  printf "\n"
-  printf "=== Fork Divergence Report ===\n"
-  printf "Local branch:  %s\n" "$current_branch"
-  printf "Upstream ref:  %s\n" "$upstream_ref"
-  printf "\n"
-
-  # Verify the local branch exists before computing divergence
-  if ! git show-ref --verify "refs/heads/${branch}" >/dev/null 2>&1; then
-    printf "Error: Local branch '%s' does not exist.\n" "$branch" >&2
-    printf "Use 'git branch' to list available branches.\n" >&2
-    exit 1
-  fi
-
-  # Verify the upstream ref exists before computing divergence
-  if ! git show-ref --verify "refs/remotes/${upstream_ref}" >/dev/null 2>&1; then
-    printf "Error: Upstream branch '%s' was not found on remote.\n" "$upstream_ref" >&2
-    printf "The branch may not exist upstream, or the branch name may be incorrect.\n" >&2
-    exit 1
-  fi
-
-  ahead=$(git rev-list --count "${upstream_ref}..${branch}")
-  behind=$(git rev-list --count "${branch}..${upstream_ref}")
-
-  printf "Commits ahead of upstream:  %s\n" "$ahead"
-  printf "Commits behind upstream:    %s\n" "$behind"
-  printf "\n"
-
-  # Warn if on a non-default branch
-  if [ "$current_branch" != "main" ] && [ "$current_branch" != "develop" ]; then
-    printf "Warning: You are on branch '%s'. Comparing against %s. Use --branch to specify a different branch.\n" "$current_branch" "$upstream_ref" >&2
-    printf "\n"
-  fi
-
-  # Determine and print status
-  if [ "$ahead" -gt 0 ] && [ "$behind" -gt 0 ]; then
-    printf "Status: DIVERGED\n"
-    printf "\n"
-    printf "Unique to your branch:\n"
-    printf "  git log --oneline --left-only %s...%s\n" "$branch" "$upstream_ref"
-    printf "\n"
-    printf "Unique to upstream:\n"
-    printf "  git log --oneline --right-only %s...%s\n" "$branch" "$upstream_ref"
-    printf "\n"
-    printf "To sync (choose one):\n"
-    printf "  git merge %s\n" "$upstream_ref"
-    printf "  git rebase %s\n" "$upstream_ref"
-  elif [ "$ahead" -gt 0 ]; then
-    printf "Status: AHEAD\n"
-    printf "\n"
-    printf "Your fork has commits not present in upstream.\n"
-    printf "(This is normal if you have open PRs or fork-specific changes.)\n"
-    printf "\n"
-    printf "To see your unique commits:\n"
-    printf "  git log --oneline %s..%s\n" "$upstream_ref" "$branch"
-  elif [ "$behind" -gt 0 ]; then
-    printf "Status: BEHIND\n"
-    printf "\n"
-    printf "Upstream has new commits. Review them before syncing.\n"
-    printf "\n"
-    printf "To review upstream changes:\n"
-    printf "  git log --oneline %s..%s\n" "$branch" "$upstream_ref"
-    printf "\n"
-    printf "To sync (choose one):\n"
-    printf "  git merge %s\n" "$upstream_ref"
-    printf "  git rebase %s\n" "$upstream_ref"
-  else
-    printf "Status: IN SYNC\n"
-    printf "Your local branch matches upstream.\n"
-  fi
-}
-
-# pragma mark *** Main ***
-
-main() {
-  local branch="$DEFAULT_BRANCH"
-  local VERBOSE="false"
-
-  # Parse flags using a while loop (supports long options)
-  while [ $# -gt 0 ]; do
-    case "$1" in
-      --help)
-        show_help
-        exit 0
-        ;;
-      --version)
-        show_version
-        exit 0
-        ;;
-      --branch)
-        if [ $# -lt 2 ]; then
-          printf "Error: --branch requires a branch name argument.\n" >&2
-          exit 1
-        fi
-        branch="$2"
-        shift
-        ;;
-      --verbose)
-        VERBOSE="true"
-        ;;
-      *)
-        printf "Error: Unknown option: %s\n" "$1" >&2
-        printf "Usage: bash scripts/sync-upstream.sh [--help] [--version] [--branch BRANCH] [--verbose]\n" >&2
-        exit 1
-        ;;
-    esac
-    shift
-  done
-
-  validate_dependencies
-  validate_branch_name "$branch"
-  ensure_upstream_remote
-  fetch_upstream
-  report_divergence "$branch"
-}
-
-main "$@"
+# --- Recommendation ---
+echo "=== Recommendation ==="
+if [ "$BEHIND" -eq 0 ] && [ "$AHEAD" -eq 0 ]; then
+  echo "  Fork is in sync with upstream. No action needed."
+elif [ "$BEHIND" -eq 0 ]; then
+  echo "  You are ${AHEAD} ahead, 0 behind — upstream has no new changes."
+  echo "  Ready to open PRs against upstream."
+elif [ "$AHEAD" -eq 0 ]; then
+  echo "  You are 0 ahead, ${BEHIND} behind — fork is behind upstream."
+  echo "  Review upstream changes and consider:"
+  echo "    git merge upstream/main   # simple sync"
+  echo "    git rebase upstream/main  # clean history"
+else
+  echo "  You are ${AHEAD} ahead, ${BEHIND} behind — fork has diverged."
+  echo "  Review upstream changes: git log --oneline main..upstream/main"
+  echo "  Then consider:"
+  echo "    git merge upstream/main   # simple sync"
+  echo "    git rebase upstream/main  # clean history"
+fi
+echo ""
+echo "  Upstream PR status: git log --oneline --cherry-mark upstream/main...main"
