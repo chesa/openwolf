@@ -26,6 +26,30 @@ Verify the installation:
 openwolf --version
 ```
 
+### Installing from the CHESA Fork
+
+The CHESA fork adds worktree support, team workflow improvements, and fixes for concurrent sessions.
+
+**First-time setup:**
+
+```bash
+git clone git@github.com:chesa/openwolf.git
+cd openwolf
+bash scripts/install-global.sh
+```
+
+**Upgrade:**
+
+```bash
+cd <your-openwolf-clone>
+git pull
+pnpm install && pnpm run install:global
+```
+
+After upgrading, run `openwolf update` in each initialized project to sync hooks.
+
+> **Why not `npm install -g chesa/openwolf`?** The `dist/` directory is a build artifact and is not committed. A local build is required.
+
 ### Development Setup
 
 For **contributors** working on the CHESA OpenWolf fork, use the automated setup script:
@@ -35,6 +59,32 @@ For **contributors** working on the CHESA OpenWolf fork, use the automated setup
 ```
 
 The script verifies Node.js >= 20, pnpm, and git repository prerequisites, installs dependencies, builds the project, links the CLI globally, and configures the upstream git remote for fork divergence management.
+
+## Fork Management
+
+The CHESA fork tracks upstream [`cytostack/openwolf`](https://github.com/cytostack/openwolf) as a read-only remote.
+
+### Check divergence
+
+```bash
+bash scripts/sync-upstream.sh
+```
+
+This shows commits ahead/behind upstream and recommends actions. It is read-only — no merging or rebasing.
+
+### Sync with upstream
+
+Review upstream changes, then:
+
+```bash
+git merge upstream/main   # simple sync
+# or
+git rebase upstream/main  # clean history
+```
+
+### Version convention
+
+The fork uses `X.Y.Z-beta` to distinguish from official releases.
 
 ## Quick start
 

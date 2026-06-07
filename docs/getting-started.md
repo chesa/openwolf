@@ -91,6 +91,20 @@ Before installing OpenWolf, make sure you have the following installed:
 
 That is it. Use `claude` as you normally would. OpenWolf runs invisibly through its hooks.
 
+### Team Workflow: Mixed Commit Strategy
+
+By default, OpenWolf ignores all `.wolf/` files at the project level. For teams,
+a **mixed commit strategy** is recommended:
+
+- **Commit shared knowledge:** `anatomy.md`, `cerebrum.md`, `OPENWOLF.md`,
+  `config.json`, `buglog.json`, `identity.md`, `hooks/`
+- **Ignore per-developer state:** `memory.md`, `token-ledger.json`, `sessions/`,
+  `backups/`, lock files
+
+Starting with `openwolf init` (v1.0.5+), a `.wolf/.gitignore` is created
+automatically with the mixed strategy. If your project's root `.gitignore`
+still contains `.wolf/`, remove that line to adopt the mixed strategy.
+
 ## Mixed commit strategy
 
 By default, OpenWolf uses a **mixed commit strategy** for `.wolf/`: configuration files are committed to git, while session state and runtime data stay ignored. This allows the team to share project context (`OPENWOLF.md`), tool configuration (`config.json`), and project identity (`identity.md`) without flooding every commit with session churn.
