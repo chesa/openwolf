@@ -71,7 +71,7 @@ function extractToml(content: string, basename: string): string {
 }
 
 // ─── Main router ─────────────────────────────────────────────
-export function extractData(content: string, ext: string, basename: string, filePath: string): string {
+export function extractData(content: string, ext: string, basename: string, _filePath: string): string {
   switch (ext) {
     case ".sql": return extractSql(content);
     case ".proto": return extractProto(content);
