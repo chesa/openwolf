@@ -1,6 +1,8 @@
 {
   "project_name": "chesa-fork-team-toolkit",
   "version": "1.0.5-beta",
-  "workflow": "GSD",
+  "workflow": {
+    "_auto_chain_active": true
+  },
   "auto_mode": true
 }

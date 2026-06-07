@@ -4,6 +4,9 @@ import { findProjectRoot } from "../../src/scanner/project-root.js";
 import { detectWorktreeContext } from "../../src/utils/worktree.js";
 import type { WorktreeId } from "../../src/hooks/worktree-helper.js";
 import { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks } from "../../src/cli/hook-settings.js";
+import { mkdtempSync, realpathSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import * as path from "node:path";
 import { initCommand } from "../../src/cli/init.js";
 
 vi.mock("../../src/scanner/project-root.js", async (importOriginal) => {
@@ -255,20 +258,23 @@ describe("replaceOpenWolfHooks", () => {
 // hook-file copy list
 // ---------------------------------------------------------------------------
 describe("hook-file copy list", () => {
-  it("includes worktree-helper.js so dist/hooks/shared.js can resolve its sibling import", async () => {
-    const { HOOK_FILES } = await import("../../src/cli/hook-settings.js");
-    expect(HOOK_FILES).toContain("worktree-helper.js");
-  });
+  it("discovers all .js files and filters out non-js files", async () => {
+    const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "openwolf-hook-copy-")));
+    try {
+      writeFileSync(path.join(dir, "shared.js"), "");
+      writeFileSync(path.join(dir, "worktree-helper.js"), "");
+      writeFileSync(path.join(dir, "not-a-hook.txt"), ""); // excluded by .endsWith(".js")
 
-  it("covers all seven OpenWolf hook scripts plus the worktree-helper", async () => {
-    const { HOOK_FILES } = await import("../../src/cli/hook-settings.js");
-    // Exact list — if this changes, update both this test and the constant.
-    expect([...HOOK_FILES].sort()).toEqual([
-      "post-read.js", "post-write.js", "pre-read.js", "pre-write.js",
-      "session-start.js", "shared.js", "stop.js", "wolf-anatomy.js",
-      "wolf-describe.js", "wolf-files.js", "wolf-json.js", "wolf-lock.js",
-      "wolf-misc.js", "wolf-paths.js", "worktree-helper.js",
-    ].sort());
+      const { getHookFileNames } = await import("../../src/cli/hook-copy.js");
+      const files = getHookFileNames(dir);
+
+      expect(files).toContain("shared.js");
+      expect(files).toContain("worktree-helper.js");
+      expect(files).not.toContain("not-a-hook.txt");
+      expect(files.length).toBe(2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

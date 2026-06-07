@@ -108,6 +108,7 @@ export function isOpenWolfHook(hook: unknown): boolean {
   if (typeof hook !== "object" || hook === null) return false;
   const h = hook as Record<string, unknown>;
   if (h._managedBy === "openwolf") return true;
+  if (typeof h.command === "string" && h.command.includes(".wolf/hooks/")) return true;
   return false;
 }
 
