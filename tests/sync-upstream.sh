@@ -97,7 +97,9 @@ test_4_default_branch_header() {
   setup_test_repo
   (
     cd "$TEST_TMP_DIR"
-    git remote add upstream https://github.com/cytostack/openwolf.git
+    git init --bare "$TEST_TMP_DIR/upstream-bare"
+    git push "$TEST_TMP_DIR/upstream-bare" HEAD:main
+    git remote add upstream "$TEST_TMP_DIR/upstream-bare"
     output=$(bash "$SCRIPT" 2>&1 || true)
     if echo "$output" | grep -q "Fork Divergence Report"; then
       if echo "$output" | grep -q "upstream/main"; then
@@ -193,8 +195,10 @@ test_9_feature_branch_warning() {
   setup_test_repo
   (
     cd "$TEST_TMP_DIR"
+    git init --bare "$TEST_TMP_DIR/upstream-bare"
+    git push "$TEST_TMP_DIR/upstream-bare" HEAD:main
     git checkout -b feature/my-feature
-    git remote add upstream https://github.com/cytostack/openwolf.git
+    git remote add upstream "$TEST_TMP_DIR/upstream-bare"
     output=$(bash "$SCRIPT" 2>&1 || true)
     if echo "$output" | grep -q "Warning:"; then
       print_result PASS "Test 9: Feature branch warning" ""
@@ -238,7 +242,10 @@ test_12_branch_flag() {
   setup_test_repo
   (
     cd "$TEST_TMP_DIR"
-    git remote add upstream https://github.com/cytostack/openwolf.git
+    git init --bare "$TEST_TMP_DIR/upstream-bare"
+    git push "$TEST_TMP_DIR/upstream-bare" HEAD:main
+    git push "$TEST_TMP_DIR/upstream-bare" HEAD:refs/heads/develop
+    git remote add upstream "$TEST_TMP_DIR/upstream-bare"
     output=$(bash "$SCRIPT" --branch develop 2>&1 || true)
     if echo "$output" | grep -q "upstream/develop"; then
       print_result PASS "Test 12: --branch develop" ""
