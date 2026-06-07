@@ -42,7 +42,7 @@ export function extractTsJs(content: string, basename: string, ext: string): str
   if (basename === "error.tsx") return "Next.js error boundary";
   if (basename === "not-found.tsx") return "Next.js 404 page";
   if (basename === "route.ts" || basename === "route.js") {
-    const methods = [...new Set((content.match(/export\s+(?:async\s+)?function\s+(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)/g) || [])
+    const methods = [...new Set((content.match(/(?:export\s+(?:async\s+)?function\s+|export\s+(?:const|let)\s+)(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)/g) || [])
       .map(m => m.match(/(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)/)?.[1]))].filter(Boolean);
     return methods.length ? `Next.js API route: ${methods.join(", ")}` : "Next.js API route";
   }
