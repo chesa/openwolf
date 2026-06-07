@@ -6,7 +6,7 @@ set -euo pipefail
 PASS=0
 FAIL=0
 SKIP=0
-SCRIPT="scripts/sync-upstream.sh"
+SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scripts/sync-upstream.sh"
 TEST_TMP_DIR=""
 
 cleanup() {
