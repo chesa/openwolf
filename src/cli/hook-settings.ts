@@ -94,24 +94,8 @@ export const HOOK_SETTINGS = {
     },
   ],
 };
-
-export const HOOK_FILES = [
-  "post-read.js",
-  "post-write.js",
-  "pre-read.js",
-  "pre-write.js",
-  "session-start.js",
-  "shared.js",
-  "stop.js",
-  "worktree-helper.js",
-  "wolf-anatomy.js",
-  "wolf-describe.js",
-  "wolf-files.js",
-  "wolf-json.js",
-  "wolf-lock.js",
-  "wolf-misc.js",
-  "wolf-paths.js",
-];
+// HOOK_FILES (static file list) removed in v0 — dynamic discovery via
+// hook-copy.ts getHookFileNames() replaced it.
 
 /**
  * Returns true if a hook entry was registered by OpenWolf.
@@ -124,9 +108,6 @@ export function isOpenWolfHook(hook: unknown): boolean {
   if (typeof hook !== "object" || hook === null) return false;
   const h = hook as Record<string, unknown>;
   if (h._managedBy === "openwolf") return true;
-  if (typeof h.command === "string" && h.command.includes(".wolf/hooks/")) {
-    return true;
-  }
   return false;
 }
 
