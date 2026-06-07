@@ -5,9 +5,20 @@ import {
     existsSync,
     readFileSync,
     realpathSync,
+    renameSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
+
+// Wrap fs.renameSync in a controllable mock so tests can simulate rename
+// failures (e.g., EBUSY) and verify the direct-write fallback in writeJSON.
+vi.mock("node:fs", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("node:fs")>();
+    return {
+        ...actual,
+        renameSync: vi.fn(actual.renameSync),
+    };
+});
 
 // Mock the helper so we control the WorktreeContext returned to shared.ts.
 vi.mock("../../src/hooks/worktree-helper.js", async (importOriginal) => {
@@ -247,7 +258,28 @@ describe("shared.ts (hot path)", () => {
         },
     );
 
-    it("writeJSON falls back to direct write only for handle-busy errors and reports the original cause if the fallback fails", async () => {
+    it(
+        "writeJSON produces output correctly on the happy path",
+        async () => {
+            const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "openwolf-write-")));
+            try {
+                vi.mocked(detectWorktreeContextRaw).mockReturnValue({
+                    isWorktree: false, mainRepoRoot: dir, worktreePath: dir, branch: "main",
+                });
+                process.env.CLAUDE_PROJECT_DIR = dir;
+                const { writeJSON } = await freshShared();
+
+                const target = path.join(dir, "ok.json");
+                writeJSON(target, { a: 1 });
+                expect(JSON.parse(readFileSync(target, "utf-8"))).toEqual({ a: 1 });
+            } finally {
+                rmSync(dir, { recursive: true, force: true });
+                delete process.env.CLAUDE_PROJECT_DIR;
+            }
+        },
+    );
+
+    it("falls back to direct write when renameSync fails with EBUSY", async () => {
         const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "openwolf-write-")));
         try {
             vi.mocked(detectWorktreeContextRaw).mockReturnValue({
@@ -256,9 +288,19 @@ describe("shared.ts (hot path)", () => {
             process.env.CLAUDE_PROJECT_DIR = dir;
             const { writeJSON } = await freshShared();
 
-            const target = path.join(dir, "ok.json");
-            writeJSON(target, { a: 1 });
-            expect(JSON.parse(readFileSync(target, "utf-8"))).toEqual({ a: 1 });
+            const target = path.join(dir, "fallback.json");
+
+            // Make renameSync throw EBUSY to trigger the direct-write fallback
+            const renameMock = vi.mocked(renameSync);
+            renameMock.mockImplementationOnce(() => {
+                const err = new Error("resource busy") as NodeJS.ErrnoException;
+                err.code = "EBUSY";
+                throw err;
+            });
+
+            writeJSON(target, { b: 2 });
+            // The file should still be written via the direct-write fallback
+            expect(JSON.parse(readFileSync(target, "utf-8"))).toEqual({ b: 2 });
         } finally {
             rmSync(dir, { recursive: true, force: true });
             delete process.env.CLAUDE_PROJECT_DIR;
