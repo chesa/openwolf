@@ -61,7 +61,11 @@ export function extractTsJs(content: string, basename: string, ext: string): str
   }
 
   // Zustand / Redux store
-  if (content.includes("create(") && content.includes("set(")) return "Zustand store";
+  if (
+    content.includes("zustand") &&
+    /create\s*\(/.test(content) &&
+    /\.set\s*\(/.test(content)
+  ) return "Zustand store";
   if (content.includes("createSlice")) {
     const name = content.match(/name:\s*['"](\w+)['"]/);
     return name ? `Redux slice: ${name[1]}` : "Redux slice";
