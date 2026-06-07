@@ -144,6 +144,13 @@ report_divergence() {
   printf "Upstream ref:  %s\n" "$upstream_ref"
   printf "\n"
 
+  # Verify the local branch exists before computing divergence
+  if ! git show-ref --verify "refs/heads/${branch}" >/dev/null 2>&1; then
+    printf "Error: Local branch '%s' does not exist.\n" "$branch" >&2
+    printf "Use 'git branch' to list available branches.\n" >&2
+    exit 1
+  fi
+
   # Verify the upstream ref exists before computing divergence
   if ! git show-ref --verify "refs/remotes/${upstream_ref}" >/dev/null 2>&1; then
     printf "Error: Upstream branch '%s' was not found on remote.\n" "$upstream_ref" >&2
@@ -151,8 +158,8 @@ report_divergence() {
     exit 1
   fi
 
-  ahead=$(git rev-list --count "${upstream_ref}..${branch}" 2>/dev/null || echo "0")
-  behind=$(git rev-list --count "${branch}..${upstream_ref}" 2>/dev/null || echo "0")
+  ahead=$(git rev-list --count "${upstream_ref}..${branch}" 2>/dev/null)
+  behind=$(git rev-list --count "${branch}..${upstream_ref}" 2>/dev/null)
 
   printf "Commits ahead of upstream:  %s\n" "$ahead"
   printf "Commits behind upstream:    %s\n" "$behind"
