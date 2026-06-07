@@ -31,6 +31,10 @@ How to set up, build, and contribute to OpenWolf.
    pnpm link --global    # optional: makes 'openwolf' available globally
    ```
 
+4. Verify the CLI works:
+
+   After building, verify with `node dist/bin/openwolf.js --help`
+
 ### Troubleshooting
 
 If the automated setup script (`./scripts/install-dev.sh`) fails during the global link step,
@@ -40,10 +44,6 @@ directory is included in your `PATH`:
    ```bash
    pnpm setup
    ```
-
-4. Verify the CLI works:
-
-   After building, verify with `node dist/bin/openwolf.js --help`
 
 > **Prerequisites:** Node.js >= 20.0.0. See [Getting Started](getting-started.md) for full prerequisite details.
 
