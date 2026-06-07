@@ -199,7 +199,7 @@ report_divergence() {
 
 main() {
   local branch="$DEFAULT_BRANCH"
-  VERBOSE="false"
+  local VERBOSE="false"
 
   # Parse flags using a while loop (supports long options)
   while [ $# -gt 0 ]; do
