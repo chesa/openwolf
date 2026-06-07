@@ -1,6 +1,6 @@
 ---
 phase: 02-divergence-management
-fixed_at: 2026-06-07T00:00:00Z
+fixed_at: 2026-06-07T17:10:00Z
 review_path: .planning/phases/02-divergence-management/02-REVIEW.md
 iteration: 1
 findings_in_scope: 4
@@ -11,8 +11,8 @@ status: all_fixed
 
 # Phase 02: Code Review Fix Report
 
-**Fixed at:** 2026-06-07T00:00:00Z
-**Source review:** `.planning/phases/02-divergence-management/02-REVIEW.md`
+**Fixed at:** 2026-06-07T17:10:00Z
+**Source review:** .planning/phases/02-divergence-management/02-REVIEW.md
 **Iteration:** 1
 
 **Summary:**
@@ -22,36 +22,35 @@ status: all_fixed
 
 ## Fixed Issues
 
-### WR-05: Temp directory leak — `setup_test_repo()` overwrites global `$TEST_TMP_DIR`
-
-**Files modified:** `tests/sync-upstream.sh`
-**Commit:** `4c6a9de`
-**Applied fix:** Changed `setup_test_repo()` to track temp directories in a `TEST_TMP_DIRS` array instead of overwriting a single global. The `cleanup()` trap now iterates over all tracked directories on exit, ensuring every temp directory created during the test run is cleaned up. Previously, `setup_test_repo()` overwrote `TEST_TMP_DIR` on each call, leaving N-1 temp directories leaked per run.
-
-### WR-06: Tests 4, 9, 12 are network-dependent and fail in offline CI
-
-**Files modified:** `tests/sync-upstream.sh`
-**Commit:** `0a6538b`
-**Applied fix:** Replaced the real GitHub upstream URL (`https://github.com/cytostack/openwolf.git`) with a local bare repository in tests 4, 9, and 12, following the same pattern used by tests 5-8. Each test now:
-- Creates a local bare repo as a simulated upstream
-- Pushes the initial commit (and develop branch for test 12) to establish refs
-- Sets the upstream remote to the local bare repo
-- Runs the script against the local repo, which fetches deterministically without network access
-
-### WR-07: Test function calls lack `|| true` guards — single failure aborts entire suite
-
-**Files modified:** `tests/sync-upstream.sh`
-**Commit:** `c2eb633`
-**Applied fix:** Added `|| true` guards to all 12 test function calls at the top level of the test suite. With `set -euo pipefail`, any unhandled non-zero return from a test function (e.g., from `setup_test_repo()` failing or a subshell crash) would previously abort the entire suite. Now each test runs independently: a failure in one test does not prevent the remaining tests from executing. The `FAIL` counter is already tracked by `print_result()` calls within each test, so `exit $FAIL` at the end still reports the correct failure count.
-
-### WR-08: Silent "IN SYNC" when upstream branch does not exist
+### WR-01: Silent "IN SYNC" when local branch does not exist
 
 **Files modified:** `scripts/sync-upstream.sh`
-**Commit:** `134b926`
-**Applied fix:** Added a `git show-ref --verify` check in `report_divergence()` before computing ahead/behind counts. If the specified upstream ref does not exist (e.g., `upstream/develop` was never created on the remote, was deleted, or has a typo), the script now prints a clear error message and exits with code 1 instead of silently reporting "Status: IN SYNC" (which happened because both `rev-list` commands errored, fell through to `|| echo "0"`, and produced 0/0 counts).
+**Commit:** 9fabcb6
+**Applied fix:** Added a local branch existence check (`git show-ref --verify refs/heads/${branch}`) in `report_divergence()` before the upstream ref check, with a clear error message. Removed the `|| echo "0"` fallback from both `git rev-list --count` commands so failures propagate via `set -e` instead of silently producing "0" counts.
+
+### WR-02: Branch name validation is weaker than git's rules
+
+**Files modified:** `scripts/sync-upstream.sh`
+**Commit:** 14b1dbe
+**Applied fix:** Replaced the hand-written regex validation in `validate_branch_name()` with `git check-ref-format --branch "$branch"`, which provides canonical git branch name validation. This rejects double-dot sequences, trailing dots, `.lock` suffixes, and other edge cases that the previous regex allowed.
+
+### WR-03: Tests never assert exit codes
+
+**Files modified:** `tests/sync-upstream.sh`
+**Commit:** 3d399b1
+**Applied fix:** Updated all 12 behavioral tests to capture the exit code alongside script output. Each test uses `set +e` / `set -e` wrapping around the command substitution, then asserts the expected exit code (`-eq 0` for success tests, `-ne 0` for failure tests) before checking output string content. Failure messages now include the exit code for diagnosis.
+
+- Tests expecting exit 0 (success): 4 (default branch header), 5 (AHEAD), 6 (BEHIND), 7 (DIVERGED), 8 (IN SYNC), 9 (feature branch warning), 10 (--help), 11 (--version), 12 (--branch develop)
+- Tests expecting exit != 0 (expected failure): 1 (missing upstream — fetch fails), 2 (existing upstream — fetch fails), 3 (fetch failure)
+
+### WR-04: `ensure_upstream_remote` does not verify remote URL matches expected
+
+**Files modified:** `scripts/sync-upstream.sh`
+**Commit:** 3207ef0
+**Applied fix:** Added a URL comparison in `ensure_upstream_remote()` when an existing `upstream` remote is found. If the existing URL differs from `$UPSTREAM_URL`, a warning is printed to stderr showing both URLs and noting that the script will continue with the existing remote.
 
 ---
 
-_Fixed: 2026-06-07T00:00:00Z_
+_Fixed: 2026-06-07T17:10:00Z_
 _Fixer: the agent (gsd-code-fixer)_
 _Iteration: 1_
