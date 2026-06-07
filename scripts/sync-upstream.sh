@@ -6,7 +6,8 @@ set -euo pipefail
 # This script is read-only — no merging or rebasing.
 # Usage: bash scripts/sync-upstream.sh
 
-cd "$(git rev-parse --show-toplevel 2>/dev/null || { echo "Error: not in a git repository"; exit 1; })"
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "Error: not in a git repository" >&2; exit 1; }
+cd "$ROOT"
 
 # --- Ensure upstream remote ---
 if ! git remote get-url upstream >/dev/null 2>&1; then

@@ -8,7 +8,7 @@ PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # --- Prerequisites ---
 command -v node >/dev/null 2>&1 || { echo "Error: Node.js is required. Install from https://nodejs.org/ (v20+)."; exit 1; }
-NODE_VERSION=$(node --version | sed 's/[^0-9]*//' | cut -c1-2)
+NODE_VERSION=$(node --version | sed 's/v//' | cut -d. -f1)
 if [ "$NODE_VERSION" -lt 20 ] 2>/dev/null; then
   echo "Error: Node.js 20+ required. Found: $(node --version)"
   echo "Upgrade from https://nodejs.org/"
