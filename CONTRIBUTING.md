@@ -115,6 +115,17 @@ Follow [semver](https://semver.org/). Decide the bump before merging any branch:
 
 When uncertain, ask before merging.
 
+## Release Tagging
+
+After bumping `package.json` and merging to `develop`, create an annotated tag:
+
+```bash
+git tag -a release/X.Y.Z-beta -m "release/X.Y.Z-beta — <one-line summary>"
+git push origin release/X.Y.Z-beta
+```
+
+**Use `release/` prefix** (not bare `v`). This keeps release tags visually distinct from GSD milestone completion tags (`v1.0`, `v1.1`, etc.) which use the short two-part `v` format. The version inside the tag matches `package.json` exactly — no inner `v` prefix (i.e. `release/1.1.0-beta`, not `release/v1.1.0-beta`).
+
 ## Issue Reporting
 
 Open bugs and feature requests on [GitHub
