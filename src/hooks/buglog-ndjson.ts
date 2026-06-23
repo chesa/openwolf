@@ -38,7 +38,7 @@ export function readBugEntries(wolfDir: string): BugEntry[] {
   for (const line of raw.split("\n")) {
     const t = line.trim();
     if (!t) continue;
-    try { out.push(JSON.parse(t) as BugEntry); } catch { /* skip blank/torn/corrupt line */ }
+    try { out.push(JSON.parse(t) as BugEntry); } catch { /* skip torn/corrupt line */ }
   }
   return out;
 }

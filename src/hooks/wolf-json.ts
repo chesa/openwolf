@@ -35,6 +35,8 @@ function deepMergeDefaults<T>(defaults: T, loaded: T): T {
   return result as T;
 }
 
+// Never calls withFileLock — safe to invoke inside an already-held lock
+// (updateJSON relies on this to do a single locked read-modify-write).
 export function readJSON<T = unknown>(filePath: string, fallback: T): T {
   try {
     if (!fs.existsSync(filePath)) return fallback;
@@ -52,8 +54,12 @@ export function readJSON<T = unknown>(filePath: string, fallback: T): T {
   }
 }
 
-// Lock-free atomic write (temp file + rename, with the existing EBUSY/EXDEV
-// fallback). INTERNAL — every caller must already hold the file lock.
+// Lock-free atomic write (temp file + rename). INTERNAL — every caller must
+// already hold the file lock via withFileLock.
+// EBUSY/EACCES/EPERM/EXDEV get a direct-write fallback: on Windows (EBUSY) and
+// some network/cross-device filesystems (EXDEV) rename() fails even when the
+// lock is held, so we fall back to overwriting in place rather than leaving a
+// stale .tmp behind.
 function _writeJSONUnsafe(filePath: string, data: unknown): void {
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });

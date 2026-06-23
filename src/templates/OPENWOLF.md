@@ -87,20 +87,12 @@ OpenWolf's value comes from learning across sessions. You MUST update `.wolf/cer
 
 **Before fixing:** Read `.wolf/buglog.ndjson` first — the fix may already be known.
 
-**After fixing:** ALWAYS append to `.wolf/buglog.ndjson` with this structure:
+**After fixing:** ALWAYS append a fresh line to `.wolf/buglog.ndjson` (one JSON
+object per line, no pretty-printing). Each recurrence is a new line — do NOT
+edit existing lines to bump `occurrences`. The id is 8 lowercase hex characters.
+
 ```json
-{
-  "id": "bug-NNN",
-  "timestamp": "ISO date",
-  "error_message": "exact error or user complaint",
-  "file": "file that was fixed",
-  "root_cause": "why it broke",
-  "fix": "what you changed to fix it",
-  "tags": ["relevant", "keywords"],
-  "related_bugs": [],
-  "occurrences": 1,
-  "last_seen": "ISO date"
-}
+{"id":"bug-1a2b3c4d","timestamp":"ISO date","error_message":"exact error or user complaint","file":"file that was fixed","root_cause":"why it broke","fix":"what you changed to fix it","tags":["relevant","keywords"],"related_bugs":[],"occurrences":1,"last_seen":"ISO date"}
 ```
 
 **The threshold is LOW.** When in doubt, log it. A false positive in the bug log costs nothing. A missed bug means repeating the same mistake later.
