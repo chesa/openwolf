@@ -2,8 +2,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
 import {
-  getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, readMarkdown, parseAnatomy, serializeAnatomy,
-  extractDescription, estimateTokens, appendMarkdown, timeShort, readStdin, normalizePath, isWolfFile
+  getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, updateJSON, readMarkdown, parseAnatomy, serializeAnatomy,
+  extractDescription, estimateTokens, appendMarkdown, timeShort, timestamp, readStdin, normalizePath, isWolfFile
 } from "./shared.js";
 
 interface SessionData {
@@ -153,29 +153,24 @@ async function main(): Promise<void> {
 
   // 3. Record in session tracker + track edit counts
   try {
-    const session = readJSON<SessionData>(sessionFile, { files_written: [], edit_counts: {} });
-    if (!session.edit_counts) session.edit_counts = {};
-
-    const normalizedFile = normalizePath(filePath);
+    const relFile = normalizePath(filePath);
     const action = toolName === "Write" ? "create" : "edit";
     const fileContent = input.tool_input?.content ?? "";
-    const tokens = estimateTokens(fileContent || newStr, "code");
+    const writeTokens = estimateTokens(fileContent || newStr, "code");
+    const editKey = normalizePath(path.relative(projectRoot, absolutePath));
 
-    session.files_written.push({
-      file: normalizedFile,
-      action,
-      tokens,
-      at: new Date().toISOString(),
+    let editKeyCount = 0;
+    updateJSON<SessionData>(sessionFile, { files_written: [], edit_counts: {} } as SessionData, (session) => {
+      if (!session.edit_counts) session.edit_counts = {};
+      session.files_written.push({ file: relFile, action, tokens: writeTokens, at: timestamp() });
+      session.edit_counts[editKey] = (session.edit_counts[editKey] || 0) + 1;
+      editKeyCount = session.edit_counts[editKey];
+      return session;
     });
 
-    const editKey = normalizePath(path.relative(projectRoot, absolutePath));
-    session.edit_counts[editKey] = (session.edit_counts[editKey] || 0) + 1;
-
-    writeJSON(sessionFile, session);
-
-    if (session.edit_counts[editKey] >= 3) {
+    if (editKeyCount >= 3) {
       process.stderr.write(
-        `⚠️ OpenWolf: ${baseName} has been edited ${session.edit_counts[editKey]} times this session. If you're fixing a bug, remember to log it to .wolf/buglog.json.\n`
+        `⚠️ OpenWolf: ${baseName} has been edited ${editKeyCount} times this session. If you're fixing a bug, remember to log it to .wolf/buglog.json.\n`
       );
     }
   } catch (err) {

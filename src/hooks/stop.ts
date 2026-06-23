@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, updateJSON, appendMarkdown, timeShort } from "./shared.js";
+import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, updateJSON, appendMarkdown, timeShort } from "./shared.js";
 
 interface FileRead {
   count: number;
@@ -50,7 +50,8 @@ interface SessionEntry {
 }
 
 export function finalizeSession(wolfDir: string, sessionDir: string, session: SessionData): void {
-  session.stop_count++;
+  // Note: stop_count increment is handled by the finally block in main() via updateJSON,
+  // so concurrent sessions can't lose increments. Do not increment here.
 
   // Only write to ledger if there's been activity
   const readCount = Object.keys(session.files_read).length;
@@ -187,8 +188,12 @@ async function main(): Promise<void> {
     const error = err instanceof Error ? err : new Error(String(err));
     process.stderr.write(`OpenWolf: stop hook error — ${error.message}\n`);
   } finally {
-    // Always persist stop_count increment
-    writeJSON(sessionFile, session);
+    // Always persist stop_count increment under lock so concurrent sessions
+    // read the latest value, increment it once, and write it back atomically.
+    updateJSON<SessionData>(sessionFile, session, (cur) => {
+      cur.stop_count = (cur.stop_count ?? 0) + 1;
+      return cur;
+    });
   }
 
   process.exit(0);
