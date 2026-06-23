@@ -25,4 +25,7 @@ export { extractDescription } from "./wolf-describe.js";
 
 export { estimateTokens, timestamp, timeShort, readStdin } from "./wolf-misc.js";
 
+export { appendBugEntry, readBugEntries, countBugEntries, newBugId, bugLogPath } from "./buglog-ndjson.js";
+
 export type { WorktreeContext } from "./wolf-paths.js";
+export type { BugEntry } from "./buglog-ndjson.js";
