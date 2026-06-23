@@ -2,7 +2,7 @@
 
 > Date: 2026-06-23
 > Author: Brian Summa / Claude
-> Status: Draft (awaiting review)
+> Status: Draft v2 — code review incorporated (2026-06-23)
 > Scope: Make OpenWolf safe for multiple developers writing concurrently in ONE
 > shared checkout — closing the Q1 gap left by the v1.0 Team Toolkit milestone.
 
@@ -65,23 +65,34 @@ shipping as **two phases**:
 
 ### A1. `updateJSON()` helper
 
-Add to `src/hooks/wolf-json.ts`:
+Add to `src/hooks/wolf-json.ts`. **`writeJSON` already wraps its entire body in
+`withFileLock(filePath, …)`** (`wolf-json.ts:55-56`), and the lock is a
+non-reentrant `wx` lockfile. So `updateJSON` must NOT call `writeJSON` from
+inside its own lock — that re-acquires the same per-file lock, hits `EEXIST`,
+burns the retry budget, and prints a spurious "proceeding unlocked" warning on
+every call (the data is still safe under the outer lock, but the noise + latency
+are unacceptable). Extract the lock-free write and have both callers share it:
 
 ```ts
-// Read-modify-write a JSON file atomically under a per-file lock, so concurrent
-// sessions can't lose each other's updates. `mutate` receives the current value
-// (or `fallback` if the file is absent/corrupt) and returns the value to write.
+// Lock-free atomic write (temp file + rename). Internal — callers MUST already
+// hold the file lock: writeJSON wraps it, updateJSON owns the RMW lock.
+function _writeJSONUnsafe(filePath: string, data: unknown): void { /* temp+rename body */ }
+
+export function writeJSON(filePath: string, data: unknown): void {
+  withFileLock(filePath, () => _writeJSONUnsafe(filePath, data));
+}
+
+// Read-modify-write under ONE lock — no nested re-acquire.
 export function updateJSON<T>(filePath: string, fallback: T, mutate: (cur: T) => T): void {
   withFileLock(filePath, () => {
     const cur = readJSON<T>(filePath, fallback);
-    writeJSON(filePath, mutate(cur));   // writeJSON stays atomic (temp + rename)
+    _writeJSONUnsafe(filePath, mutate(cur));
   });
 }
 ```
 
-The lock now spans read→mutate→write, so the lost-update window is closed. Note
-`withFileLock` currently wraps only `writeJSON`'s write; with `updateJSON` the
-read happens *inside* the lock, which is the whole point.
+The lock spans read→mutate→write exactly once, closing the lost-update window
+with no nested-lock false alarm. (Review #1.)
 
 ### A2. Convert the read-modify-write call sites
 
@@ -90,6 +101,8 @@ read happens *inside* the lock, which is the whole point.
 | `src/hooks/stop.ts` `finalizeSession` (ledger lifetime counters) | read → accumulate → `writeJSON` | wrap in `updateJSON` |
 | `src/hooks/session-start.ts` `initializeSessionLedger` (`total_sessions++`) | read → `++` → `writeJSON` | wrap in `updateJSON` |
 | `src/hooks/post-write.ts` token-ledger updates | read → add → `writeJSON` | wrap in `updateJSON` |
+| `src/hooks/post-write.ts` `_session.json` (`files_written.push`, `edit_counts++`, `:156-174`) | read → mutate → `writeJSON` | wrap in `updateJSON` |
+| `src/hooks/stop.ts` `_session.json` (`stop_count++`, `:171-192`) | read → `++` → `writeJSON` | wrap in `updateJSON` |
 
 `buglog.json` is intentionally **not** in this table — Pillar B removes it from
 the RMW path entirely (NDJSON appends are conflict-free and need no lock).
@@ -97,8 +110,17 @@ the RMW path entirely (NDJSON appends are conflict-free and need no lock).
 The token-ledger and `_session.json` are session-scoped
 (`.wolf/sessions/<worktreeId>/`), so in the worktree-per-dev pattern they don't
 contend. But in a **single shared checkout** (`getSessionDir()` returns
-`getWolfDir()`), every developer shares one ledger — that is exactly where the
-lock now matters.
+`getWolfDir()`), every developer shares one ledger and one `_session.json` —
+that is exactly where the lock now matters.
+
+**`_session.json` semantic caveat (review #4):** locking stops corruption and
+lost updates, but in a shared checkout two concurrent Claude sessions still
+write to ONE `_session.json`, so its `session_id` / `files_written` /
+`edit_counts` conflate both sessions. That file only drives in-session nudges,
+not permanent accounting (the token-ledger stays correct), so this is an
+**accepted limitation** — fully separating concurrent sessions in one checkout
+would require namespacing `_session.json` by Claude session id (out of scope;
+worktree-per-dev avoids it).
 
 ### A3. Harden the lock (audit follow-ups)
 
@@ -109,8 +131,12 @@ lock now matters.
   stderr when it fires so silent unlocked writes are visible.
 - **TOCTOU on stale removal.** The stale branch does `unlink`-then-`wx`-create;
   two processes can each delete the other's freshly-written lock during a
-  staleness storm. Keep the single-retry-after-stale-removal but document the
-  bound and cover it with a test.
+  staleness storm. Keep the single-retry-after-stale-removal, and document the
+  bound: when N processes all find one stale lock, at most one wins per embedded
+  retry; losers retry and may briefly re-enter the race, but it is bounded —
+  after `MAX_RETRIES × (staleness window + retry delay)` every process either
+  holds the lock or has fallen through to the (now logged) unlocked write. Cover
+  it with a test. (Review #8.)
 
 ---
 
@@ -131,10 +157,12 @@ Why NDJSON:
 - **Conflict-free appends.** A new bug is a new line at EOF. Two branches that
   each append land on different lines → git merges them cleanly with no manual
   resolution. (The JSON array conflicted on the shared tail every time.)
-- **No lock needed for appends.** `fs.appendFileSync` of a single `…\n` line is
-  atomic on local POSIX filesystems, so the post-write hook's bug append needs
-  no `withFileLock` — it just appends. (Dedup/occurrence bumps are the
-  exception — see B3.)
+- **No lock needed for appends.** `fs.appendFileSync` issues a single `write`
+  syscall; at typical buglog line sizes (a few hundred bytes) on a local
+  filesystem that is effectively atomic, so the post-write hook's bug append
+  needs no `withFileLock` — it just appends. (Very long lines or network
+  filesystems weaken this; the reader tolerates a torn final line — see Testing.
+  Dedup/occurrence bumps are the exception — see B3.) (Review #6.)
 
 ### B2. Collision-free IDs
 
@@ -150,27 +178,41 @@ references remain opaque strings, so existing cross-references keep working.
 ### B3. Dedup / occurrence bumps
 
 The one buglog operation that is still read-modify-write is incrementing
-`occurrences` / updating `last_seen` on a re-seen bug (`bug-matcher.ts`).
-Options, decided at implementation time:
+`occurrences` / updating `last_seen` on a re-seen bug. This happens in TWO
+places (review #5): the CLI helper `bug-tracker.ts` `logBug` (`:42-72`, reads
+via `fs-safe`, **no lock**, and itself uses the buggy `bug-${length+1}` id at
+`:57`) and the hook's `autoDetectBugFix` (`post-write.ts`). Options, decided at
+implementation time:
 
 - **B3a (recommended):** append-only — a re-seen bug appends a new line; a
   compaction step (`openwolf bug compact`, or the daemon on a schedule) folds
-  duplicates by matcher key. Keeps the hot path lock-free.
-- **B3b:** wrap just the occurrence-bump rewrite in `updateJSON`-style locking
-  over the NDJSON file. Simpler semantics, reintroduces a (small) lock.
+  duplicates by matcher key. Keeps both hot paths lock-free and sidesteps the
+  cross-context lock problem below.
+- **B3b:** wrap the occurrence-bump rewrite in `updateJSON`-style locking over
+  the NDJSON file. Simpler semantics, reintroduces a lock — **and that lock must
+  be reachable from BOTH the hook and CLI contexts** (today `withFileLock` is
+  hooks-only; `logBug` uses `src/utils/fs-safe.ts`). So B3b additionally
+  requires B6 below.
 
 ### B4. Reader/writer migration
 
-Every touchpoint that reads or writes `buglog.json` must move to the NDJSON
-reader/writer in `src/buglog/bug-tracker.ts`:
+Every touchpoint that reads or writes `buglog.json` must move to the new NDJSON
+format. **Compilation-boundary constraint (review #2):** the hooks compile under
+`tsconfig.hooks.json` (`rootDir: src/hooks`, `include: src/hooks/**`) and cannot
+import `src/buglog/` or `src/utils/`. So the NDJSON read/append logic needs a
+self-contained copy in `src/hooks/` (the same pattern `shared.ts` already uses
+for utilities) AND the canonical helper in `src/buglog/bug-tracker.ts`; a shared
+format test guards the two against drift.
 
 | File | Role |
 |------|------|
-| `src/buglog/bug-tracker.ts` | read/write helpers — **source of truth for the format** |
+| `src/buglog/bug-tracker.ts` | CLI read/write helpers — **canonical format** |
+| `src/hooks/` self-contained NDJSON helper (NEW) | hook-side append/read (can't import bug-tracker) |
 | `src/buglog/bug-matcher.ts` | dedup/match logic |
 | `src/cli/bug-cmd.ts` | `openwolf bug` command (list/search) |
 | `src/hooks/post-write.ts` | `autoDetectBugFix` append |
 | `src/hooks/session-start.ts` | empty-buglog reminder (counts entries) |
+| `src/hooks/stop.ts` (review #3) | `checkForMissingBugLogs` matches `w.file.includes("buglog.json")` (`:212`) → change to `"buglog"` so the nudge still fires for `buglog.ndjson` |
 | `src/daemon/wolf-daemon.ts` | serves buglog to the dashboard |
 | `src/dashboard/app/hooks/useWolfData.ts`, `components/panels/BugLog.tsx` | dashboard reader/UI |
 | `src/cli/init.ts` | seeds the template; `src/cli/status.ts` counts entries |
@@ -184,6 +226,16 @@ Ship a converter (`openwolf migrate-buglog`, or run automatically by `init`/
 bug as an NDJSON line to `buglog.ndjson`, preserving ids, then rename the old
 file to `buglog.json.bak`. Idempotent; no-op if `buglog.ndjson` already exists.
 The fork's own `.wolf/buglog.json` (203 entries) is the first migration target.
+
+### B6. (If B3b) lift `withFileLock` to a shared module
+
+`withFileLock` currently lives in `src/hooks/wolf-lock.ts`, importable only by
+the hooks build. The CLI buglog path (`bug-tracker.ts` → `fs-safe.ts`) and any
+future CLI RMW cannot lock. If B3b is chosen — or whenever a CLI command needs
+the same lock — lift `withFileLock` into a location both build graphs can import
+(e.g. `src/utils/`), with a thin re-export from `src/hooks/wolf-lock.ts` to
+preserve the self-contained hooks copy. With B3a (append-only) this is
+unnecessary. (Review #5, recommendation #5.)
 
 ---
 
@@ -223,15 +275,17 @@ deliver the concurrency-safety win without it.
 
 ```
 src/hooks/
-  wolf-json.ts        # A1: add updateJSON(); A3: lock hardening
+  wolf-json.ts        # A1: _writeJSONUnsafe + writeJSON + updateJSON; A3: lock hardening
   wolf-lock.ts        # A3: retry budget + stderr on unlocked fallback
-  post-write.ts       # A2 ledger via updateJSON; B4 NDJSON append; uuid ids
+                      # B6 (if B3b): re-export a shared withFileLock
+  buglog-ndjson.ts    # B4: self-contained NDJSON append/read for hooks (NEW)
+  post-write.ts       # A2 ledger + _session.json via updateJSON; B4 NDJSON; uuid ids
   session-start.ts    # A2 initializeSessionLedger via updateJSON; B4 count
-  stop.ts             # A2 finalizeSession via updateJSON
+  stop.ts             # A2 finalizeSession + _session.json via updateJSON; B4 nudge string
   wolf-files.ts       # C1: appendProposal() helper (staging)
 
 src/buglog/
-  bug-tracker.ts      # B1/B4: NDJSON read/write (format source of truth)
+  bug-tracker.ts      # B1/B4: canonical NDJSON read/write
   bug-matcher.ts      # B3: dedup over NDJSON
 
 src/cli/
@@ -257,6 +311,9 @@ src/templates/ + docs/  # B4: buglog.ndjson naming; C2: protocol text
   fallback fires only after the (raised) retry budget and logs to stderr.
 - **B — NDJSON round-trip:** write/read N bugs; assert parse tolerance of blank
   lines and a trailing newline; assert a malformed line is skipped, not fatal.
+- **B — concurrent append + read (review #7):** while one process appends, a
+  reader (`openwolf bug` / the daemon endpoint) must not return partial/corrupt
+  entries — the reader skips an incomplete final line rather than throwing.
 - **B — migration:** convert a fixture legacy `buglog.json` (incl. the 203-entry
   real file) → NDJSON; assert ids and counts preserved, idempotent on re-run.
 - **C — propose/merge:** proposals from two sessions both survive a merge into
