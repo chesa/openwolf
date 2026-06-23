@@ -177,7 +177,7 @@ async function updateProject(
 
   console.log(`  ${name} (${root})`);
 
-  // One-time migration: buglog.ndjson (legacy array format) → buglog.ndjson
+  // One-time migration: buglog.json (legacy array format) → buglog.ndjson
   migrateBugLog(wolfDir);
 
   // Already at this version?
