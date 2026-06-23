@@ -44,7 +44,7 @@ const CREATE_IF_MISSING = [
   "anatomy.md",
   "STATUS.md",
   "token-ledger.json",
-  "buglog.json",
+  "buglog.ndjson",
   "cron-manifest.json",
   "cron-state.json",
   "designqc-report.json",

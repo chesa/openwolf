@@ -208,7 +208,7 @@ app.get("/api/files", (_req, res) => {
   const files: Record<string, string> = {};
   const wolfFiles = [
     "OPENWOLF.md", "identity.md", "cerebrum.md", "memory.md", "anatomy.md",
-    "config.json", "token-ledger.json", "buglog.json",
+    "config.json", "token-ledger.json", "buglog.ndjson",
     "cron-manifest.json", "cron-state.json",
     "designqc-report.json",
   ];
@@ -420,7 +420,7 @@ function handleDashboardCommand(msg: { type: string; task_id?: string }, sender:
         const files: Record<string, string> = {};
         const wolfFiles = [
           "OPENWOLF.md", "identity.md", "cerebrum.md", "memory.md", "anatomy.md",
-          "config.json", "token-ledger.json", "buglog.json",
+          "config.json", "token-ledger.json", "buglog.ndjson",
           "cron-manifest.json", "cron-state.json",
           "designqc-report.json",
         ];

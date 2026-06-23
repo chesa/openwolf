@@ -241,7 +241,7 @@ Then re-run `openwolf scan --check` to confirm it now exits with code 0. This is
 openwolf init
 ```
 
-This creates the `.wolf/` directory with `anatomy.md`, `cerebrum.md`, `memory.md`, `buglog.json`, and other required files.
+This creates the `.wolf/` directory with `anatomy.md`, `cerebrum.md`, `memory.md`, `buglog.ndjson`, and other required files.
 
 ## Git Worktrees
 
@@ -252,7 +252,7 @@ OpenWolf supports git worktrees (created via `git worktree add`, `claude --workt
 When Claude Code launches inside a linked worktree, OpenWolf automatically:
 
 - Resolves `.wolf/` to the main checkout using `git rev-parse --git-common-dir`
-- Reads shared knowledge files (`cerebrum.md`, `anatomy.md`, `buglog.json`) from the main checkout — all worktrees contribute to and benefit from the same brain
+- Reads shared knowledge files (`cerebrum.md`, `anatomy.md`, `buglog.ndjson`) from the main checkout — all worktrees contribute to and benefit from the same brain
 - Writes session-scoped state (`token-ledger.json`, `_session.json`) to an isolated namespace at `.wolf/sessions/<worktree-id>/` to prevent context leakage between parallel sessions
 - Keeps `memory.md` shared so all worktrees contribute to the same chronological log
 

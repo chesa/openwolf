@@ -103,8 +103,10 @@ export function useWolfData(): WolfData {
     if (files["cron-manifest.json"]) {
       try { setCronManifest(JSON.parse(files["cron-manifest.json"])); } catch {}
     }
-    if (files["buglog.json"]) {
-      try { setBuglog(JSON.parse(files["buglog.json"])); } catch {}
+    if (files["buglog.ndjson"] != null) {
+      const bugs = files["buglog.ndjson"].split("\n").map((l) => l.trim()).filter(Boolean)
+        .flatMap((l) => { try { return [JSON.parse(l)]; } catch { return []; } });
+      setBuglog({ bugs });
     }
     if (files["suggestions.json"]) {
       try { setSuggestions(JSON.parse(files["suggestions.json"])); } catch {}

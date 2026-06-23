@@ -154,7 +154,7 @@ async function main(): Promise<void> {
 
     if (editKeyCount >= 3) {
       process.stderr.write(
-        `⚠️ OpenWolf: ${baseName} has been edited ${editKeyCount} times this session. If you're fixing a bug, remember to log it to .wolf/buglog.json.\n`
+        `⚠️ OpenWolf: ${baseName} has been edited ${editKeyCount} times this session. If you're fixing a bug, remember to log it to .wolf/buglog.ndjson.\n`
       );
     }
   } catch (err) {

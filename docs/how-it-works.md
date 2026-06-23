@@ -16,7 +16,7 @@ Every OpenWolf project has a `.wolf/` folder containing:
 | `identity.md` | Project name, AI role, constraints |
 | `config.json` | OpenWolf configuration |
 | `token-ledger.json` | Lifetime token usage statistics |
-| `buglog.json` | Bug encounter/resolution memory |
+| `buglog.ndjson` | Bug encounter/resolution memory |
 | `cron-manifest.json` | Scheduled task definitions |
 | `cron-state.json` | Cron execution state and dead letter queue |
 | `suggestions.json` | AI-generated project improvement suggestions |

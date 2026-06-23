@@ -288,7 +288,7 @@ describe("findMissingTemplates", () => {
   const REQUIRED = [
     "OPENWOLF.md", "reframe-frameworks.md", "wolf-gitignore",
     "config.json", "identity.md", "cerebrum.md", "memory.md", "anatomy.md",
-    "STATUS.md", "token-ledger.json", "buglog.json", "cron-manifest.json", "cron-state.json",
+    "STATUS.md", "token-ledger.json", "buglog.ndjson", "cron-manifest.json", "cron-state.json",
   ];
 
   it("reports required templates absent from the directory", () => {
@@ -298,7 +298,7 @@ describe("findMissingTemplates", () => {
       writeFileSync(path.join(dir, "cerebrum.md"), "");
       const missing = findMissingTemplates(dir);
       expect(missing).toContain("wolf-gitignore");
-      expect(missing).toContain("buglog.json");
+      expect(missing).toContain("buglog.ndjson");
       expect(missing).toContain("anatomy.md");
       expect(missing).not.toContain("OPENWOLF.md");
       expect(missing).not.toContain("cerebrum.md");
