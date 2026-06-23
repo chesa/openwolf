@@ -16,44 +16,45 @@ OpenWolf gives Claude Code a persistent memory: a project map so it reads less, 
 
 Requires **Node.js 20 or later**.
 
+This is the **CHESA fork** of OpenWolf — it adds git worktree support, team
+workflow improvements, and fixes for concurrent sessions that are not yet in the
+upstream release. Install it directly from the fork:
+
 ```bash
-npm install -g openwolf
+npm install -g --install-links "chesa/openwolf#develop"
 ```
+
+The `--install-links` flag is required — without it, npm 11 creates a symlink to
+a temp directory that gets deleted after install. The `dist/` build artifact is
+not committed, so the install builds from source automatically via a `prepare`
+step (this needs `git` and Node 20+; the build runs on first install).
 
 Verify the installation:
 
 ```bash
-openwolf --version
+openwolf --version   # → 1.0.x-beta   (the -beta suffix marks the fork build)
 ```
 
-### Installing from the CHESA Fork
-
-The CHESA fork adds worktree support, team workflow improvements, and fixes for concurrent sessions.
-
-**One-liner install (recommended):**
+**Upgrade** — same command; afterward run `openwolf update` in each initialized
+project to sync hooks:
 
 ```bash
 npm install -g --install-links "chesa/openwolf#develop"
 ```
 
-The `--install-links` flag is required — without it, npm 11 creates a symlink
-to a temp directory that gets deleted after install.
-
-**Upgrade:**
-
-```bash
-npm install -g --install-links "chesa/openwolf#develop"
-```
-
-After upgrading, run `openwolf update` in each initialized project to sync hooks.
-
-**Alternative: clone and build locally:**
+**Alternative: clone and build locally** (handy for contributors, or if the
+git-URL install fails behind a proxy):
 
 ```bash
 git clone git@github.com:chesa/openwolf.git
 cd openwolf
 bash scripts/install-global.sh
 ```
+
+> ⚠️ **Do not** run `npm install -g openwolf`. That installs the upstream
+> [`cytostack/openwolf`](https://www.npmjs.com/package/openwolf) release from the
+> public npm registry, which lacks this fork's worktree and team features. Use
+> the `chesa/openwolf#develop` command above.
 
 ### Development Setup
 
