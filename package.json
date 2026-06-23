@@ -8,7 +8,7 @@
   },
   "scripts": {
     "prebuild": "node -e \"const fs=require('fs');if(fs.existsSync('dist'))fs.rmSync('dist',{recursive:true})\"",
-    "build": "tsc && pnpm build:hooks && pnpm build:dashboard && pnpm build:templates",
+    "build": "tsc && npm run build:hooks && npm run build:dashboard && npm run build:templates",
     "build:templates": "cp -r src/templates dist/templates",
     "build:hooks": "tsc -p tsconfig.hooks.json",
     "build:dashboard": "cd src/dashboard/app && npx vite build --outDir ../../../dist/dashboard",
@@ -17,6 +17,7 @@
     "dev": "tsc --watch",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
+    "prepare": "npm run build",
     "prepublishOnly": "pnpm build",
     "test": "vitest run",
     "test:watch": "vitest",
