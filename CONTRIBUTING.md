@@ -97,6 +97,23 @@ src/
 - Update `README.md` if you add or change commands.
 - Update `src/templates/` if you change the `.wolf/` file structure.
 - Update relevant pages under `docs/` if user-facing behavior changes.
+- **Bump `package.json` version before merging** — use semver strictly (see below).
+
+## Versioning Policy
+
+Follow [semver](https://semver.org/). Decide the bump before merging any branch:
+
+| What shipped | Bump | Example |
+|---|---|---|
+| Bug fixes only — no API, format, or behavior change | **patch** (`1.0.x`) | Fix a crash in `openwolf status` |
+| New features or capabilities, backwards-compatible | **minor** (`1.x.0`) | New CLI command, new exported function |
+| Breaking change — migration required, or API removed/renamed | **major** (`x.0.0`) | Rename a flag, drop Node 18 support |
+
+**A stored-file format change is at minimum a minor bump**, even when a migration command exists. Examples that ruled out a patch in the past:
+
+- `buglog.json` → `buglog.ndjson` (PR #18): format break + new `migrate-buglog` command + new `updateJSON` export → **1.1.0**
+
+When uncertain, ask before merging.
 
 ## Issue Reporting
 
