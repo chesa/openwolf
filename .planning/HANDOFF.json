@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-06-23T23:15:03.066Z",
+  "phase": null,
+  "phase_name": "between-milestones",
+  "phase_dir": null,
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "completed_tasks": [
+    {
+      "id": 1,
+      "name": "Address PR #17 review findings (spec stale sections A2/A3/B3)",
+      "status": "done",
+      "commit": "9afc04f"
+    },
+    {
+      "id": 2,
+      "name": "Confirm PR #18 review clean (no code issues)",
+      "status": "done",
+      "commit": null
+    },
+    {
+      "id": 3,
+      "name": "Merge PR #17 (docs/concurrency-spec → develop)",
+      "status": "done",
+      "commit": "bbbb61e"
+    },
+    {
+      "id": 4,
+      "name": "Merge PR #18 (feat/concurrency-phase1 → develop)",
+      "status": "done",
+      "commit": "f7ac281"
+    },
+    {
+      "id": 5,
+      "name": "Prune remote tracking refs and local branches",
+      "status": "done",
+      "commit": null
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 6,
+      "name": "Commit LEARNINGS doc + session report; delete stale PR review files",
+      "status": "not_started"
+    },
+    {
+      "id": 7,
+      "name": "Start Phase 2 milestone (propose-mode / Pillar C)",
+      "status": "not_started"
+    }
+  ],
+  "blockers": [],
+  "async_jobs": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {
+      "decision": "Merge strategy: --merge (not squash/rebase)",
+      "rationale": "Preserve Phase 1 commit history",
+      "phase": "between-milestones"
+    },
+    {
+      "decision": "Phase 2 (propose-mode) deferred to new milestone",
+      "rationale": "Larger scope; needs own discuss→spec→plan→execute cycle",
+      "phase": "between-milestones"
+    }
+  ],
+  "uncommitted_files": [
+    "docs/superpowers/2026-06-23-shared-checkout-concurrency-phase1-LEARNINGS.md",
+    ".planning/reports/20260623-session-report.md",
+    "PR#17.md",
+    "PR#18.md"
+  ],
+  "next_action": "Triage 4 untracked files (commit LEARNINGS + session report; delete PR review files), then /gsd-new-milestone for Phase 2.",
+  "context_notes": "Concurrency Phase 1 fully merged. develop is clean and green. Phase 2 (propose-mode for cerebrum.md) is the next milestone of meaningful work."
+}
