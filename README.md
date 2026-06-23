@@ -30,25 +30,30 @@ openwolf --version
 
 The CHESA fork adds worktree support, team workflow improvements, and fixes for concurrent sessions.
 
-**First-time setup:**
+**One-liner install (recommended):**
+
+```bash
+npm install -g --install-links "chesa/openwolf#develop"
+```
+
+The `--install-links` flag is required — without it, npm 11 creates a symlink
+to a temp directory that gets deleted after install.
+
+**Upgrade:**
+
+```bash
+npm install -g --install-links "chesa/openwolf#develop"
+```
+
+After upgrading, run `openwolf update` in each initialized project to sync hooks.
+
+**Alternative: clone and build locally:**
 
 ```bash
 git clone git@github.com:chesa/openwolf.git
 cd openwolf
 bash scripts/install-global.sh
 ```
-
-**Upgrade:**
-
-```bash
-cd <your-openwolf-clone>
-git pull
-pnpm install && pnpm run install:global
-```
-
-After upgrading, run `openwolf update` in each initialized project to sync hooks.
-
-> **Why not `npm install -g chesa/openwolf`?** The `dist/` directory is a build artifact and is not committed. A local build is required.
 
 ### Development Setup
 

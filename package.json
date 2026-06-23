@@ -13,7 +13,7 @@
     "build:hooks": "./node_modules/.bin/tsc -p tsconfig.hooks.json",
     "build:dashboard": "cd src/dashboard/app && npx vite build --outDir ../../../dist/dashboard",
     "install:dev": "bash scripts/install-dev.sh",
-    "install:global": "pnpm build && npm install -g .",
+    "install:global": "pnpm build && npm install -g --install-links .",
     "dev": "./node_modules/.bin/tsc --watch",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",

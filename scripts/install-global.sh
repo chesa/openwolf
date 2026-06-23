@@ -34,8 +34,8 @@ pnpm install || { echo "Error: pnpm install failed. Retry: cd ${PROJECT_DIR} && 
 echo "Running pnpm build..."
 pnpm build || { echo "Error: pnpm build failed. Retry: cd ${PROJECT_DIR} && pnpm build"; exit 1; }
 
-echo "Running npm install -g ."
-npm install -g . || { echo "Error: npm install -g failed. Retry: cd ${PROJECT_DIR} && npm install -g ."; exit 1; }
+echo "Running npm install -g --install-links ."
+npm install -g --install-links . || { echo "Error: npm install -g failed. Retry: cd ${PROJECT_DIR} && npm install -g --install-links ."; exit 1; }
 
 # --- Verify ---
 echo "Verifying installation..."
