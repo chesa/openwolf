@@ -2,8 +2,9 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
 import {
-  getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, updateJSON, readMarkdown, parseAnatomy, serializeAnatomy,
-  extractDescription, estimateTokens, appendMarkdown, timeShort, timestamp, readStdin, normalizePath, isWolfFile
+  getWolfDir, ensureWolfDir, getSessionDir, updateJSON, readMarkdown, parseAnatomy, serializeAnatomy,
+  extractDescription, estimateTokens, appendMarkdown, timeShort, timestamp, readStdin, normalizePath, isWolfFile,
+  appendBugEntry, newBugId,
 } from "./shared.js";
 
 interface SessionData {
@@ -12,23 +13,6 @@ interface SessionData {
   [key: string]: unknown;
 }
 
-interface BugEntry {
-  id: string;
-  timestamp: string;
-  error_message: string;
-  file: string;
-  root_cause: string;
-  fix: string;
-  tags: string[];
-  related_bugs: string[];
-  occurrences: number;
-  last_seen: string;
-}
-
-interface BugLog {
-  version: number;
-  bugs: BugEntry[];
-}
 
 async function main(): Promise<void> {
   ensureWolfDir();
@@ -292,8 +276,6 @@ function extractCalls(code: string): string[] {
 // ─── Auto Bug Detection ──────────────────────────────────────────
 
 function autoDetectBugFix(wolfDir: string, absolutePath: string, projectRoot: string, oldStr: string, newStr: string): void {
-  const bugLogPath = path.join(wolfDir, "buglog.json");
-  const bugLog = readJSON<BugLog>(bugLogPath, { version: 1, bugs: [] });
   const relFile = normalizePath(path.relative(projectRoot, absolutePath));
   const basename = path.basename(absolutePath);
   const ext = path.extname(basename).toLowerCase();
@@ -302,31 +284,11 @@ function autoDetectBugFix(wolfDir: string, absolutePath: string, projectRoot: st
   const detection = detectFixPattern(oldStr, newStr, ext, basename);
   if (!detection) return;
 
-  // Check for recent duplicate (same file + same category within 5 min)
-  const recentDupe = bugLog.bugs.find(b => {
-    if (path.basename(b.file) !== basename) return false;
-    if (!b.tags.includes("auto-detected")) return false;
-    if (!b.tags.includes(detection.category)) return false;
-    const bugTime = new Date(b.last_seen).getTime();
-    return (Date.now() - bugTime) < 5 * 60 * 1000;
-  });
-
-  if (recentDupe) {
-    recentDupe.occurrences++;
-    recentDupe.last_seen = new Date().toISOString();
-    // Append additional context
-    if (detection.context && !recentDupe.fix.includes(detection.context)) {
-      recentDupe.fix += ` | Also: ${detection.context}`;
-    }
-    writeJSON(bugLogPath, bugLog);
-    return;
-  }
-
-  const nextId = `bug-${String(bugLog.bugs.length + 1).padStart(3, "0")}`;
-
-  bugLog.bugs.push({
-    id: nextId,
-    timestamp: new Date().toISOString(),
+  // Append-only (Phase 1): each detected fix becomes a fresh NDJSON entry.
+  const now = new Date().toISOString();
+  appendBugEntry(wolfDir, {
+    id: newBugId(),
+    timestamp: now,
     error_message: detection.summary,
     file: relFile,
     root_cause: detection.rootCause,
@@ -334,10 +296,8 @@ function autoDetectBugFix(wolfDir: string, absolutePath: string, projectRoot: st
     tags: ["auto-detected", detection.category, ext.replace(".", "") || "unknown"],
     related_bugs: [],
     occurrences: 1,
-    last_seen: new Date().toISOString(),
+    last_seen: now,
   });
-
-  writeJSON(bugLogPath, bugLog);
 }
 
 interface FixDetection {

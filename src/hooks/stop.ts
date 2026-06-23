@@ -214,12 +214,12 @@ function checkForMissingBugLogs(wolfDir: string, session: SessionData): void {
 
   // Check if buglog was written to this session
   const buglogWritten = session.files_written.some(w =>
-    w.file.includes("buglog.json")
+    w.file.includes("buglog")
   );
 
   if (!buglogWritten) {
     process.stderr.write(
-      `⚠️ OpenWolf: Files edited 3+ times this session (${multiEditFiles.join(", ")}) but buglog.json was not updated. If you fixed bugs, please log them.\n`
+      `⚠️ OpenWolf: Files edited 3+ times this session (${multiEditFiles.join(", ")}) but buglog.ndjson was not updated. If you fixed bugs, please log them.\n`
     );
   }
 }

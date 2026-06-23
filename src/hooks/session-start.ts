@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, getSessionDir, ensureSessionDir, getWorktreeContext, writeJSON, appendMarkdown, readJSON, updateJSON, timestamp, timeShort } from "./shared.js";
+import { getWolfDir, ensureWolfDir, getSessionDir, ensureSessionDir, getWorktreeContext, writeJSON, appendMarkdown, updateJSON, timestamp, timeShort, countBugEntries } from "./shared.js";
 
 async function main(): Promise<void> {
   ensureWolfDir();
@@ -89,11 +89,9 @@ async function main(): Promise<void> {
 
   // Check buglog — remind if empty
   try {
-    const buglogPath = path.join(wolfDir, "buglog.json");
-    const buglog = readJSON<{ bugs: unknown[] }>(buglogPath, { bugs: [] });
-    if (buglog.bugs.length === 0) {
+    if (countBugEntries(wolfDir) === 0) {
       process.stderr.write(
-        `📋 OpenWolf: buglog.json is empty. If you encounter or fix any bugs, errors, or failed tests this session, log them to .wolf/buglog.json.\n`
+        `📋 OpenWolf: buglog.ndjson is empty. If you encounter or fix any bugs, errors, or failed tests this session, log them to .wolf/buglog.ndjson.\n`
       );
     }
   } catch (err) {
