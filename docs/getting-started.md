@@ -28,7 +28,7 @@ Before installing OpenWolf, make sure you have the following installed:
    openwolf --version
    ```
 
-   You should see the installed version printed (e.g., `1.0.4`).
+   You should see the installed version printed (e.g., `1.1.0-beta`).
 
 3. (Optional) If you plan to use **Design QC**, install the optional dependency:
 
@@ -101,7 +101,7 @@ a **mixed commit strategy** is recommended:
 - **Ignore per-developer state:** `memory.md`, `token-ledger.json`, `sessions/`,
   `backups/`, lock files
 
-Starting with `openwolf init` (v1.0.5+), a `.wolf/.gitignore` is created
+Starting with `openwolf init` (v1.1.0+), a `.wolf/.gitignore` is created
 automatically with the mixed strategy. If your project's root `.gitignore`
 still contains `.wolf/`, remove that line to adopt the mixed strategy.
 

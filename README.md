@@ -32,7 +32,7 @@ step (this needs `git` and Node 20+; the build runs on first install).
 Verify the installation:
 
 ```bash
-openwolf --version   # → 1.0.x-beta   (the -beta suffix marks the fork build)
+openwolf --version   # → 1.1.x-beta   (the -beta suffix marks the fork build)
 ```
 
 **Upgrade** — same command; afterward run `openwolf update` in each initialized

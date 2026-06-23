@@ -153,7 +153,7 @@ const archFiles = [
               </div>
               <div class="ow-terminal__body">
                 <div class="ow-terminal__line"><span class="ow-terminal__ps">$</span> <span class="ow-terminal__cmd">openwolf init</span></div>
-                <div class="ow-terminal__line ow-terminal__line--out"><span class="ow-terminal__ok">✓</span> OpenWolf v1.0.4 initialized</div>
+                <div class="ow-terminal__line ow-terminal__line--out"><span class="ow-terminal__ok">✓</span> OpenWolf v1.1.0-beta initialized</div>
                 <div class="ow-terminal__line ow-terminal__line--out"><span class="ow-terminal__ok">✓</span> .wolf/ created with 13 files</div>
                 <div class="ow-terminal__line ow-terminal__line--out"><span class="ow-terminal__ok">✓</span> Claude Code hooks registered (6 hooks)</div>
                 <div class="ow-terminal__line ow-terminal__line--out"><span class="ow-terminal__ok">✓</span> CLAUDE.md updated</div>
