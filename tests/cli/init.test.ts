@@ -7,7 +7,7 @@ import { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks } from "../../src/c
 import { mkdtempSync, realpathSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { initCommand } from "../../src/cli/init.js";
+import { initCommand, findMissingTemplates } from "../../src/cli/init.js";
 
 vi.mock("../../src/scanner/project-root.js", async (importOriginal) => {
   const mod = await importOriginal<typeof import("../../src/scanner/project-root.js")>();
@@ -275,6 +275,66 @@ describe("hook-file copy list", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// findMissingTemplates — guards against a broken/incomplete package (the
+// npm-pack template-stripping bug that produced a silently crippled .wolf/).
+// ---------------------------------------------------------------------------
+describe("findMissingTemplates", () => {
+  // The full set of required source templates (mirrors init.ts: ALWAYS_OVERWRITE
+  // + CREATE_IF_MISSING, minus the two runtime-created files with no template).
+  const REQUIRED = [
+    "OPENWOLF.md", "reframe-frameworks.md", "wolf-gitignore",
+    "config.json", "identity.md", "cerebrum.md", "memory.md", "anatomy.md",
+    "STATUS.md", "token-ledger.json", "buglog.json", "cron-manifest.json", "cron-state.json",
+  ];
+
+  it("reports required templates absent from the directory", () => {
+    const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "openwolf-tmpl-")));
+    try {
+      writeFileSync(path.join(dir, "OPENWOLF.md"), "");
+      writeFileSync(path.join(dir, "cerebrum.md"), "");
+      const missing = findMissingTemplates(dir);
+      expect(missing).toContain("wolf-gitignore");
+      expect(missing).toContain("buglog.json");
+      expect(missing).toContain("anatomy.md");
+      expect(missing).not.toContain("OPENWOLF.md");
+      expect(missing).not.toContain("cerebrum.md");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("returns empty when every required template is present", () => {
+    const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "openwolf-tmpl-")));
+    try {
+      for (const f of REQUIRED) writeFileSync(path.join(dir, f), "");
+      expect(findMissingTemplates(dir)).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not flag runtime-created files that have no template", () => {
+    const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "openwolf-tmpl-")));
+    try {
+      // Complete required set present; the two runtime files intentionally absent.
+      for (const f of REQUIRED) writeFileSync(path.join(dir, f), "");
+      const missing = findMissingTemplates(dir);
+      expect(missing).not.toContain("designqc-report.json");
+      expect(missing).not.toContain("suggestions.json");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports all required templates missing when the dir does not exist", () => {
+    const missing = findMissingTemplates(path.join(tmpdir(), "openwolf-nope-xyz-12345"));
+    expect(missing).toContain("OPENWOLF.md");
+    expect(missing).toContain("wolf-gitignore");
+    expect(missing).not.toContain("designqc-report.json");
   });
 });
 

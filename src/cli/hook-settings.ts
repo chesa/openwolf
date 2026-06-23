@@ -11,13 +11,19 @@
 // WOLF_ROOT must resolve to an ABSOLUTE path so the spawned `node` invocation
 // works regardless of the cwd Claude Code uses when firing the hook.
 //
-// Strategy: cd into $CLAUDE_PROJECT_DIR (always absolute), then cd into the
-// parent of `git rev-parse --git-common-dir` (which may be relative ".git" in
-// the main checkout, or an absolute path in a worktree), then `pwd` to print
-// the resolved absolute root. Falls back to $CLAUDE_PROJECT_DIR if anything
-// fails (non-git dir, missing git, etc).
+// Strategy: resolve everything relative to `base` = $CLAUDE_PROJECT_DIR (the
+// dir Claude Code reports for the project), falling back to the process cwd.
+// Run `git rev-parse --git-common-dir` WITH `cwd: base` — NOT the process cwd —
+// so this shell snippet computes the same root the compiled JS hook does
+// (detectWorktreeContext also runs git from CLAUDE_PROJECT_DIR). Without
+// cwd:base the two can diverge when the hook fires with a cwd outside the
+// project, sending the shell to a different .wolf/ than the JS resolver.
+// `--git-common-dir` is ".git" (relative) in a main checkout and an absolute
+// path from a linked worktree; resolving it against `base` and taking the
+// parent yields the MAIN repo root in both cases, so every worktree shares one
+// .wolf/. Falls back to `base` on any failure (non-git dir, missing git, etc).
 export const WOLF_ROOT_SHELL =
-  'WOLF_ROOT=$(node -e \'const path = require("path"); const { execSync } = require("child_process"); try { const gitDir = execSync("git rev-parse --git-common-dir", { stdio: "pipe" }).toString().trim(); console.log(path.resolve(process.env.CLAUDE_PROJECT_DIR || process.cwd(), gitDir, "..")); } catch (e) { console.log(process.env.CLAUDE_PROJECT_DIR || process.cwd()); }\')';
+  'WOLF_ROOT=$(node -e \'const path = require("path"); const { execSync } = require("child_process"); const base = process.env.CLAUDE_PROJECT_DIR || process.cwd(); try { const gitDir = execSync("git rev-parse --git-common-dir", { cwd: base, stdio: "pipe" }).toString().trim(); console.log(path.resolve(base, gitDir, "..")); } catch (e) { console.log(base); }\')';
 
 const hookCmd = (script: string): string =>
   `${WOLF_ROOT_SHELL} && node "$WOLF_ROOT/.wolf/hooks/${script}"`;

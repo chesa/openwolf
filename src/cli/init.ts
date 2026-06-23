@@ -51,6 +51,15 @@ const CREATE_IF_MISSING = [
   "suggestions.json",
 ];
 
+// CREATE_IF_MISSING entries that are created at runtime by their owning feature
+// (cron writes suggestions.json, designqc writes designqc-report.json) rather
+// than seeded from a packaged template. init must NOT warn about — or fail on —
+// their absence, since they legitimately have no template.
+const RUNTIME_CREATED_NO_TEMPLATE = new Set<string>([
+  "designqc-report.json",
+  "suggestions.json",
+]);
+
 import { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks } from "./hook-settings.js";
 import { findHookSourceDir, copyHookFiles, writeHooksPackageJson } from "./hook-copy.js";
 import { findTemplatesDir } from "./templates.js";
@@ -70,9 +79,32 @@ function writeTemplateFile(templatesDir: string, wolfDir: string, file: string):
   if (fs.existsSync(srcPath)) {
     const content = fs.readFileSync(srcPath, "utf-8");
     fs.writeFileSync(destPath, content, "utf-8");
-  } else {
+  } else if (!RUNTIME_CREATED_NO_TEMPLATE.has(file)) {
     console.warn(`Template not found: ${file}`);
   }
+}
+
+/**
+ * Source template files that must ship in the package for a working install.
+ * A missing one means the package was built or published incorrectly (e.g. a
+ * nested .gitignore stripped the templates during `npm pack`). Returns the
+ * names of any required templates absent from `templatesDir`. Runtime-created
+ * files (designqc-report.json, suggestions.json) are excluded — they have no
+ * template by design.
+ */
+export function findMissingTemplates(templatesDir: string): string[] {
+  let present: Set<string>;
+  try {
+    present = new Set(fs.readdirSync(templatesDir));
+  } catch {
+    // templatesDir itself is unreadable/missing — treat every required
+    // template as missing rather than silently producing a broken .wolf/.
+    present = new Set();
+  }
+  const required = [...ALWAYS_OVERWRITE, ...CREATE_IF_MISSING].filter(
+    (f) => !RUNTIME_CREATED_NO_TEMPLATE.has(f),
+  );
+  return required.filter((f) => !present.has(f));
 }
 
 function writeHooks(wolfDir: string): void {
@@ -345,6 +377,24 @@ export async function initCommand(): Promise<void> {
 
   // Find templates directory
   const actualTemplatesDir = findTemplatesDir();
+
+  // Fail fast on a broken install. A missing required template means the
+  // package shipped incompletely; creating a crippled .wolf/ and reporting
+  // success (the silent-failure trap) is worse than erroring out here.
+  const missingTemplates = findMissingTemplates(actualTemplatesDir);
+  if (missingTemplates.length > 0) {
+    console.error("");
+    console.error(`  ✗ OpenWolf install is incomplete — ${missingTemplates.length} required template(s) missing:`);
+    for (const f of missingTemplates) console.error(`      - ${f}`);
+    console.error(`    (looked in ${actualTemplatesDir})`);
+    console.error("");
+    console.error("    This usually means the package was built or published incorrectly.");
+    console.error("    Reinstall the CHESA fork:");
+    console.error('      npm install -g --install-links "chesa/openwolf#develop"');
+    console.error("    or rebuild from a clone:  pnpm install && pnpm run install:global");
+    console.error("");
+    process.exit(1);
+  }
 
   // --- Template files ---
   let createdCount = 0;

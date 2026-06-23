@@ -6,6 +6,7 @@ import type { IncomingMessage } from "node:http";
 import express from "express";
 import { WebSocketServer, WebSocket } from "ws";
 import { findProjectRoot } from "../scanner/project-root.js";
+import { detectWorktreeContext } from "../utils/worktree.js";
 import { readJSON, writeJSON, readText } from "../utils/fs-safe.js";
 import { Logger } from "../utils/logger.js";
 import { CronEngine } from "./cron-engine.js";
@@ -16,7 +17,16 @@ const __dirname = path.dirname(__filename);
 
 // Prefer explicit OPENWOLF_PROJECT_ROOT env (set by CLI commands) over cwd detection
 const projectRoot = process.env.OPENWOLF_PROJECT_ROOT || findProjectRoot();
-const wolfDir = path.join(projectRoot, ".wolf");
+// Resolve .wolf/ the same way the hooks' getWolfDir() does, so the dashboard
+// reads the SAME state the hooks write:
+//  1. OPENWOLF_METADATA_DIR (absolute) wins, if set.
+//  2. Otherwise resolve to the MAIN repo root — a git worktree shares the main
+//     checkout's .wolf/, so a daemon launched from inside a worktree must not
+//     point at the worktree's own (nonexistent) .wolf/.
+const metadataDirEnv = process.env.OPENWOLF_METADATA_DIR?.trim();
+const wolfDir = metadataDirEnv && path.isAbsolute(metadataDirEnv)
+  ? path.resolve(metadataDirEnv)
+  : path.join(detectWorktreeContext(projectRoot).mainRepoRoot, ".wolf");
 
 // Generate a session token for authentication
 const authToken = crypto.randomBytes(32).toString("hex");

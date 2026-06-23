@@ -12,6 +12,14 @@ async function freshSessionStart() {
     vi.resetModules();
     const mod = await import("../../src/hooks/session-start.js");
     if (orig !== undefined) process.env.CLAUDE_PROJECT_DIR = orig;
+    // Importing the module runs its top-level main(), which calls
+    // initializeSessionLedger(getSessionDir()) BEFORE process.exit(0) (so the
+    // exit-mock throw can't stop it). Because the test points
+    // OPENWOLF_METADATA_DIR at its temp dir, that import-time write lands in the
+    // very token-ledger.json the tests inspect, inflating total_sessions by one.
+    // Reset it so each test measures only its own explicit ledger calls.
+    const mdir = process.env.OPENWOLF_METADATA_DIR;
+    if (mdir) rmSync(path.join(mdir, "token-ledger.json"), { force: true });
     return mod;
 }
 
