@@ -1,8 +1,22 @@
 import * as fs from "node:fs";
+import * as path from "node:path";
 
 const LOCK_TTL_MS = 10_000;
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 100;
+const MAX_RETRIES = 5;
+
+// TOCTOU staleness-storm bound (spec A3): under a staleness storm where
+// multiple writers simultaneously detect a stale lock and race to unlink+rewrite,
+// at most one writer wins the wx-exclusive create per embedded retry cycle.
+// The entire operation is bounded by MAX_RETRIES × (LOCK_TTL_MS + max jitter),
+// i.e. 5 × (10 000 ms + 150 ms) ≈ 50.75 s worst-case before falling through
+// to an unlocked write with a stderr warning.
+const BASE_RETRY_DELAY_MS = 80;
+const RETRY_JITTER_MS = 70; // max added jitter per attempt
+
+function sleepJittered(attempt: number): void {
+  const delay = BASE_RETRY_DELAY_MS + Math.floor(Math.random() * RETRY_JITTER_MS);
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay);
+}
 
 function acquireLock(lockPath: string): boolean {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -31,7 +45,7 @@ function acquireLock(lockPath: string): boolean {
     }
 
     if (attempt < MAX_RETRIES - 1) {
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, RETRY_DELAY_MS);
+      sleepJittered(attempt);
     }
   }
   return false;
@@ -49,7 +63,7 @@ export function withFileLock<T>(filePath: string, fn: () => T): T {
   const lockPath = filePath + ".lock";
   if (!acquireLock(lockPath)) {
     process.stderr.write(
-      `OpenWolf: could not acquire lock for ${filePath}, proceeding unlocked\n`
+      `OpenWolf: could not acquire lock for ${path.basename(filePath)} after ${MAX_RETRIES} attempts, proceeding unlocked\n`,
     );
     return fn();
   }

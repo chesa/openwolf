@@ -36,7 +36,7 @@ describe("withFileLock", () => {
         expect(fs.existsSync(testFile + ".lock")).toBe(false);
     });
 
-    it("proceeds unlocked after exhausting retries (3 attempts)", async () => {
+    it("proceeds unlocked after exhausting retries (5 attempts)", async () => {
         const { withFileLock } = await import("../../src/hooks/wolf-lock.js");
         const testFile = path.join(tmpDir, "contended.json");
         const lockPath = testFile + ".lock";
@@ -106,5 +106,26 @@ describe("withFileLock", () => {
 
         expect(aStarted).toBe(true);
         expect(bExecuted).toBe(true);
+    });
+
+    it("warns to stderr when it gives up and proceeds unlocked", async () => {
+        const { withFileLock } = await import("../../src/hooks/wolf-lock.js");
+        const dir = fs.mkdtempSync(path.join(tmpdir(), "ow-lock-"));
+        const target = path.join(dir, "f.json");
+        const held = target + ".lock";
+        // Hold a FRESH lock (embedded timestamp = now) so it never looks stale.
+        fs.writeFileSync(held, `${process.pid}\n${Date.now()}`, { flag: "wx" });
+        const errs: string[] = [];
+        const orig = process.stderr.write.bind(process.stderr);
+        (process.stderr as any).write = (s: string) => { errs.push(String(s)); return true; };
+        let ran = false;
+        try {
+            withFileLock(target, () => { ran = true; });
+        } finally {
+            (process.stderr as any).write = orig;
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+        expect(ran).toBe(true);                       // proceeds unlocked rather than hanging
+        expect(errs.join("")).toMatch(/could not acquire lock/);
     });
 });
