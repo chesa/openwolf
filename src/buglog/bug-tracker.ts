@@ -1,5 +1,6 @@
+import * as fs from "node:fs";
+import * as crypto from "node:crypto";
 import * as path from "node:path";
-import { readJSON, writeJSON } from "../utils/fs-safe.js";
 
 interface BugEntry {
   id: string;
@@ -21,13 +22,35 @@ interface BugLog {
 }
 
 export function getBugLogPath(wolfDir: string): string {
-  return path.join(wolfDir, "buglog.json");
+  return path.join(wolfDir, "buglog.ndjson");
 }
 
 export function readBugLog(wolfDir: string): BugLog {
-  return readJSON<BugLog>(getBugLogPath(wolfDir), { version: 1, bugs: [] });
+  let raw: string;
+  try {
+    raw = fs.readFileSync(getBugLogPath(wolfDir), "utf-8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      process.stderr.write(
+        `OpenWolf: failed to read buglog.ndjson (${err instanceof Error ? err.message : String(err)})\n`
+      );
+    }
+    return { version: 1, bugs: [] };
+  }
+  const bugs: BugEntry[] = [];
+  for (const line of raw.split("\n")) {
+    const t = line.trim();
+    if (!t) continue;
+    try {
+      bugs.push(JSON.parse(t) as BugEntry);
+    } catch {
+      /* skip blank/torn/corrupt line */
+    }
+  }
+  return { version: 1, bugs };
 }
 
+// Phase 1 is append-only; occurrence folding is a deferred `bug compact` follow-up.
 export function logBug(
   wolfDir: string,
   bug: {
@@ -39,24 +62,9 @@ export function logBug(
     tags: string[];
   }
 ): void {
-  const bugLog = readBugLog(wolfDir);
   const now = new Date().toISOString();
-
-  // Check for near-duplicate (score > 0.8)
-  const similar = findSimilarBugs(wolfDir, bug.error_message);
-  if (similar.length > 0 && similar[0].score > 0.8) {
-    const existing = bugLog.bugs.find((b) => b.id === similar[0].bug.id);
-    if (existing) {
-      existing.occurrences++;
-      existing.last_seen = now;
-      writeJSON(getBugLogPath(wolfDir), bugLog);
-      return;
-    }
-  }
-
-  const id = `bug-${String(bugLog.bugs.length + 1).padStart(3, "0")}`;
-  bugLog.bugs.push({
-    id,
+  const entry = {
+    id: `bug-${crypto.randomUUID().slice(0, 8)}`,
     timestamp: now,
     error_message: bug.error_message,
     file: bug.file,
@@ -67,9 +75,9 @@ export function logBug(
     related_bugs: [],
     occurrences: 1,
     last_seen: now,
-  });
-
-  writeJSON(getBugLogPath(wolfDir), bugLog);
+  };
+  fs.mkdirSync(path.dirname(getBugLogPath(wolfDir)), { recursive: true });
+  fs.appendFileSync(getBugLogPath(wolfDir), JSON.stringify(entry) + "\n", "utf-8");
 }
 
 function normalize(text: string): string {
