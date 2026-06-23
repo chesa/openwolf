@@ -73,7 +73,7 @@ OpenWolf's value comes from learning across sessions. You MUST update `.wolf/cer
 
 ## Bug Logging (MANDATORY)
 
-**Log a bug to `.wolf/buglog.json` whenever ANY of these happen:**
+**Log a bug to `.wolf/buglog.ndjson` whenever ANY of these happen:**
 - The user reports an error, bug, or problem
 - A test fails or a command produces an error
 - You fix something that was broken
@@ -85,22 +85,14 @@ OpenWolf's value comes from learning across sessions. You MUST update `.wolf/cer
 - You change error handling, try/catch blocks, or validation logic
 - The user says something "doesn't work", "is broken", or "shows wrong X"
 
-**Before fixing:** Read `.wolf/buglog.json` first — the fix may already be known.
+**Before fixing:** Read `.wolf/buglog.ndjson` first — the fix may already be known.
 
-**After fixing:** ALWAYS append to `.wolf/buglog.json` with this structure:
+**After fixing:** ALWAYS append a fresh line to `.wolf/buglog.ndjson` (one JSON
+object per line, no pretty-printing). Each recurrence is a new line — do NOT
+edit existing lines to bump `occurrences`. The id is 8 lowercase hex characters.
+
 ```json
-{
-  "id": "bug-NNN",
-  "timestamp": "ISO date",
-  "error_message": "exact error or user complaint",
-  "file": "file that was fixed",
-  "root_cause": "why it broke",
-  "fix": "what you changed to fix it",
-  "tags": ["relevant", "keywords"],
-  "related_bugs": [],
-  "occurrences": 1,
-  "last_seen": "ISO date"
-}
+{"id":"bug-1a2b3c4d","timestamp":"ISO date","error_message":"exact error or user complaint","file":"file that was fixed","root_cause":"why it broke","fix":"what you changed to fix it","tags":["relevant","keywords"],"related_bugs":[],"occurrences":1,"last_seen":"ISO date"}
 ```
 
 **The threshold is LOW.** When in doubt, log it. A false positive in the bug log costs nothing. A missed bug means repeating the same mistake later.
@@ -154,4 +146,4 @@ Before ending or when asked to wrap up:
 
 1. **Update `.wolf/STATUS.md`** — move concluded work to ✅, write next quest in 🚀, bump date. This is the most important step for next session efficiency.
 2. Write a session summary to `.wolf/memory.md`.
-3. Review the session: did you learn anything? Did the user correct you? Did you fix a bug? If yes, update `.wolf/cerebrum.md` and/or `.wolf/buglog.json`.
+3. Review the session: did you learn anything? Did the user correct you? Did you fix a bug? If yes, update `.wolf/cerebrum.md` and/or `.wolf/buglog.ndjson`.

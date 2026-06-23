@@ -36,7 +36,7 @@ export async function statusCommand(): Promise<void> {
   // File integrity check
   const sharedFiles = [
     "OPENWOLF.md", "identity.md", "cerebrum.md",
-    "anatomy.md", "config.json", "buglog.json",
+    "anatomy.md", "config.json", "buglog.ndjson",
     "cron-manifest.json", "cron-state.json", "memory.md",
   ];
   const sessionFiles = ["token-ledger.json"];

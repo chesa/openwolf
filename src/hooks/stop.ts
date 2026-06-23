@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, appendMarkdown, timeShort } from "./shared.js";
+import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, updateJSON, appendMarkdown, timeShort } from "./shared.js";
 
 interface FileRead {
   count: number;
@@ -50,7 +50,8 @@ interface SessionEntry {
 }
 
 export function finalizeSession(wolfDir: string, sessionDir: string, session: SessionData): void {
-  session.stop_count++;
+  // Note: stop_count increment is handled by the finally block in main() via updateJSON,
+  // so concurrent sessions can't lose increments. Do not increment here.
 
   // Only write to ledger if there's been activity
   const readCount = Object.keys(session.files_read).length;
@@ -106,7 +107,12 @@ export function finalizeSession(wolfDir: string, sessionDir: string, session: Se
 
   // Update token-ledger.json
   const ledgerPath = path.join(sessionDir, "token-ledger.json");
-  const ledger = readJSON(ledgerPath, {
+  const savedFromAnatomy = session.anatomy_hits * 200;
+  const savedFromRepeats = Object.values(session.files_read)
+    .filter((r) => r.count > 1)
+    .reduce((sum, r) => sum + r.tokens * (r.count - 1), 0);
+
+  updateJSON(ledgerPath, {
     version: 1,
     created_at: "",
     lifetime: {
@@ -123,29 +129,23 @@ export function finalizeSession(wolfDir: string, sessionDir: string, session: Se
     daemon_usage: [],
     waste_flags: [],
     optimization_report: { last_generated: null, patterns: [] },
-  }) as {
+  } as {
     version: number;
     lifetime: Record<string, number>;
     sessions: SessionEntry[];
     [key: string]: unknown;
-  };
-
-  ledger.sessions.push(sessionEntry);
-  ledger.lifetime.total_reads += readCount;
-  ledger.lifetime.total_writes += writeCount;
-  ledger.lifetime.total_tokens_estimated += inputTokens + outputTokens;
-  ledger.lifetime.anatomy_hits += session.anatomy_hits;
-  ledger.lifetime.anatomy_misses += session.anatomy_misses;
-  ledger.lifetime.repeated_reads_blocked += session.repeated_reads_warned;
-
-  // Estimate savings: anatomy hits save ~200 tokens each, repeated reads blocked save their token count
-  const savedFromAnatomy = session.anatomy_hits * 200;
-  const savedFromRepeats = Object.values(session.files_read)
-    .filter((r) => r.count > 1)
-    .reduce((sum, r) => sum + r.tokens * (r.count - 1), 0);
-  ledger.lifetime.estimated_savings_vs_bare_cli += savedFromAnatomy + savedFromRepeats;
-
-  writeJSON(ledgerPath, ledger);
+  }, (ledger) => {
+    ledger.sessions.push(sessionEntry);
+    ledger.lifetime.total_reads += readCount;
+    ledger.lifetime.total_writes += writeCount;
+    ledger.lifetime.total_tokens_estimated += inputTokens + outputTokens;
+    ledger.lifetime.anatomy_hits += session.anatomy_hits;
+    ledger.lifetime.anatomy_misses += session.anatomy_misses;
+    ledger.lifetime.repeated_reads_blocked += session.repeated_reads_warned;
+    // Estimate savings: anatomy hits save ~200 tokens each, repeated reads blocked save their token count
+    ledger.lifetime.estimated_savings_vs_bare_cli += savedFromAnatomy + savedFromRepeats;
+    return ledger;
+  });
 
   // Write a session summary line to memory.md if there was meaningful activity
   if (writeCount > 0) {
@@ -188,15 +188,19 @@ async function main(): Promise<void> {
     const error = err instanceof Error ? err : new Error(String(err));
     process.stderr.write(`OpenWolf: stop hook error — ${error.message}\n`);
   } finally {
-    // Always persist stop_count increment
-    writeJSON(sessionFile, session);
+    // Always persist stop_count increment under lock so concurrent sessions
+    // read the latest value, increment it once, and write it back atomically.
+    updateJSON<SessionData>(sessionFile, session, (cur) => {
+      cur.stop_count = (cur.stop_count ?? 0) + 1;
+      return cur;
+    });
   }
 
   process.exit(0);
 }
 
 /**
- * Check if files were edited multiple times but buglog.json wasn't updated.
+ * Check if files were edited multiple times but buglog.ndjson wasn't updated.
  * Emit a stderr reminder so Claude sees it in the next turn.
  */
 function checkForMissingBugLogs(wolfDir: string, session: SessionData): void {
@@ -210,12 +214,12 @@ function checkForMissingBugLogs(wolfDir: string, session: SessionData): void {
 
   // Check if buglog was written to this session
   const buglogWritten = session.files_written.some(w =>
-    w.file.includes("buglog.json")
+    w.file.includes("buglog")
   );
 
   if (!buglogWritten) {
     process.stderr.write(
-      `⚠️ OpenWolf: Files edited 3+ times this session (${multiEditFiles.join(", ")}) but buglog.json was not updated. If you fixed bugs, please log them.\n`
+      `⚠️ OpenWolf: Files edited 3+ times this session (${multiEditFiles.join(", ")}) but buglog.ndjson was not updated. If you fixed bugs, please log them.\n`
     );
   }
 }

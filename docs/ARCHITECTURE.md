@@ -59,9 +59,9 @@ A typical OpenWolf interaction flows as follows:
 2. **Scanning**: `src/scanner/anatomy-scanner.ts` walks the project tree, skipping excluded paths and binary files. For each file, it extracts a description and estimates token count, writing the results to `.wolf/anatomy.md`.
 3. **Session Start**: When Claude Code starts a session, the `session-start` hook creates a fresh `_session.json`, detects worktree mode, cleans up stale `.tmp` files, appends a session header to `memory.md`, and checks cerebrum and buglog freshness.
 4. **Pre-Read**: Before Claude Code reads a file, the `pre-read` hook checks `anatomy.md`. If the file is already described there, the hook prints the description to stderr as a hint to Claude Code. If the file was already read earlier in the same session, it warns about the repeated read, prompting the developer to reuse existing knowledge.
-5. **Pre-Write**: Before Claude Code writes a file, the `pre-write` hook checks the `cerebrum.md` Do-Not-Repeat section for patterns that should be avoided. It also searches `buglog.json` for similar past bugs when the edit looks like a fix.
+5. **Pre-Write**: Before Claude Code writes a file, the `pre-write` hook checks the `cerebrum.md` Do-Not-Repeat section for patterns that should be avoided. It also searches `buglog.ndjson` for similar past bugs when the edit looks like a fix.
 6. **Post-Read**: After Claude Code reads a file, the `post-read` hook updates the token estimate in the session file for that file.
-7. **Post-Write**: After Claude Code writes a file, the `post-write` hook updates `anatomy.md` with a fresh description and token count, appends a structured entry to `memory.md`, tracks edit counts in the session file, and auto-detects bug-fix patterns to log to `buglog.json`.
+7. **Post-Write**: After Claude Code writes a file, the `post-write` hook updates `anatomy.md` with a fresh description and token count, appends a structured entry to `memory.md`, tracks edit counts in the session file, and auto-detects bug-fix patterns to log to `buglog.ndjson`.
 8. **Session Stop**: The `stop` hook finalizes the session, checks for files edited multiple times without a corresponding buglog entry, verifies cerebrum and STATUS.md freshness, and writes session totals to `token-ledger.json`.
 9. **Dashboard**: The user opens `openwolf dashboard`, which launches a browser connected to the local Express daemon. The dashboard fetches project state, health metrics, and file data via authenticated HTTP and WebSocket APIs.
 
@@ -75,7 +75,7 @@ A typical OpenWolf interaction flows as follows:
 | `scanProject` | Function | Walks the project tree and writes `anatomy.md` | `src/scanner/anatomy-scanner.ts` |
 | `buildAnatomy` | Function | Builds anatomy content and file count without writing to disk | `src/scanner/anatomy-scanner.ts` |
 | `finalizeSession` | Function | Finalizes session state, performs checks, and writes totals to `token-ledger.json` | `src/hooks/stop.ts` |
-| `logBug` | Function | Appends a structured bug entry to `.wolf/buglog.json` | `src/buglog/bug-tracker.ts` |
+| `logBug` | Function | Appends a structured bug entry to `.wolf/buglog.ndjson` | `src/buglog/bug-tracker.ts` |
 | `safeCompareToken` | Function | Constant-time token comparison for daemon auth | `src/daemon/wolf-daemon.ts` |
 | `ensureWolfDir` | Function | Verifies the `.wolf/` directory exists; exits silently if missing | `src/hooks/shared.ts` |
 | `readJSON` / `writeJSON` | Functions | Safe filesystem helpers with defaults | `src/utils/fs-safe.ts` |

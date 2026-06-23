@@ -28,7 +28,7 @@ openwolf update
 3. **Preserves user data** -- these files are never overwritten:
    - `.wolf/cerebrum.md` (learned preferences and conventions)
    - `.wolf/memory.md` (session history)
-   - `.wolf/buglog.json` (bug tracking)
+   - `.wolf/buglog.ndjson` (bug tracking)
    - `.wolf/anatomy.md` (project file map)
    - Any custom files you added to `.wolf/`
 4. **Updates hooks** registered in `.claude/settings.json`
@@ -87,7 +87,7 @@ Every backup is a full copy of `.wolf/` at the time of the update. This includes
 | `.wolf/hooks/*` | Protocol |
 | `.wolf/cerebrum.md` | User data |
 | `.wolf/memory.md` | User data |
-| `.wolf/buglog.json` | User data |
+| `.wolf/buglog.ndjson` | User data |
 | `.wolf/anatomy.md` | User data |
 | `designqc-captures/*` | Generated |
 | Any custom files in `.wolf/` | User data |

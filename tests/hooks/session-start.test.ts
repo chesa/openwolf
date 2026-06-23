@@ -75,4 +75,16 @@ describe("session-start.ts ledger init", () => {
         const ledger = JSON.parse(readFileSync(ledgerPath, "utf-8"));
         expect(ledger.lifetime.total_sessions).toBe(2);
     });
+
+    // NOTE: in-process JS serializes synchronous read-modify-write, so this checks accumulation, not lock contention. The real cross-process concurrency guard is the e2e test in Task 9 of the plan.
+    it("initializeSessionLedger accumulates total_sessions across N calls", async () => {
+        const { initializeSessionLedger } = await freshSessionStart();
+        rmSync(ledgerPath, { force: true });
+        const N = 20;
+        for (let i = 0; i < N; i++) {
+            initializeSessionLedger(dir);
+        }
+        const ledger = JSON.parse(readFileSync(ledgerPath, "utf-8"));
+        expect(ledger.lifetime.total_sessions).toBe(N);
+    });
 });

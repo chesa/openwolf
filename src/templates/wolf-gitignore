@@ -17,7 +17,7 @@ sessions/
 #   cerebrum.md       — learned conventions and do-not-repeat list
 #   OPENWOLF.md       — operating protocol
 #   config.json       — project configuration
-#   buglog.json       — known bugs and fixes
+#   buglog.ndjson     — known bugs and fixes
 #   identity.md       — project identity
 #   STATUS.md         — project status
 #   hooks/            — compiled hook scripts

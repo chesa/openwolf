@@ -22,6 +22,18 @@ vi.mock("../../src/hooks/shared.js", async () => {
             fs.mkdirSync(path.dirname(fp), { recursive: true });
             fs.writeFileSync(fp, JSON.stringify(data, null, 2), "utf-8");
         }),
+        updateJSON: vi.fn((fp, fallback, mutate) => {
+            const fs = require("node:fs");
+            let cur;
+            try {
+                cur = JSON.parse(readFileSync(fp, "utf-8"));
+            } catch {
+                cur = fallback;
+            }
+            const updated = mutate(cur);
+            fs.mkdirSync(path.dirname(fp), { recursive: true });
+            fs.writeFileSync(fp, JSON.stringify(updated, null, 2), "utf-8");
+        }),
         appendMarkdown: vi.fn(),
         timeShort: vi.fn(() => "12:34"),
     };
@@ -97,7 +109,7 @@ describe("stop.ts robustness", () => {
         rmSync(dir, { recursive: true, force: true });
     });
 
-    it("increments stop_count even when ledger write throws", () => {
+    it("does not throw even when ledger write fails (stop_count managed by main finally)", () => {
         const session = {
             session_id: "test",
             started: new Date().toISOString(),
@@ -115,8 +127,10 @@ describe("stop.ts robustness", () => {
         // to ensure the ledger write path is exercised (not short-circuited
         // by the early return when files_read/files_written are empty).
         const badDir = path.join(dir, "nonexistent", "deep");
+        // finalizeSession must not throw; stop_count increment now happens in
+        // main()'s finally via updateJSON, not inside finalizeSession itself.
         expect(() => finalizeSession(dir, badDir, session)).not.toThrow();
-        expect(session.stop_count).toBeGreaterThanOrEqual(1);
+        expect(session.stop_count).toBe(0); // in-memory not mutated by finalizeSession
     });
 
     it("writes ledger to sessionDir, not wolfDir, in worktree mode", () => {
@@ -150,7 +164,9 @@ describe("stop.ts robustness", () => {
         expect(ledger.sessions[0].id).toBe("wt-test");
     });
 
-    it("increments stop_count when there is activity", () => {
+    it("finalizeSession does not mutate in-memory stop_count (increment is in main() finally)", () => {
+        // stop_count increment moved to main()'s finally via updateJSON so that
+        // concurrent sessions read the latest persisted value and can't lose increments.
         const session = readJSON<SessionData>(sessionFile, {
             session_id: "",
             started: "",
@@ -169,7 +185,8 @@ describe("stop.ts robustness", () => {
 
         expect(session.stop_count).toBe(0);
         finalizeSession(wolfDir, sessionDir, session);
-        expect(session.stop_count).toBe(1);
+        // finalizeSession itself no longer mutates stop_count; main()'s finally does
+        expect(session.stop_count).toBe(0);
     });
 
     it("F-02: main() does not emit TypeError to stderr when wolfDir/sessionDir are undefined", () => {
@@ -181,6 +198,72 @@ describe("stop.ts robustness", () => {
             (args) => String(args[0]).includes("Received undefined")
         );
         expect(typeErrorCalls).toHaveLength(0);
+    });
+});
+
+describe("_session.json concurrent update safety", () => {
+    const concDir = mkdtempSync(path.join(tmpdir(), "ow-stop-conc-"));
+    const concSessionFile = path.join(concDir, "_session.json");
+
+    afterEach(() => {
+        rmSync(concDir, { recursive: true, force: true });
+    });
+
+    it("two updateJSON calls both survive — files_written and stop_count accumulate", async () => {
+        // Seed the session file with one existing file write
+        mkdirSync(concDir, { recursive: true });
+        writeFileSync(concSessionFile, JSON.stringify({
+            session_id: "conc-test",
+            started: "2026-06-23T00:00:00Z",
+            files_read: {},
+            files_written: [{ file: "src/foo.ts", action: "edit", tokens: 100, at: "2026-06-23T00:00:00Z" }],
+            edit_counts: {},
+            anatomy_hits: 0,
+            anatomy_misses: 0,
+            repeated_reads_warned: 0,
+            cerebrum_warnings: 0,
+            stop_count: 0,
+        }, null, 2), "utf-8");
+
+        const { updateJSON } = await import("../../src/hooks/shared.js");
+        const fallback = {
+            session_id: "",
+            started: "",
+            files_read: {},
+            files_written: [] as Array<{ file: string; action: string; tokens: number; at: string }>,
+            edit_counts: {} as Record<string, number>,
+            anatomy_hits: 0,
+            anatomy_misses: 0,
+            repeated_reads_warned: 0,
+            cerebrum_warnings: 0,
+            stop_count: 0,
+        };
+
+        // Simulate post-write: push a new file_written entry
+        updateJSON(concSessionFile, fallback, (cur: typeof fallback) => {
+            cur.files_written.push({ file: "src/bar.ts", action: "edit", tokens: 50, at: "2026-06-23T00:01:00Z" });
+            return cur;
+        });
+
+        // Simulate first stop: increment stop_count
+        updateJSON(concSessionFile, fallback, (cur: typeof fallback) => {
+            cur.stop_count = (cur.stop_count ?? 0) + 1;
+            return cur;
+        });
+
+        // Simulate second stop: increment stop_count again
+        updateJSON(concSessionFile, fallback, (cur: typeof fallback) => {
+            cur.stop_count = (cur.stop_count ?? 0) + 1;
+            return cur;
+        });
+
+        const final = JSON.parse(readFileSync(concSessionFile, "utf-8"));
+        // Both the seeded write and the post-write push must survive
+        expect(final.files_written).toHaveLength(2);
+        expect(final.files_written.map((w: { file: string }) => w.file)).toContain("src/foo.ts");
+        expect(final.files_written.map((w: { file: string }) => w.file)).toContain("src/bar.ts");
+        // Both stop increments must accumulate
+        expect(final.stop_count).toBe(2);
     });
 });
 

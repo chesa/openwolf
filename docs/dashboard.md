@@ -79,7 +79,7 @@ Search filters by filename or description. Stats bar shows total files, average 
 
 ### Bug Log
 
-Searchable bug database from `buglog.json`. Each bug expands to show:
+Searchable bug database from `buglog.ndjson`. Each bug expands to show:
 - Error message (in red code block)
 - Root cause
 - Fix (in green code block)

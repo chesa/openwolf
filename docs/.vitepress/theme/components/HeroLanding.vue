@@ -86,7 +86,7 @@ const archFiles = [
   { name: "anatomy.md", desc: "File index with descriptions and token estimates. Prevents unnecessary full-file reads.", icon: "file" },
   { name: "cerebrum.md", desc: "Learned preferences, conventions, Do-Not-Repeat mistakes. Gets smarter every session.", icon: "brain" },
   { name: "memory.md", desc: "Chronological action log. Every read, write, and decision recorded per session.", icon: "clock" },
-  { name: "buglog.json", desc: "Bug encounter and resolution memory. Searchable. Prevents re-discovering the same fix.", icon: "bug" },
+  { name: "buglog.ndjson", desc: "Bug encounter and resolution memory. Searchable. Prevents re-discovering the same fix.", icon: "bug" },
   { name: "hooks/", desc: "6 Node.js hooks that fire on every Claude action. Pure file I/O, no network, no AI calls.", icon: "code" },
   { name: "config.json", desc: "All settings with sensible defaults. Token ratios, cron schedules, dashboard port, exclude patterns.", icon: "gear" },
 ];

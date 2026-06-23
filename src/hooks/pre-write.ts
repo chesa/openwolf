@@ -1,20 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, readJSON, readMarkdown, readStdin } from "./shared.js";
-
-interface BugEntry {
-  id: string;
-  error_message: string;
-  root_cause: string;
-  fix: string;
-  file: string;
-  tags: string[];
-}
-
-interface BugLog {
-  version: number;
-  bugs: BugEntry[];
-}
+import { getWolfDir, ensureWolfDir, readJSON, readMarkdown, readStdin, readBugEntries, bugLogPath } from "./shared.js";
+import type { BugEntry } from "./shared.js";
 
 async function main(): Promise<void> {
   ensureWolfDir();
@@ -99,17 +86,17 @@ const STOP_WORDS = new Set([
 ]);
 
 function checkBugLog(wolfDir: string, filePath: string, oldStr: string, newStr: string, content: string): void {
-  const bugLogPath = path.join(wolfDir, "buglog.json");
-  if (!fs.existsSync(bugLogPath)) return;
+  const ndjsonPath = bugLogPath(wolfDir);
+  if (!fs.existsSync(ndjsonPath)) return;
 
-  const bugLog = readJSON<BugLog>(bugLogPath, { version: 1, bugs: [] });
-  if (bugLog.bugs.length === 0) return;
+  const bugs = readBugEntries(wolfDir);
+  if (bugs.length === 0) return;
 
   const basename = path.basename(filePath);
 
   // ONLY surface bugs that match the SAME file being edited.
   // Cross-file matching is too noisy and risks misdirecting Claude.
-  const fileMatches = bugLog.bugs.filter(b => {
+  const fileMatches = bugs.filter(b => {
     const bugBasename = path.basename(b.file);
     return bugBasename === basename;
   });

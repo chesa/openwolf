@@ -97,7 +97,7 @@ By default, OpenWolf ignores all `.wolf/` files at the project level. For teams,
 a **mixed commit strategy** is recommended:
 
 - **Commit shared knowledge:** `anatomy.md`, `cerebrum.md`, `OPENWOLF.md`,
-  `config.json`, `buglog.json`, `identity.md`, `hooks/`
+  `config.json`, `buglog.ndjson`, `identity.md`, `hooks/`
 - **Ignore per-developer state:** `memory.md`, `token-ledger.json`, `sessions/`,
   `backups/`, lock files
 

@@ -61,4 +61,4 @@
 
 - `.wolf/cerebrum.md` — User Preferences + Do-Not-Repeat + Decision Log
 - `.wolf/anatomy.md` — token-efficient file index
-- `.wolf/buglog.json` — known bugs + fixes
+- `.wolf/buglog.ndjson` — known bugs + fixes
