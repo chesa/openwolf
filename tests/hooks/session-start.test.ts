@@ -76,13 +76,14 @@ describe("session-start.ts ledger init", () => {
         expect(ledger.lifetime.total_sessions).toBe(2);
     });
 
-    it("N concurrent ledger increments do not lose updates", async () => {
+    // NOTE: in-process JS serializes synchronous read-modify-write, so this checks accumulation, not lock contention. The real cross-process concurrency guard is the e2e test in Task 9 of the plan.
+    it("initializeSessionLedger accumulates total_sessions across N calls", async () => {
         const { initializeSessionLedger } = await freshSessionStart();
         rmSync(ledgerPath, { force: true });
         const N = 20;
-        await Promise.all(
-            Array.from({ length: N }, () => Promise.resolve().then(() => initializeSessionLedger(dir))),
-        );
+        for (let i = 0; i < N; i++) {
+            initializeSessionLedger(dir);
+        }
         const ledger = JSON.parse(readFileSync(ledgerPath, "utf-8"));
         expect(ledger.lifetime.total_sessions).toBe(N);
     });
