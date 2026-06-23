@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, appendMarkdown, timeShort } from "./shared.js";
+import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, writeJSON, updateJSON, appendMarkdown, timeShort } from "./shared.js";
 
 interface FileRead {
   count: number;
@@ -106,7 +106,12 @@ export function finalizeSession(wolfDir: string, sessionDir: string, session: Se
 
   // Update token-ledger.json
   const ledgerPath = path.join(sessionDir, "token-ledger.json");
-  const ledger = readJSON(ledgerPath, {
+  const savedFromAnatomy = session.anatomy_hits * 200;
+  const savedFromRepeats = Object.values(session.files_read)
+    .filter((r) => r.count > 1)
+    .reduce((sum, r) => sum + r.tokens * (r.count - 1), 0);
+
+  updateJSON(ledgerPath, {
     version: 1,
     created_at: "",
     lifetime: {
@@ -123,29 +128,23 @@ export function finalizeSession(wolfDir: string, sessionDir: string, session: Se
     daemon_usage: [],
     waste_flags: [],
     optimization_report: { last_generated: null, patterns: [] },
-  }) as {
+  } as {
     version: number;
     lifetime: Record<string, number>;
     sessions: SessionEntry[];
     [key: string]: unknown;
-  };
-
-  ledger.sessions.push(sessionEntry);
-  ledger.lifetime.total_reads += readCount;
-  ledger.lifetime.total_writes += writeCount;
-  ledger.lifetime.total_tokens_estimated += inputTokens + outputTokens;
-  ledger.lifetime.anatomy_hits += session.anatomy_hits;
-  ledger.lifetime.anatomy_misses += session.anatomy_misses;
-  ledger.lifetime.repeated_reads_blocked += session.repeated_reads_warned;
-
-  // Estimate savings: anatomy hits save ~200 tokens each, repeated reads blocked save their token count
-  const savedFromAnatomy = session.anatomy_hits * 200;
-  const savedFromRepeats = Object.values(session.files_read)
-    .filter((r) => r.count > 1)
-    .reduce((sum, r) => sum + r.tokens * (r.count - 1), 0);
-  ledger.lifetime.estimated_savings_vs_bare_cli += savedFromAnatomy + savedFromRepeats;
-
-  writeJSON(ledgerPath, ledger);
+  }, (ledger) => {
+    ledger.sessions.push(sessionEntry);
+    ledger.lifetime.total_reads += readCount;
+    ledger.lifetime.total_writes += writeCount;
+    ledger.lifetime.total_tokens_estimated += inputTokens + outputTokens;
+    ledger.lifetime.anatomy_hits += session.anatomy_hits;
+    ledger.lifetime.anatomy_misses += session.anatomy_misses;
+    ledger.lifetime.repeated_reads_blocked += session.repeated_reads_warned;
+    // Estimate savings: anatomy hits save ~200 tokens each, repeated reads blocked save their token count
+    ledger.lifetime.estimated_savings_vs_bare_cli += savedFromAnatomy + savedFromRepeats;
+    return ledger;
+  });
 
   // Write a session summary line to memory.md if there was meaningful activity
   if (writeCount > 0) {

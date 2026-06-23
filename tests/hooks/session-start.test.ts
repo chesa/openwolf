@@ -75,4 +75,15 @@ describe("session-start.ts ledger init", () => {
         const ledger = JSON.parse(readFileSync(ledgerPath, "utf-8"));
         expect(ledger.lifetime.total_sessions).toBe(2);
     });
+
+    it("N concurrent ledger increments do not lose updates", async () => {
+        const { initializeSessionLedger } = await freshSessionStart();
+        rmSync(ledgerPath, { force: true });
+        const N = 20;
+        await Promise.all(
+            Array.from({ length: N }, () => Promise.resolve().then(() => initializeSessionLedger(dir))),
+        );
+        const ledger = JSON.parse(readFileSync(ledgerPath, "utf-8"));
+        expect(ledger.lifetime.total_sessions).toBe(N);
+    });
 });

@@ -15,7 +15,7 @@ export { getWolfDir, getSessionDir, getWorktreeContext, normalizePath } from "./
 
 export { ensureSessionDir, ensureWolfDir, isWolfFile, readMarkdown, appendMarkdown } from "./wolf-files.js";
 
-export { readJSON, writeJSON } from "./wolf-json.js";
+export { readJSON, writeJSON, updateJSON } from "./wolf-json.js";
 
 export { withFileLock } from "./wolf-lock.js";
 

@@ -22,6 +22,18 @@ vi.mock("../../src/hooks/shared.js", async () => {
             fs.mkdirSync(path.dirname(fp), { recursive: true });
             fs.writeFileSync(fp, JSON.stringify(data, null, 2), "utf-8");
         }),
+        updateJSON: vi.fn((fp, fallback, mutate) => {
+            const fs = require("node:fs");
+            let cur;
+            try {
+                cur = JSON.parse(readFileSync(fp, "utf-8"));
+            } catch {
+                cur = fallback;
+            }
+            const updated = mutate(cur);
+            fs.mkdirSync(path.dirname(fp), { recursive: true });
+            fs.writeFileSync(fp, JSON.stringify(updated, null, 2), "utf-8");
+        }),
         appendMarkdown: vi.fn(),
         timeShort: vi.fn(() => "12:34"),
     };
