@@ -13,7 +13,7 @@ const MAX_RETRIES = 5;
 const BASE_RETRY_DELAY_MS = 80;
 const RETRY_JITTER_MS = 70; // max added jitter per attempt
 
-function sleepJittered(attempt: number): void {
+function sleepJittered(): void {
   const delay = BASE_RETRY_DELAY_MS + Math.floor(Math.random() * RETRY_JITTER_MS);
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay);
 }
@@ -45,7 +45,7 @@ function acquireLock(lockPath: string): boolean {
     }
 
     if (attempt < MAX_RETRIES - 1) {
-      sleepJittered(attempt);
+      sleepJittered();
     }
   }
   return false;

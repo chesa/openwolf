@@ -126,6 +126,9 @@ describe("withFileLock", () => {
             fs.rmSync(dir, { recursive: true, force: true });
         }
         expect(ran).toBe(true);                       // proceeds unlocked rather than hanging
-        expect(errs.join("")).toMatch(/could not acquire lock/);
+        const combined = errs.join("");
+        expect(combined).toMatch(/could not acquire lock/);
+        expect(combined).toContain("after 5 attempts");
+        expect(combined).toContain("f.json");
     });
 });
