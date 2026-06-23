@@ -63,6 +63,7 @@ const RUNTIME_CREATED_NO_TEMPLATE = new Set<string>([
 import { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks } from "./hook-settings.js";
 import { findHookSourceDir, copyHookFiles, writeHooksPackageJson } from "./hook-copy.js";
 import { findTemplatesDir } from "./templates.js";
+import { migrateBugLog } from "./migrate-buglog.js";
 export { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks };
 
 // Template name → destination filename mapping.
@@ -374,6 +375,9 @@ export async function initCommand(): Promise<void> {
   ensureDir(wolfDir);
   // Hooks always deploy under projectRoot/.wolf/hooks/
   ensureDir(path.join(projectWolfDir, "hooks"));
+
+  // One-time migration: buglog.json (legacy array format) → buglog.ndjson
+  migrateBugLog(wolfDir);
 
   // Find templates directory
   const actualTemplatesDir = findTemplatesDir();

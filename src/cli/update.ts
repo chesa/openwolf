@@ -57,6 +57,7 @@ const BACKUP_FILES = [
 import { HOOK_SETTINGS, replaceOpenWolfHooks } from "./hook-settings.js";
 import { findHookSourceDir, copyHookFiles, writeHooksPackageJson } from "./hook-copy.js";
 import { findTemplatesDir } from "./templates.js";
+import { migrateBugLog } from "./migrate-buglog.js";
 
 interface UpdateResult {
   project: RegisteredProject;
@@ -175,6 +176,9 @@ async function updateProject(
   }
 
   console.log(`  ${name} (${root})`);
+
+  // One-time migration: buglog.json (legacy array format) → buglog.ndjson
+  migrateBugLog(wolfDir);
 
   // Already at this version?
   if (project.version === version) {
