@@ -17,7 +17,7 @@
     "dev": "./node_modules/.bin/tsc --watch",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "prepare": "npm run build",
+    "prepare": "test -d node_modules/typescript || npm install --ignore-scripts --no-audit --no-fund; npm run build",
     "prepublishOnly": "pnpm build",
     "test": "vitest run",
     "test:watch": "vitest",
