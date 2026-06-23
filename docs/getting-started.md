@@ -14,15 +14,34 @@ Before installing OpenWolf, make sure you have the following installed:
 
 ## Installation steps
 
-### Install from npm (recommended)
+### Install from GitHub (CHESA fork)
 
-1. Install OpenWolf globally:
+This is the **CHESA fork** — do not use `npm install -g openwolf`, which installs
+the upstream release and lacks worktree support and team features.
 
-   ```bash
-   npm install -g openwolf
-   ```
+Install directly from the GitHub repository:
 
-2. Verify the installation:
+```bash
+# Latest development (bleeding edge)
+npm install -g --install-links "chesa/openwolf#develop"
+
+# Pinned to a stable release tag (recommended for team environments)
+npm install -g --install-links "chesa/openwolf#release/1.1.0-beta"
+```
+
+npm accepts a branch name, tag name, or commit SHA after the `#`. Use `#develop`
+to always get the latest; use a `#release/X.Y.Z-beta` tag to pin to a
+known-good version. To list available release tags:
+
+```bash
+git ls-remote --tags https://github.com/chesa/openwolf
+```
+
+The `--install-links` flag is required — without it, npm 11 creates a symlink to
+a temp directory that is deleted after install. The build runs automatically from
+source on first install (requires `git` and Node 20+).
+
+1. Verify the installation:
 
    ```bash
    openwolf --version

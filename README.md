@@ -21,8 +21,16 @@ workflow improvements, and fixes for concurrent sessions that are not yet in the
 upstream release. Install it directly from the fork:
 
 ```bash
+# Latest development (bleeding edge)
 npm install -g --install-links "chesa/openwolf#develop"
+
+# Pinned to a stable release tag
+npm install -g --install-links "chesa/openwolf#release/1.1.0-beta"
 ```
+
+npm accepts a branch name, tag name, or commit SHA after the `#`. Use `#develop`
+to track the latest; use a `#release/X.Y.Z-beta` tag to pin to a known-good
+version. Available tags: `git ls-remote --tags https://github.com/chesa/openwolf`.
 
 The `--install-links` flag is required — without it, npm 11 creates a symlink to
 a temp directory that gets deleted after install. The `dist/` build artifact is
@@ -40,6 +48,8 @@ project to sync hooks:
 
 ```bash
 npm install -g --install-links "chesa/openwolf#develop"
+# or pin to a specific release:
+npm install -g --install-links "chesa/openwolf#release/1.1.0-beta"
 ```
 
 **Alternative: clone and build locally** (handy for contributors, or if the
