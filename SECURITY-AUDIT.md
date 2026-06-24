@@ -48,8 +48,8 @@ session (per the OpenWolf protocol). It governs coding conventions, the
 
 #### Remediation
 
-The vulnerability has been **fully remediated**. Current code implements
-all required mitigations:
+The vulnerability has been **remediated via a staging-file design**.
+Current code implements the following mitigations:
 
 ```typescript
 // cron-engine.ts:414-426 (FIXED)
@@ -83,6 +83,14 @@ if (action.writes_to?.includes("cerebrum-draft.md")) {
 4. ✅ **Memory audit trail:** Appends an entry to `memory.md` with the timestamp
    and pending-review status, creating a recoverable audit trail.
 
+**On the original [MUST] backup requirement:** The original audit also
+required a timestamped backup before any write to `cerebrum.md`. That
+requirement is obsoleted by the staging design — the daemon never overwrites
+`cerebrum.md` in place, so there is nothing to back up at AI-write time. The
+eventual human promotion step (manually copying `cerebrum-draft.md` to
+`cerebrum.md`) remains out-of-band and unbacked; that is a deliberate manual
+action, not the daemon-driven path this finding covers.
+
 **Attack vectors neutralized:**
 
 - Malicious or accidental overwrites of `cerebrum.md` can no longer occur via
@@ -91,6 +99,10 @@ if (action.writes_to?.includes("cerebrum-draft.md")) {
   the `writes_to` gate; manual review is always required before promotion.
 - Legitimate AI tasks cannot accidentally destroy `cerebrum.md` via truncation
   or hallucination.
+- The shipped default `cerebrum-reflection` task declares no
+  `writes_to: ["cerebrum-draft.md"]`, so the gate never fires and the task
+  writes nothing by default — a deliberate safe default; generating a draft
+  requires opting in explicitly.
 
 ---
 

@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Shared-Checkout Concurrency — Pillar C
-current_phase: 1
+current_phase: 0
 status: Awaiting next milestone
 stopped_at: Completed Phase 7 plan — all v1.1 phases delivered. Ready for milestone completion.
 last_updated: "2026-06-24T19:23:45.682Z"

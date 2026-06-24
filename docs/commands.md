@@ -14,7 +14,7 @@ openwolf init
 **What it does:**
 1. Detects the project root (looks for `.git`, `package.json`, etc.)
 2. Creates `.wolf/` with 15 template files
-3. Copies 16 hook scripts to `.wolf/hooks/`
+3. Copies 16 hook module files (6 lifecycle hooks + 10 supporting modules) to `.wolf/hooks/`
 4. Registers 6 Claude Code hooks in `.claude/settings.json`
 5. Creates `.claude/rules/openwolf.md`
 6. Prepends the OpenWolf snippet to `CLAUDE.md`
@@ -43,7 +43,7 @@ OpenWolf Status
 ===============
 
   ✓ All 15 template files present
-  ✓ All 16 hook scripts present
+  ✓ All 16 hook module files present
   ✓ Claude Code hooks registered (6 matchers)
 
 Token Stats:

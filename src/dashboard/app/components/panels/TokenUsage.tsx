@@ -24,7 +24,7 @@ export function TokenUsage({ data }: { data: WolfData }) {
 
   const comparisonData = [
     { name: "Claude CLI (no context mgmt)", tokens: withOverhead, fill: "#f87171" },
-    { name: "Claude CLI (without OpenWolf)", tokens: withoutWolf, fill: "#fbbf24" },
+    { name: "Claude CLI (baseline)", tokens: withoutWolf, fill: "#fbbf24" },
     { name: "OpenWolf + Claude CLI", tokens: totalTracked, fill: "#34d399" },
   ];
 
