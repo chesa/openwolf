@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Shared-Checkout Concurrency — Pillar C
-status: planning
-last_updated: "2026-06-23"
-last_activity: 2026-06-23
+status: in_progress
+last_updated: "2026-06-24"
+last_activity: 2026-06-24
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 2
+  percent: 67
 ---
 
 # Project State: CHESA Fork Team Toolkit
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and manageable to keep synced with upstream.
-**Current focus:** Phase 5 — Propose-Mode Infrastructure (ready to plan)
+**Current focus:** Phase 7 — Concurrency & Integration Tests (plan imported & revised, ready to execute)
 
 ## Current Position
 
-Phase: 5 of 7 (Propose-Mode Infrastructure)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-06-23 — v1.1 roadmap created (Phases 5-7)
+Phase: 7 of 7 (Concurrency & Integration Tests)
+Plan: 07-01 (imported 2026-06-24, not yet executed)
+Status: Ready to execute
+Last activity: 2026-06-24 — Phases 5-6 complete; Phase 7 plan imported & revised per concurrency learnings
 
-Progress: [░░░░░░░░░░] 0% (v1.1 milestone; v1.0 complete)
+Progress: [███████░░░] 67% (v1.1 milestone; phases 5-6 complete, 7 planned)
 
 ## Performance Metrics
 
@@ -41,8 +41,8 @@ Progress: [░░░░░░░░░░] 0% (v1.1 milestone; v1.0 complete)
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 5. Propose-Mode Infrastructure | TBD | - | - |
-| 6. Learnings Review CLI | TBD | - | - |
+| 5. Propose-Mode Infrastructure | 1 | - | - |
+| 6. Learnings Review CLI | 1 | - | - |
 | 7. Concurrency & Integration Tests | 1 (planned) | - | - |
 
 *Updated after each plan completion*
@@ -54,7 +54,7 @@ Progress: [░░░░░░░░░░] 0% (v1.1 milestone; v1.0 complete)
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- D-06 (v1.0): Zero-consumer-changes for lock wrapper — withFileLock already available from Phase 1 Pillar A; no new lock infrastructure needed in v1.1
+- D-06 (v1.0): Zero-consumer-changes for lock wrapper — withFileLock already available from the Pillar A lock-wrapper work (concurrency PR #18); no new lock infrastructure needed in v1.1
 - v1.1 design: Dashboard deferred to v1.2 — CLI ships first; staging path is `.wolf/sessions/<worktreeId|sessionId>/proposed-learnings.md`
 - v1.1 design: `openwolf learnings merge` is the sole writer of `cerebrum.md` and `anatomy.md`; all hooks redirect to `appendProposal()`
 
@@ -74,6 +74,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-23
-Stopped at: Roadmap created — Phases 5-7 defined; ready to plan Phase 5
+Last session: 2026-06-24
+Stopped at: Phases 5-6 complete; Phase 7 plan imported & revised per concurrency learnings; ready to execute Phase 7
 Resume file: None

@@ -22,8 +22,8 @@
 
 **Milestone Goal:** Add a propose-and-review layer for shared markdown so concurrent Claude Code sessions cannot silently overwrite each other's learnings.
 
-- [ ] **Phase 5: Propose-Mode Infrastructure** - appendProposal helper, hook redirect, and OPENWOLF.md protocol update
-- [ ] **Phase 6: Learnings Review CLI** - openwolf learnings list and merge commands with consumed-tracking
+- [x] **Phase 5: Propose-Mode Infrastructure** - appendProposal helper, hook redirect, and OPENWOLF.md protocol update — completed 2026-06-23
+- [x] **Phase 6: Learnings Review CLI** - openwolf learnings list and merge commands with consumed-tracking — completed 2026-06-24
 - [ ] **Phase 7: Concurrency & Integration Tests** - Verify two-session propose-and-merge produces no data loss
 
 ## Phase Details
@@ -51,7 +51,7 @@
 **Plans**: 1 plan
 
 Plans:
-- [ ] 06-01-PLAN.md — openwolf learnings list and merge commands with consumed-tracking archive
+- [x] 06-01-PLAN.md — openwolf learnings list and merge commands with consumed-tracking archive — completed 2026-06-24
 
 ### Phase 7: Concurrency & Integration Tests
 **Goal**: Automated tests confirm the propose-and-merge workflow survives concurrent sessions without data loss
@@ -75,6 +75,6 @@ Plans:
 | 2. Fork Divergence Management | v1.0 | 1/1 | Complete | 2026-06-06 |
 | 3. .wolf/ Team Workflow Improvements | v1.0 | 5/5 | Complete | 2026-06-06 |
 | 4. P2 Cleanup | v1.0 | 1/1 | Complete | 2026-06-06 |
-| 5. Propose-Mode Infrastructure | v1.1 | 0/1 | Planning | - |
-| 6. Learnings Review CLI | v1.1 | 0/1 | Planned | - |
+| 5. Propose-Mode Infrastructure | v1.1 | 1/1 | Complete | 2026-06-23 |
+| 6. Learnings Review CLI | v1.1 | 1/1 | Complete | 2026-06-24 |
 | 7. Concurrency & Integration Tests | v1.1 | 0/1 | Planned | - |
