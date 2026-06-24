@@ -37,7 +37,7 @@
   2. Every hook that previously called `appendMarkdown` targeting `cerebrum.md` or `anatomy.md` now calls `appendProposal()` instead — no hook writes shared markdown directly
   3. The `src/templates/OPENWOLF.md` template instructs Claude to use the proposal path rather than editing shared files directly
   4. Two simultaneous sessions can each write proposals without contention (per-session files eliminate the race)
-**Plans**: TBD
+**Plans**: 1 plan
 
 ### Phase 6: Learnings Review CLI
 **Goal**: `openwolf learnings` lets the developer review, select, and merge staged proposals into shared markdown
@@ -69,6 +69,6 @@
 | 2. Fork Divergence Management | v1.0 | 1/1 | Complete | 2026-06-06 |
 | 3. .wolf/ Team Workflow Improvements | v1.0 | 5/5 | Complete | 2026-06-06 |
 | 4. P2 Cleanup | v1.0 | 1/1 | Complete | 2026-06-06 |
-| 5. Propose-Mode Infrastructure | v1.1 | 0/? | Not started | - |
+| 5. Propose-Mode Infrastructure | v1.1 | 0/1 | Planning | - |
 | 6. Learnings Review CLI | v1.1 | 0/? | Not started | - |
 | 7. Concurrency & Integration Tests | v1.1 | 0/? | Not started | - |
