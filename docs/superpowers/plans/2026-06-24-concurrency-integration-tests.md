@@ -1,0 +1,320 @@
+# Concurrency & Integration Tests Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Automated tests confirming the propose-and-merge workflow survives concurrent sessions without data loss, and that `openwolf learnings` enumerates proposals across session directories.
+
+**Architecture:** Two new vitest test files under `tests/cli/` — `concurrency.test.ts` (TEST-01) and `learnings-integration.test.ts` (TEST-02). All source code exists from Phases 5/6; no production code changes.
+
+**Tech Stack:** TypeScript (Node.js), vitest
+
+## Global Constraints
+
+- Mock `getWolfDir()` from `../../src/hooks/wolf-paths.js` to return a temp dir
+- Mock `withFileLock` from `../../src/hooks/wolf-lock.js` as pass-through (`fn => fn()`)
+- Mock `node:readline` at module level (not `vi.spyOn` which fails in ESM) for merge tests
+- No production code files are modified
+
+---
+
+### Task 1: Concurrency merge test (`tests/cli/concurrency.test.ts`)
+
+**Files:**
+- Create: `tests/cli/concurrency.test.ts`
+
+**Interfaces:**
+- Consumes: `learningsMergeCommand()` from `../../src/cli/learnings-cmd.js` — takes no args, uses `getWolfDir()` + `readline.createInterface` + `withFileLock`
+- Produces: 3 test cases covering concurrency merge end-to-end
+
+- [ ] **Step 1: Write the failing test file**
+
+```ts
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+
+const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+const originalStderrWrite = process.stderr.write;
+let stderrOutput: string[] = [];
+
+vi.mock("../../src/hooks/wolf-paths.js", () => ({
+  getWolfDir: vi.fn(),
+  getSessionDir: vi.fn(),
+  getWorktreeContext: vi.fn(),
+}));
+
+vi.mock("../../src/hooks/wolf-lock.js", () => ({
+  withFileLock: vi.fn(async (_path: string, fn: () => void) => fn()),
+}));
+
+const mockAnswers = { queue: ["a", "y"], index: 0 };
+
+vi.mock("node:readline", () => ({
+  createInterface: vi.fn(() => ({
+    question: vi.fn((_query: string, cb: (a: string) => void) => {
+      cb(mockAnswers.queue[mockAnswers.index++] ?? "");
+    }),
+    close: vi.fn(),
+  })),
+}));
+
+import { getWolfDir } from "../../src/hooks/wolf-paths.js";
+
+describe("concurrency - learningsMergeCommand", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(path.join(tmpdir(), "owl-con-"));
+    vi.mocked(getWolfDir).mockReturnValue(tmpDir);
+    stderrOutput = [];
+    process.stderr.write = vi.fn((chunk: string) => { stderrOutput.push(chunk); return true; }) as any;
+    mockAnswers.queue = ["a", "y"];
+    mockAnswers.index = 0;
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+    vi.clearAllMocks();
+    logSpy.mockClear();
+    process.stderr.write = originalStderrWrite;
+  });
+
+  it("merges proposals from two sessions into cerebrum.md intact", async () => {
+    const sess1 = path.join(tmpDir, "sessions", "sess001");
+    const sess2 = path.join(tmpDir, "sessions", "sess002");
+    mkdirSync(sess1, { recursive: true });
+    mkdirSync(sess2, { recursive: true });
+    writeFileSync(
+      path.join(sess1, "proposed-learnings.md"),
+      "\n## 2026-06-23T12:00:00.000Z → cerebrum\n\nContent from session one\n",
+      "utf-8"
+    );
+    writeFileSync(
+      path.join(sess2, "proposed-learnings.md"),
+      "\n## 2026-06-23T13:00:00.000Z → cerebrum\n\nContent from session two\n",
+      "utf-8"
+    );
+
+    const { learningsMergeCommand } = await import("../../src/cli/learnings-cmd.js");
+    await learningsMergeCommand();
+
+    const merged = fs.readFileSync(path.join(tmpDir, "cerebrum.md"), "utf-8");
+    expect(merged).toContain("Content from session one");
+    expect(merged).toContain("Content from session two");
+  });
+
+  it("archives consumed entries from both sessions after merge", async () => {
+    const sess1 = path.join(tmpDir, "sessions", "s001");
+    const sess2 = path.join(tmpDir, "sessions", "s002");
+    mkdirSync(sess1, { recursive: true });
+    mkdirSync(sess2, { recursive: true });
+    writeFileSync(
+      path.join(sess1, "proposed-learnings.md"),
+      "\n## 2026-06-23T12:00:00.000Z → cerebrum\n\nS1 content\n",
+      "utf-8"
+    );
+    writeFileSync(
+      path.join(sess2, "proposed-learnings.md"),
+      "\n## 2026-06-23T13:00:00.000Z → cerebrum\n\nS2 content\n",
+      "utf-8"
+    );
+
+    const { learningsMergeCommand } = await import("../../src/cli/learnings-cmd.js");
+    await learningsMergeCommand();
+
+    for (const sid of ["s001", "s002"]) {
+      const archivePath = path.join(tmpDir, "sessions", sid, "merged-learnings.md");
+      expect(fs.existsSync(archivePath)).toBe(true);
+      const content = fs.readFileSync(archivePath, "utf-8");
+      expect(content).toContain(sid === "s001" ? "S1 content" : "S2 content");
+    }
+  });
+
+  it("prints 'No pending proposals found' when no sessions exist", async () => {
+    const { learningsMergeCommand } = await import("../../src/cli/learnings-cmd.js");
+    await learningsMergeCommand();
+    expect(logSpy).toHaveBeenCalledWith("No pending proposals found");
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run tests/cli/concurrency.test.ts -v`
+Expected: At least one test fails (likely import resolution for `../../src/cli/learnings-cmd.js` — need `.js` extension for ESM)
+
+- [ ] **Step 3: Fix extension and re-run until tests compile and execute**
+
+If import fails, switch to the exact import path pattern used in the existing `tests/cli/learnings.test.ts`:
+```ts
+const { learningsMergeCommand } = await import("../../src/cli/learnings-cmd.js");
+```
+Fix any other issues (e.g., mock answers not consumed in right order) until all 3 tests pass.
+
+Expected: `3 passed`
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add tests/cli/concurrency.test.ts
+git commit -m "test(07): concurrency merge test — two sessions propose, merge, both survive"
+```
+
+---
+
+### Task 2: Integration enumeration test (`tests/cli/learnings-integration.test.ts`)
+
+**Files:**
+- Create: `tests/cli/learnings-integration.test.ts`
+
+**Interfaces:**
+- Consumes: `learningsCommand()` from `../../src/cli/learnings-cmd.js` — signature `(sessionFilter?: string): void`
+- Produces: 3 test cases verifying cross-session enumeration
+
+- [ ] **Step 1: Write the failing test file**
+
+```ts
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import * as path from "node:path";
+import { tmpdir } from "node:os";
+
+const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+vi.mock("../../src/hooks/wolf-paths.js", () => ({
+  getWolfDir: vi.fn(),
+  getSessionDir: vi.fn(),
+  getWorktreeContext: vi.fn(),
+}));
+
+import { getWolfDir } from "../../src/hooks/wolf-paths.js";
+
+describe("learnings integration - learningsCommand", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(path.join(tmpdir(), "owl-int-"));
+    vi.mocked(getWolfDir).mockReturnValue(tmpDir);
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+    vi.clearAllMocks();
+    logSpy.mockClear();
+  });
+
+  it("enumerates proposals from multiple session directories", async () => {
+    mkdirSync(path.join(tmpDir, "sessions", "aaa111"), { recursive: true });
+    mkdirSync(path.join(tmpDir, "sessions", "bbb222"), { recursive: true });
+    writeFileSync(
+      path.join(tmpDir, "sessions", "aaa111", "proposed-learnings.md"),
+      "\n## 2026-06-23T12:00:00.000Z → cerebrum\n\nFrom aaa\n", "utf-8"
+    );
+    writeFileSync(
+      path.join(tmpDir, "sessions", "bbb222", "proposed-learnings.md"),
+      "\n## 2026-06-23T13:00:00.000Z → anatomy\n\nFrom bbb\n", "utf-8"
+    );
+
+    const { learningsCommand } = await import("../../src/cli/learnings-cmd.js");
+    learningsCommand();
+
+    const calls = logSpy.mock.calls.map(c => c[0]).join(" ");
+    expect(calls).toContain("aaa111");
+    expect(calls).toContain("bbb222");
+    expect(calls).toContain("cerebrum");
+    expect(calls).toContain("anatomy");
+    expect(calls).toContain("From aaa");
+    expect(calls).toContain("From bbb");
+  });
+
+  it("handles empty staging files without crashing", async () => {
+    mkdirSync(path.join(tmpDir, "sessions", "s1"), { recursive: true });
+    mkdirSync(path.join(tmpDir, "sessions", "s2"), { recursive: true });
+    writeFileSync(path.join(tmpDir, "sessions", "s1", "proposed-learnings.md"), "", "utf-8");
+    writeFileSync(
+      path.join(tmpDir, "sessions", "s2", "proposed-learnings.md"),
+      "\n## 2026-06-23T12:00:00.000Z → cerebrum\n\nValid\n", "utf-8"
+    );
+
+    const { learningsCommand } = await import("../../src/cli/learnings-cmd.js");
+    expect(() => learningsCommand()).not.toThrow();
+    const calls = logSpy.mock.calls.map(c => c[0]).join(" ");
+    expect(calls).toContain("Valid");
+  });
+
+  it("prints 'No pending proposals found' when no sessions exist", async () => {
+    const { learningsCommand } = await import("../../src/cli/learnings-cmd.js");
+    learningsCommand();
+    expect(logSpy).toHaveBeenCalledWith("No pending proposals found");
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run tests/cli/learnings-integration.test.ts -v`
+Expected: Fails cleanly (expected TDD red phase)
+
+- [ ] **Step 3: Verify it passes after any fix**
+
+Run: `npx vitest run tests/cli/learnings-integration.test.ts -v`
+Expected: `3 passed`
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add tests/cli/learnings-integration.test.ts
+git commit -m "test(07): integration enumeration test — multi-session, empty files, no crash"
+```
+
+---
+
+### Task 3: Full regression check
+
+- [ ] **Step 1: Run full test suite**
+
+Run: `pnpm test`
+Expected: All existing tests + 6 new tests = all passing, no regressions
+
+- [ ] **Step 2: Run full build**
+
+Run: `pnpm build`
+Expected: Build succeeds (no code changes, but verify)
+
+- [ ] **Step 3: Write Phase 7 SUMMARY.md**
+
+Write `.planning/phases/07-concurrency-integration-tests/07-01-SUMMARY.md`:
+```markdown
+# Plan 07-01: Concurrency & Integration Tests
+
+**Phase:** 7 — Concurrency & Integration Tests
+**Plan:** 01
+**Status:** Complete ✓
+
+## What Was Built
+
+### TEST-01: Concurrency test (`tests/cli/concurrency.test.ts`)
+- Two sessions propose distinct entries → merge command → both in cerebrum.md
+- Both sessions' entries archived to merged-learnings.md
+- Empty state: "No pending proposals found"
+
+### TEST-02: Integration enumeration (`tests/cli/learnings-integration.test.ts`)
+- Multiple session dirs enumerated correctly
+- Empty staging file in one dir doesn't crash
+- Missing sessions dir: "No pending proposals found"
+
+## Verification
+- `npx vitest run tests/cli/concurrency.test.ts` — 3/3 passed
+- `npx vitest run tests/cli/learnings-integration.test.ts` — 3/3 passed
+- `pnpm test` — all tests pass, no regressions
+- `pnpm build` — passes
+```
+
+- [ ] **Step 4: Commit Phase 7 artifacts**
+
+```bash
+git add .planning/phases/07-concurrency-integration-tests/07-01-SUMMARY.md tests/cli/concurrency.test.ts tests/cli/learnings-integration.test.ts
+git commit -m "test(07): concurrency & integration tests — milestone v1.1 complete"
+```
