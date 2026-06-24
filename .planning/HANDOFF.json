@@ -1,78 +1,36 @@
 {
   "version": "1.0",
-  "timestamp": "2026-06-23T23:15:03.066Z",
-  "phase": null,
-  "phase_name": "between-milestones",
-  "phase_dir": null,
-  "plan": null,
-  "task": null,
-  "total_tasks": null,
+  "timestamp": "2026-06-24T15:45:01.518Z",
+  "phase": "7",
+  "phase_name": "Concurrency & Integration Tests",
+  "phase_dir": ".planning/phases/07-concurrency-integration-tests",
+  "plan": 1,
+  "task": 0,
+  "total_tasks": 3,
   "status": "paused",
-  "completed_tasks": [
-    {
-      "id": 1,
-      "name": "Address PR #17 review findings (spec stale sections A2/A3/B3)",
-      "status": "done",
-      "commit": "9afc04f"
-    },
-    {
-      "id": 2,
-      "name": "Confirm PR #18 review clean (no code issues)",
-      "status": "done",
-      "commit": null
-    },
-    {
-      "id": 3,
-      "name": "Merge PR #17 (docs/concurrency-spec → develop)",
-      "status": "done",
-      "commit": "bbbb61e"
-    },
-    {
-      "id": 4,
-      "name": "Merge PR #18 (feat/concurrency-phase1 → develop)",
-      "status": "done",
-      "commit": "f7ac281"
-    },
-    {
-      "id": 5,
-      "name": "Prune remote tracking refs and local branches",
-      "status": "done",
-      "commit": null
-    }
-  ],
+  "completed_tasks": [],
   "remaining_tasks": [
-    {
-      "id": 6,
-      "name": "Commit LEARNINGS doc + session report; delete stale PR review files",
-      "status": "not_started"
-    },
-    {
-      "id": 7,
-      "name": "Start Phase 2 milestone (propose-mode / Pillar C)",
-      "status": "not_started"
-    }
+    {"id": 1, "name": "Accumulation merge test (tests/cli/merge-accumulation.test.ts) — 3 tests + withFileLock-invoked assertion", "status": "not_started"},
+    {"id": 2, "name": "Integration enumeration test (tests/cli/learnings-integration.test.ts) — 4 tests incl. missing-staging-file edge", "status": "not_started"},
+    {"id": 3, "name": "Full regression (pnpm test + pnpm build) and write 07-01-SUMMARY.md", "status": "not_started"}
   ],
   "blockers": [],
   "async_jobs": [],
-  "human_actions_pending": [],
+  "human_actions_pending": [
+    {"action": "Triage 71 uncommitted deletions of old v1.0 phase dirs (.planning/phases/00..04 and siblings)", "context": "Predate this session; decide commit-as-cleanup vs git restore. Does not affect health (phases archived in .planning/milestones/).", "blocking": false},
+    {"action": "Decide on untracked reference files (LEARNINGS doc + imported plan = keep/commit; PR#17.md/PR#18.md = stale, deletable; reports/20260623-session-report.md = keep)", "context": "Loose untracked files in the tree", "blocking": false}
+  ],
   "decisions": [
-    {
-      "decision": "Merge strategy: --merge (not squash/rebase)",
-      "rationale": "Preserve Phase 1 commit history",
-      "phase": "between-milestones"
-    },
-    {
-      "decision": "Phase 2 (propose-mode) deferred to new milestone",
-      "rationale": "Larger scope; needs own discuss→spec→plan→execute cycle",
-      "phase": "between-milestones"
-    }
+    {"decision": "Phase 7 concurrency coverage = in-process accumulation test + withFileLock-called assertion, NOT a spawn-based cross-process e2e", "rationale": "Pillar C safety is structural (per-session staging files; merge is a single human-driven command); the lock primitive is already cross-process-verified in tests/e2e-concurrency.test.ts. Documented in the plan's Concurrency Coverage Rationale.", "phase": "7"},
+    {"decision": "Marked phases 5 & 6 complete in ROADMAP/STATE", "rationale": "They were implemented and committed (ac6dc7c, dd8128c) but tracking lagged; verified via committed source + Phase 6 learnings.test.ts running 8/8 green before updating.", "phase": "7"}
   ],
   "uncommitted_files": [
-    "docs/superpowers/2026-06-23-shared-checkout-concurrency-phase1-LEARNINGS.md",
-    ".planning/reports/20260623-session-report.md",
-    "PR#17.md",
-    "PR#18.md"
+    "(pre-existing, NOT this session) 71 deletions under .planning/phases/00-04 and v1.0 sibling dirs",
+    "(untracked) docs/superpowers/2026-06-23-shared-checkout-concurrency-phase1-LEARNINGS.md",
+    "(untracked) docs/superpowers/plans/2026-06-24-concurrency-integration-tests.md",
+    "(untracked) .planning/reports/20260623-session-report.md",
+    "(untracked) PR#17.md, PR#18.md"
   ],
-  "next_action": "Triage 4 untracked files (commit LEARNINGS + session report; delete PR review files), then /gsd-new-milestone for Phase 2.",
-  "context_notes": "Concurrency Phase 1 fully merged. develop is clean and green. Phase 2 (propose-mode for cerebrum.md) is the next milestone of meaningful work."
+  "next_action": "/gsd-execute-phase 07 — Task 1: write tests/cli/merge-accumulation.test.ts exactly per the revised plan, INCLUDING expect(vi.mocked(withFileLock)).toHaveBeenCalled(). Expect pass on first run (Phase 6 code already exists).",
+  "context_notes": "This session was plan-hardening only: imported Phase 7 plan (067e3b1), revised it against phase-1 concurrency LEARNINGS to kill a tautological concurrency test (18b0131), reconciled ROADMAP/STATE marking phases 5-6 done (0993e54), and cleared health warnings to HEALTHY (489b2f4). No Phase 7 plan tasks executed. Next session = mechanical execution of a well-vetted plan. The one thing that matters: keep the withFileLock assertion; do not regress the merge test into a naive concurrency test."
 }
