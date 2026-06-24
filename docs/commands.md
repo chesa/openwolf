@@ -448,5 +448,5 @@ openwolf --version
 ```
 
 ```
-1.1.0-beta
+1.2.0-beta
 ```

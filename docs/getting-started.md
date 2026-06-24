@@ -26,7 +26,7 @@ Install directly from the GitHub repository:
 npm install -g --install-links "chesa/openwolf#develop"
 
 # Pinned to a stable release tag (recommended for team environments)
-npm install -g --install-links "chesa/openwolf#release/1.1.0-beta"
+npm install -g --install-links "chesa/openwolf#release/1.2.0-beta"
 ```
 
 npm accepts a branch name, tag name, or commit SHA after the `#`. Use `#develop`
@@ -47,7 +47,7 @@ source on first install (requires `git` and Node 20+).
    openwolf --version
    ```
 
-   You should see the installed version printed (e.g., `1.1.0-beta`).
+   You should see the installed version printed (e.g., `1.2.0-beta`).
 
 3. (Optional) If you plan to use **Design QC**, install the optional dependency:
 
@@ -120,7 +120,7 @@ a **mixed commit strategy** is recommended:
 - **Ignore per-developer state:** `memory.md`, `token-ledger.json`, `sessions/`,
   `backups/`, lock files
 
-Starting with `openwolf init` (v1.1.0+), a `.wolf/.gitignore` is created
+Starting with `openwolf init` (v1.1.0-beta+), a `.wolf/.gitignore` is created
 automatically with the mixed strategy. If your project's root `.gitignore`
 still contains `.wolf/`, remove that line to adopt the mixed strategy.
 

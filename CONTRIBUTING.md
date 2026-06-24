@@ -112,6 +112,7 @@ Follow [semver](https://semver.org/). Decide the bump before merging any branch:
 **A stored-file format change is at minimum a minor bump**, even when a migration command exists. Examples that ruled out a patch in the past:
 
 - `buglog.json` → `buglog.ndjson` (PR #18): format break + new `migrate-buglog` command + new `updateJSON` export → **1.1.0**
+- Pillar C: propose-mode + learnings CLI (PR #19): new features (propose-mode infrastructure, `openwolf learnings` commands, concurrency tests) → **1.2.0**
 
 When uncertain, ask before merging.
 
@@ -124,7 +125,7 @@ git tag -a release/X.Y.Z-beta -m "release/X.Y.Z-beta — <one-line summary>"
 git push origin release/X.Y.Z-beta
 ```
 
-**Use `release/` prefix** (not bare `v`). This keeps release tags visually distinct from GSD milestone completion tags (`v1.0`, `v1.1`, etc.) which use the short two-part `v` format. The version inside the tag matches `package.json` exactly — no inner `v` prefix (i.e. `release/1.1.0-beta`, not `release/v1.1.0-beta`).
+**Use `release/` prefix** (not bare `v`). This keeps release tags visually distinct from GSD milestone completion tags (`v1.0`, `v1.1`, etc.) which use the short two-part `v` format. The version inside the tag matches `package.json` exactly — no inner `v` prefix (i.e. `release/1.2.0-beta`, not `release/v1.2.0-beta`).
 
 ## Issue Reporting
 

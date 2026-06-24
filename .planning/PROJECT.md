@@ -62,7 +62,7 @@ Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and man
 **Tech stack:** TypeScript (Node.js), pnpm, Bash (scripts), OpenWolf (forked from cytostack/openwolf)
 **Codebase:** ~19,300 LOC across .ts, .js, .json, .md files (excluding node_modules, dist, .wolf, .planning)
 **Git:** 330+ total commits; v1.1 added 18 commits, 21 files changed, +1,421 / −99 lines
-**Version:** 1.1.0-beta (release tag: `release/1.1.0-beta`)
+**Version:** 1.2.0-beta (release tag: `release/1.2.0-beta`)
 
 ## Key Decisions
 
