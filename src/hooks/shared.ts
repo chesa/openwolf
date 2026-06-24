@@ -13,7 +13,7 @@
 
 export { getWolfDir, getSessionDir, getWorktreeContext, normalizePath } from "./wolf-paths.js";
 
-export { ensureSessionDir, ensureWolfDir, isWolfFile, readMarkdown, appendMarkdown } from "./wolf-files.js";
+export { ensureSessionDir, ensureWolfDir, isWolfFile, readMarkdown, appendMarkdown, appendProposal } from "./wolf-files.js";
 
 export { readJSON, writeJSON, updateJSON } from "./wolf-json.js";
 

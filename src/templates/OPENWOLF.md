@@ -43,7 +43,22 @@ You are working in an OpenWolf-managed project. These rules apply every turn.
 
 ## Cerebrum Learning (MANDATORY — every session)
 
-OpenWolf's value comes from learning across sessions. You MUST update `.wolf/cerebrum.md` whenever you learn something useful. This is not optional.
+OpenWolf's value comes from learning across sessions. You MUST append learnings to the per-session staging file whenever you learn something useful. This is not optional.
+
+**Append to `.wolf/sessions/<worktreeId>/proposed-learnings.md`** (or `.wolf/proposed-learnings.md` in single-repo mode) — NOT directly to `cerebrum.md` or `anatomy.md`. Staging entries are reviewed and merged later. This ensures concurrent sessions cannot overwrite each other's learnings.
+
+**Entry format:**
+
+```
+
+## TIMESTAMP → TARGET
+
+CONTENT
+```
+
+Where `TARGET` is `cerebrum`, `anatomy`, or a subsection name. Each entry is a separate section so they can be parsed and merged independently.
+
+**When to learn (same criteria, new destination):**
 
 **Update `## User Preferences` when the user:**
 - Corrects your approach ("no, do it this way instead")
@@ -69,7 +84,7 @@ OpenWolf's value comes from learning across sessions. You MUST update `.wolf/cer
 - The user explains why they chose approach A over B
 - A trade-off is explicitly discussed
 
-**The bar is LOW.** If in doubt, add it. A cerebrum entry that's slightly redundant costs nothing. A missing entry means the next session repeats the same discovery process.
+**The bar is LOW.** If in doubt, add it. A staging entry that's slightly redundant costs nothing. A missing entry means the next session repeats the same discovery process.
 
 ## Bug Logging (MANDATORY)
 

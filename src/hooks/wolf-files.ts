@@ -85,3 +85,12 @@ export function appendMarkdown(filePath: string, line: string): void {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.appendFileSync(filePath, line, "utf-8");
 }
+
+export function appendProposal(target: "cerebrum" | "anatomy", content: string): void {
+  const sessionDir = getSessionDir();
+  const proposalPath = path.join(sessionDir, "proposed-learnings.md");
+  const dir = path.dirname(proposalPath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const entry = `\n## ${new Date().toISOString()} → ${target}\n\n${content.trim()}\n`;
+  fs.appendFileSync(proposalPath, entry, "utf-8");
+}
