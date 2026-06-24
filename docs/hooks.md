@@ -218,6 +218,7 @@ An ephemeral file in the session directory (`.wolf/` normally, or `.wolf/session
   "files_written": [
     { "file": "src/api.ts", "action": "edit", "tokens": 620, "at": "..." }
   ],
+  "edit_counts": {},
   "anatomy_hits": 4,
   "anatomy_misses": 1,
   "repeated_reads_warned": 1,

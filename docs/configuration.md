@@ -160,23 +160,37 @@ OpenWolf does not use `.env.*` files or `NODE_ENV`-based configuration layers. P
 
 OpenWolf ships with a default `.wolf/.gitignore` template that implements a "mixed commit strategy": only configuration files are tracked in git, while session state and runtime data remain ignored.
 
-**Default template (`src/templates/.gitignore`):**
+**Default template (`src/templates/wolf-gitignore`):**
 
 ```
-*
-!.gitignore
-!OPENWOLF.md
-!config.json
-!identity.md
-!wolf-gitignore
+# OpenWolf — .wolf/.gitignore
+# Per-developer state (don't commit)
+memory.md
+token-ledger.json
+cron-state.json
+designqc-captures/
+designqc-report.json
+suggestions.json
+backups/
+sessions/
+
+# Transient lock files from concurrent-write protection
+*.lock
+
+# Shared knowledge files are NOT listed here, so they ARE committed:
+#   anatomy.md        — project file map
+#   cerebrum.md       — learned conventions and do-not-repeat list
+#   OPENWOLF.md       — operating protocol
+#   config.json       — project configuration
+#   buglog.ndjson     — known bugs and fixes
+#   identity.md       — project identity
+#   STATUS.md         — project status
+#   hooks/            — compiled hook scripts
+#   reframe-frameworks.md
+#   cron-manifest.json  — cron config (cron-state.json is per-dev, above)
 ```
 
-- `*` — ignore everything in `.wolf/` by default
-- `!.gitignore` — track the gitignore itself so users who clone the repo get the correct ignore rules
-- `!OPENWOLF.md` — track the project context document (this is a manually curated file worth sharing)
-- `!config.json` — track the configuration (port assignments, scan intervals, exclude patterns)
-- `!identity.md` — track the project identity (name, description, creation date)
-- `!wolf-gitignore` — track the per-developer state ignore list (ignores session state and runtime data while allowing shared knowledge files to be committed via `.wolf/.gitignore` `!` rules)
+The template implements a "mixed commit strategy": certain development-specific files (memory, token ledger, design captures) are ignored per-developer, while configuration and shared knowledge files remain unignored for team collaboration. Comments in the template document which files are shared (not listed in ignore rules) and which are per-developer.
 
 To track additional files (e.g., `cerebrum.md` for team-wide learnings), add a `!` line to `.wolf/.gitignore`:
 
