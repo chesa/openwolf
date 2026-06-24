@@ -24,7 +24,7 @@
 
 - [x] **Phase 5: Propose-Mode Infrastructure** - appendProposal helper, hook redirect, and OPENWOLF.md protocol update — completed 2026-06-23
 - [x] **Phase 6: Learnings Review CLI** - openwolf learnings list and merge commands with consumed-tracking — completed 2026-06-24
-- [ ] **Phase 7: Concurrency & Integration Tests** - Verify two-session propose-and-merge produces no data loss
+- [x] **Phase 7: Concurrency & Integration Tests** - Verify two-session propose-and-merge produces no data loss — completed 2026-06-24
 
 ## Phase Details
 
@@ -64,7 +64,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 07-01-PLAN.md — concurrency & integration tests (imported 2026-06-24)
+- [x] 07-01-PLAN.md — concurrency & integration tests — completed 2026-06-24
 
 ## Progress
 
@@ -77,4 +77,4 @@ Plans:
 | 4. P2 Cleanup | v1.0 | 1/1 | Complete | 2026-06-06 |
 | 5. Propose-Mode Infrastructure | v1.1 | 1/1 | Complete | 2026-06-23 |
 | 6. Learnings Review CLI | v1.1 | 1/1 | Complete | 2026-06-24 |
-| 7. Concurrency & Integration Tests | v1.1 | 0/1 | Planned | - |
+| 7. Concurrency & Integration Tests | v1.1 | 1/1 | Complete | 2026-06-24 |
