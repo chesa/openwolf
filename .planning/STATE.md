@@ -24,7 +24,7 @@ current_phase_name: ""
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and manageable to keep synced with upstream.
-**Current focus:** Phase 07 — concurrency-integration-tests
+**Current focus:** None — milestone v1.1 shipped; awaiting next milestone (`/gsd-new-milestone`)
 
 ## Current Position
 
