@@ -31,28 +31,38 @@ Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and man
 - ✓ .wolf/.gitignore template with mixed commit strategy — v1.0
 - ✓ Documentation update (configuration.md, getting-started.md) — v1.0
 - ✓ `pnpm clean` script with explicit path guards — v1.0
+- ✓ `appendProposal()` per-session staging helper — v1.1
+- ✓ Hooks redirect cerebrum/anatomy writes to propose-mode — v1.1
+- ✓ OPENWOLF.md protocol updated for propose-mode — v1.1
+- ✓ `openwolf learnings` list + interactive merge CLI — v1.1
+- ✓ `openwolf learnings merge` with withFileLock-protected writes — v1.1
+- ✓ Post-merge archive to `merged-learnings.md` — v1.1
+- ✓ Concurrency accumulation test (multi-session merge, lock asserted) — v1.1
+- ✓ Integration enumeration test (edge cases: empty, missing staging files) — v1.1
 
-## Current Milestone: v1.1 Shared-Checkout Concurrency — Pillar C
+### Active
 
-**Goal:** Add a propose-and-review layer for shared markdown (`cerebrum.md`, `anatomy.md`) so concurrent Claude Code sessions cannot silently overwrite each other's learnings.
+(None — start next milestone with `/gsd-new-milestone`)
 
-**Target features:**
-- C1 — `appendProposal()` staging helper: hooks write to per-session `.wolf/sessions/<id>/proposed-learnings.md` instead of directly editing shared markdown
-- C2 — Protocol update: `OPENWOLF.md` template and `claude-rules-openwolf.md` instruct Claude to use the proposal path, not direct edits
-- C3 — `openwolf learnings` CLI: lists pending proposals across all sessions; interactive merge into `cerebrum.md` and `anatomy.md`
-- Tests: C-level concurrency (two sessions propose → both survive merge intact)
+### Out of Scope
 
-**Active requirements:** see REQUIREMENTS.md
+| Feature | Reason |
+|---------|--------|
+| `memory.md` propose-mode | Per-dev append-only log; interleaving acceptable; file is gitignored |
+| Scanner-initiated `anatomy.md` rewrites | Authoritative single-process operation; no concurrency concern |
+| Dashboard learning panel | Deferred to v1.2 — ship CLI first (DASH-01, DASH-02) |
+| Real-time CRDT semantics | Human-merge (propose-mode) is the chosen model |
 
 ## Status
-**v1.0 shipped** (2026-06-07) — all 5 phases complete (8 plans total). The toolkit is ready for team adoption.
-**v1.1 in planning** (2026-06-23) — Pillar C: propose-mode for shared markdown.
+**v1.0 shipped** (2026-06-07) — 5 phases, 8 plans. Team toolkit ready.
+**v1.1 shipped** (2026-06-24) — 3 phases, 3 plans. Propose-mode + learnings CLI + concurrency tests.
 
 ## Context
 
 **Tech stack:** TypeScript (Node.js), pnpm, Bash (scripts), OpenWolf (forked from cytostack/openwolf)
-**Codebase:** ~17,890 LOC across .ts, .js, .json, .md files (excluding node_modules, dist, .wolf, .planning)
-**Git:** 312 total commits, ~4,500 insertions in toolkit milestone
+**Codebase:** ~19,300 LOC across .ts, .js, .json, .md files (excluding node_modules, dist, .wolf, .planning)
+**Git:** 330+ total commits; v1.1 added 18 commits, 21 files changed, +1,421 / −99 lines
+**Version:** 1.1.0-beta (release tag: `release/1.1.0-beta`)
 
 ## Key Decisions
 
@@ -65,6 +75,11 @@ Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and man
 | D-05: Read-only divergence reporter | No auto-merge/rebase; 170+ commits need human judgment | ✓ Good |
 | D-06: Zero-consumer-changes for lock wrapper | 6 hook consumers unchanged | ✓ Good |
 | D-07: Dual-path resolution (metadata vs hooks dirs) | Hooks always deploy to projectRoot/.wolf/hooks/ | ✓ Good |
+| D-08: Propose-mode over direct edit for shared markdown | Per-session staging eliminates contention; human reviews via CLI | ✓ Good |
+| D-09: Dashboard deferred to v1.2 — CLI ships first | Reduced v1.1 scope; DASH-01/DASH-02 tracked as follow-on | ✓ Good |
+| D-10: Accumulation test, not cross-process concurrency test | In-process JS cannot prove cross-process safety; withFileLock assertion guards the contract | ✓ Good |
+| D-11: Semver bump 1.0.5 → 1.1.0 for format-breaking change | NDJSON buglog + new CLI/API = minor, not patch | ✓ Good |
+| D-12: release/ tag prefix for npm installs | Distinguishes package releases from GSD milestone tags (v1.0, v1.1) | ✓ Good |
 
 ## Evolution
 
@@ -88,6 +103,8 @@ This document evolves at phase transitions and milestone boundaries.
 - Specification (v1.1): `docs/superpowers/specs/2026-06-23-shared-checkout-concurrency-design.md`
 - Archive: `.planning/milestones/v1.0-ROADMAP.md`
 - Archive: `.planning/milestones/v1.0-REQUIREMENTS.md`
+- Archive: `.planning/milestones/v1.1-ROADMAP.md`
+- Archive: `.planning/milestones/v1.1-REQUIREMENTS.md`
 
 ---
-*Last updated: 2026-06-23 — v1.1 milestone started*
+*Last updated: 2026-06-24 after v1.1 milestone*

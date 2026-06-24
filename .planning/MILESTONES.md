@@ -1,5 +1,17 @@
 # Milestones
 
+## v1.1 Shared-Checkout Concurrency — Pillar C (Shipped: 2026-06-24)
+
+**Phases completed:** 3 phases, 3 plans, 7 tasks
+
+**Key accomplishments:**
+
+- 5 — Propose-Mode Infrastructure
+- 6 — Learnings Review CLI
+- Accumulation merge and integration enumeration tests for the propose-and-merge workflow
+
+---
+
 ## v1.0 CHESA Fork Team Toolkit (Shipped: 2026-06-07)
 
 **Phases completed:** 5 phases, 8 plans
