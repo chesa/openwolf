@@ -61,7 +61,10 @@ Plans:
   1. A concurrency test that simulates two sessions each appending a distinct proposal runs `openwolf learnings merge` once and asserts both entries appear in `cerebrum.md` with no loss
   2. An integration test asserts that `openwolf learnings` correctly enumerates proposals from multiple session directories, including edge cases (empty staging file, missing session dir)
   3. All new tests pass in the existing vitest suite (`pnpm test`) with no regressions
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 07-01-PLAN.md — concurrency & integration tests (imported 2026-06-24)
 
 ## Progress
 
@@ -74,4 +77,4 @@ Plans:
 | 4. P2 Cleanup | v1.0 | 1/1 | Complete | 2026-06-06 |
 | 5. Propose-Mode Infrastructure | v1.1 | 0/1 | Planning | - |
 | 6. Learnings Review CLI | v1.1 | 0/1 | Planned | - |
-| 7. Concurrency & Integration Tests | v1.1 | 0/? | Not started | - |
+| 7. Concurrency & Integration Tests | v1.1 | 0/1 | Planned | - |

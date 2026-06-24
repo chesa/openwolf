@@ -43,7 +43,7 @@ Progress: [░░░░░░░░░░] 0% (v1.1 milestone; v1.0 complete)
 |-------|-------|-------|----------|
 | 5. Propose-Mode Infrastructure | TBD | - | - |
 | 6. Learnings Review CLI | TBD | - | - |
-| 7. Concurrency & Integration Tests | TBD | - | - |
+| 7. Concurrency & Integration Tests | 1 (planned) | - | - |
 
 *Updated after each plan completion*
 
