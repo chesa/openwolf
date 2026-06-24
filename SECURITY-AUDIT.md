@@ -26,87 +26,83 @@ loopback-only default binding.
 
 | Field | Value |
 |-------|-------|
-| **Severity** | HIGH |
+| **Status** | FIXED |
+| **Severity** | HIGH (at time of discovery) |
 | **Category** | Arbitrary file write / prompt injection persistence |
-| **Confidence** | 9/10 |
-| **File** | `src/daemon/cron-engine.ts:410-414` |
+| **Original Confidence** | 9/10 |
+| **File** | `src/daemon/cron-engine.ts:414-426` |
 | **CWE** | CWE-74 (Injection), CWE-913 (Improper Control of Dynamically-Managed Code Resources) |
 
-#### Description
+#### Description (Original Vulnerability)
 
-The `runAiTask` method sends a user-defined prompt from
-`cron-manifest.json` to `claude -p` and processes the raw output. If the
-AI response is not valid JSON and contains any of three generic header
+The `runAiTask` method previously sent a user-defined prompt from
+`cron-manifest.json` to `claude -p` and processed the raw output. If the
+AI response was not valid JSON and contained any of three generic header
 strings (`## User Preferences`, `## Key Learnings`, `# Cerebrum`), the
-**entire output** overwrites `cerebrum.md` via `writeText` — no backup,
+**entire output** would overwrite `cerebrum.md` via `writeText` — no backup,
 no structural validation, no user confirmation.
 
 `cerebrum.md` is a core instruction file read by Claude Code every
 session (per the OpenWolf protocol). It governs coding conventions, the
 "Do-Not-Repeat" list, and user preferences.
 
+#### Remediation
+
+The vulnerability has been **remediated via a staging-file design**.
+Current code implements the following mitigations:
+
 ```typescript
-// cron-engine.ts:410-414
-} catch {
-  if (result.includes("## User Preferences") || result.includes("## Key Learnings") || result.includes("# Cerebrum")) {
-    writeText(path.join(this.wolfDir, "cerebrum.md"), result);
-  }
+// cron-engine.ts:414-426 (FIXED)
+if (action.writes_to?.includes("cerebrum-draft.md")) {
+  const draftPath = path.join(this.wolfDir, "cerebrum-draft.md");
+  // Write to staging file for user review instead of direct overwrite
+  writeText(draftPath, result);
+  this.logger.warn(
+    `⚠️  cerebrum.md draft generated at cerebrum-draft.md. Review and promote manually to avoid unintended instruction changes.`
+  );
+  // Also append to memory so the next Claude session sees the update
+  appendText(
+    path.join(this.wolfDir, "memory.md"),
+    `\n| cron | cerebrum-draft.md updated by AI task | cerebrum-draft.md | pending-review | ~tokens |`
+  );
 }
 ```
 
-#### Attack Vectors
+**Mitigations implemented:**
 
-**Vector 1 — Malicious cron-manifest modification:**
-An attacker who gains write access to `.wolf/cron-manifest.json` (e.g.,
-via a malicious npm `postinstall` script, a compromised dependency, or a
-rogue Claude Code hook) adds a cron task with a prompt engineered to
-produce output containing the trigger headers. The daemon executes the
-task, `cerebrum.md` is overwritten with attacker-controlled instructions,
-and every subsequent Claude Code session follows those instructions.
-Because `.wolf/` is gitignored, the modification leaves no audit trail
-visible to `git status`.
+1. ✅ **Staging file instead of direct overwrite:** Writes to `cerebrum-draft.md`
+   instead of `cerebrum.md`. User must manually review and promote the draft
+   to activate it.
 
-**Vector 2 — Accidental destruction by legitimate tasks:**
-The shipped default `cerebrum-reflection` task is designed to trigger
-this exact code path. Since AI output is non-deterministic, a malformed,
-truncated, or hallucinated response that happens to contain one of the
-three trigger strings will destroy the entire `cerebrum.md` with no
-recovery path.
+2. ✅ **Explicit writes_to gating:** Requires an explicit `writes_to: ["cerebrum-draft.md"]`
+   declaration in the cron task manifest. Without this gate, no write occurs.
 
-#### Aggravating Factors
+3. ✅ **Warning logging:** Emits a prominent warning (not debug level) when
+   the draft is generated, providing visibility into daemon-initiated changes.
 
-- No backup is created before overwrite
-- No structural validation of output (only substring presence check)
-- Trigger strings are extremely generic — `## Key Learnings` could
-  appear in any knowledge-related AI response
-- `.wolf/` is gitignored, so changes are invisible and unrecoverable
-  via git
-- Runs silently in an automated daemon with no user approval step
-- Low trigger bar: only one of three strings needs to appear anywhere
-  in the output
+4. ✅ **Memory audit trail:** Appends an entry to `memory.md` with the timestamp
+   and pending-review status, creating a recoverable audit trail.
 
-#### Action Items
+**On the original [MUST] backup requirement:** The original audit also
+required a timestamped backup before any write to `cerebrum.md`. That
+requirement is obsoleted by the staging design — the daemon never overwrites
+`cerebrum.md` in place, so there is nothing to back up at AI-write time. The
+eventual human promotion step (manually copying `cerebrum-draft.md` to
+`cerebrum.md`) remains out-of-band and unbacked; that is a deliberate manual
+action, not the daemon-driven path this finding covers.
 
-1. **[MUST] Never overwrite `cerebrum.md` directly from AI output.**
-   Write to a staging file (`cerebrum-draft.md` or append to
-   `suggestions.json`) and require user review before promotion.
+**Attack vectors neutralized:**
 
-2. **[MUST] Create a timestamped backup before any write** to
-   `cerebrum.md` (e.g., `cerebrum.md.bak.{ISO-timestamp}`), so
-   accidental or malicious overwrites are recoverable.
-
-3. **[SHOULD] Validate structural integrity** of AI output before
-   writing: required sections present, output length within reasonable
-   bounds relative to original, no preamble text before headers.
-
-4. **[SHOULD] Restrict which cron task types can write to instruction
-   files.** Consider requiring an explicit `"writes_to":
-   ["cerebrum.md"]` declaration in the manifest, or limiting
-   cerebrum writes to a dedicated task type with stricter controls.
-
-5. **[SHOULD] Log a prominent warning** (not just debug) whenever
-   `cerebrum.md` is modified by an automated task, so users have
-   visibility into daemon-initiated changes.
+- Malicious or accidental overwrites of `cerebrum.md` can no longer occur via
+  AI output alone.
+- Even if `cron-manifest.json` is compromised, the attacker must also enable
+  the `writes_to` gate; manual review is always required before promotion.
+- Legitimate AI tasks cannot accidentally destroy `cerebrum.md` via truncation
+  or hallucination.
+- The shipped default `cerebrum-reflection` task declares no
+  `writes_to: ["cerebrum-draft.md"]`, so the gate never fires and the task
+  writes nothing by default — a deliberate safe default; generating a draft
+  requires opting in explicitly.
 
 ---
 

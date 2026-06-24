@@ -139,7 +139,7 @@ OpenWolf hooks run as separate Node.js processes. When multiple hooks execute co
 
 - Each write acquires an exclusive lock using `writeFileSync` with `{ flag: "wx" }` (atomic create-or-fail)
 - Lock files contain the PID and timestamp of the holder (reliable on network filesystems)
-- If another process holds the lock, the writer retries 3 times with 100ms backoff
+- If another process holds the lock, the writer retries 5 times with 80ms base delay plus random jitter (0–70ms)
 - If the lock is stale (older than 10 seconds — matching the hook timeout), it is automatically removed
 - After all retries are exhausted, the write proceeds **without a lock** and a warning is printed to stderr (preferring hook responsiveness over strict write serialization)
 

@@ -69,9 +69,9 @@ export async function statusCommand(): Promise<void> {
     }
   } catch { /* ignore */ }
   if (hookScriptCount > 0) {
-    console.log(`  ✓ ${hookScriptCount} hook scripts present`);
+    console.log(`  ✓ ${hookScriptCount} hook module files present`);
   } else {
-    console.log(`  ✗ No hook scripts found`);
+    console.log(`  ✗ No hook module files found`);
   }
 
   // Claude settings check

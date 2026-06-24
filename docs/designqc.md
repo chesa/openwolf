@@ -35,11 +35,11 @@ If no running server is found, Design QC reads your `package.json` scripts and l
 
 ### 3. Route Detection
 
-Design QC scans your project for route files:
+Design QC scans your project for route files by checking these directories:
 
-- **Next.js / Remix** -- `pages/` and `app/` directories
-- **Vite / React Router** -- `pages/`, `app/`, `src/pages/`, and `src/app/` directories
-- **Astro** -- `src/pages/` directory
+- `pages/`, `app/`, `src/pages/`, `src/app/`
+
+This generic detection works with most frameworks (Next.js, Remix, Vite, React Router, Astro, and others) without requiring framework-specific configuration.
 
 Detected routes are queued for capture unless you specify `--routes` manually.
 

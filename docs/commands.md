@@ -13,8 +13,8 @@ openwolf init
 
 **What it does:**
 1. Detects the project root (looks for `.git`, `package.json`, etc.)
-2. Creates `.wolf/` with 14 template files
-3. Copies 8 hook scripts to `.wolf/hooks/`
+2. Creates `.wolf/` with 15 template files
+3. Copies 16 hook module files (6 lifecycle hooks + 10 supporting modules) to `.wolf/hooks/`
 4. Registers 6 Claude Code hooks in `.claude/settings.json`
 5. Creates `.claude/rules/openwolf.md`
 6. Prepends the OpenWolf snippet to `CLAUDE.md`
@@ -42,8 +42,8 @@ openwolf status
 OpenWolf Status
 ===============
 
-  ✓ All 9 shared knowledge files present
-  ✓ All 8 hook scripts present
+  ✓ All 15 template files present
+  ✓ All 16 hook module files present
   ✓ Claude Code hooks registered (6 matchers)
 
 Token Stats:
@@ -357,6 +357,85 @@ Found 2 matching bug(s):
 ```
 
 Searches across: error messages, root causes, fixes, tags, and file paths.
+
+---
+
+## `openwolf learnings`
+
+Manage staged learnings — proposed updates to shared knowledge files across sessions.
+
+### `openwolf learnings list`
+
+List all pending proposal entries across all sessions.
+
+```bash
+openwolf learnings list
+```
+
+**Output:**
+```
+Session ID     Timestamp                      Target       Preview
+────────────── ────────────────────────────── ──────────── ────────────────────────────────────────────────────────────
+session-abc123 2026-03-15T14:30:00.000Z       cerebrum     When the user asks to change UI framework: read .wolf/...
+session-def456 2026-03-16T09:15:00.000Z       anatomy      New file: src/components/Form.tsx — Input form component with va...
+session-abc123 2026-03-16T11:45:00.000Z       anatomy      Updated: src/hooks/useQuery.ts — Data fetching logic (~450 tok)
+```
+
+Each row shows:
+- **Session ID** — The OpenWolf session that generated the proposal
+- **Timestamp** — When the proposal was created
+- **Target** — Destination file: `cerebrum` or `anatomy`
+- **Preview** — First 60 characters of the proposal content
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--session <id>` | Filter proposals from a specific session |
+
+**Example:**
+```bash
+# Show proposals from one session only
+openwolf learnings list --session session-abc123
+```
+
+### `openwolf learnings merge`
+
+Interactively select and merge proposals into shared knowledge files.
+
+```bash
+openwolf learnings merge
+```
+
+**Workflow:**
+
+1. Lists all pending proposals with indices (1, 2, 3, ...)
+2. Prompts you to select proposals:
+   - Enter individual numbers: `1,3,5`
+   - Enter a range: `1-5`
+   - Enter `a` to select all
+   - Enter `q` to cancel
+3. Shows a confirmation prompt
+4. Merges selected proposals into their target files (`cerebrum.md` or `anatomy.md`)
+5. Archives merged entries in `.wolf/sessions/{sessionId}/merged-learnings.md`
+6. Removes merged entries from the staging file (`.wolf/sessions/{sessionId}/proposed-learnings.md`)
+
+**Example:**
+```bash
+openwolf learnings merge
+
+  1   [session-abc123] 2026-03-15T14:30:00Z → cerebrum
+      When the user asks to change UI framework: read .wolf/reframe-frameworks.md
+  2   [session-def456] 2026-03-16T09:15:00Z → anatomy
+      New file: src/components/Form.tsx — Input form component
+  3   [session-abc123] 2026-03-16T11:45:00Z → anatomy
+      Updated: src/hooks/useQuery.ts — Data fetching logic (~450 tok)
+
+Enter numbers to merge (e.g. 1,3,5 or 1-5), or 'a' for all, or 'q' to cancel: 1,3
+Merge 2 proposals? [y/N] y
+
+Merged 2 proposal(s) into cerebrum.md/anatomy.md
+```
 
 ---
 
