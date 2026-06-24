@@ -38,7 +38,7 @@ Chronological log of everything Claude has done. Each action is a card with time
 Two charts and waste alerts:
 
 - **Usage Over Time**: area chart showing input (reads) and output (writes) tokens per session
-- **Token Comparison**: horizontal bar chart comparing OpenClaw + Claude, Claude CLI (without OpenWolf), and OpenWolf + Claude CLI
+- **Token Comparison**: horizontal bar chart comparing Claude CLI (no context mgmt), Claude CLI (without OpenWolf), and OpenWolf + Claude CLI
 - **Waste Alerts**: flagged patterns like repeated reads, unnecessary full-file reads, memory bloat
 
 ### Cron Control Center

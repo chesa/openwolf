@@ -18,12 +18,12 @@ export function TokenUsage({ data }: { data: WolfData }) {
   const totalTracked = lt.total_tokens_estimated;
   const savings = lt.estimated_savings_vs_bare_cli;
   const withoutWolf = totalTracked + savings;
-  // OpenClaw adds overhead — uses ~30% MORE tokens than bare CLI due to extra turns/sessions
-  const withOpenClaw = Math.round(withoutWolf * 1.3);
+  // Overhead scenario — ~30% MORE tokens than bare CLI due to extra turns/sessions
+  const withOverhead = Math.round(withoutWolf * 1.3);
   const savingsPercent = withoutWolf > 0 ? Math.round((savings / withoutWolf) * 100) : 0;
 
   const comparisonData = [
-    { name: "OpenClaw + Claude", tokens: withOpenClaw, fill: "#f87171" },
+    { name: "Claude CLI (no context mgmt)", tokens: withOverhead, fill: "#f87171" },
     { name: "Claude CLI (without OpenWolf)", tokens: withoutWolf, fill: "#fbbf24" },
     { name: "OpenWolf + Claude CLI", tokens: totalTracked, fill: "#34d399" },
   ];

@@ -14,7 +14,7 @@ progress:
   total_plans: 3
   completed_plans: 3
   percent: 100
-current_phase_name: concurrency-integration-tests
+current_phase_name: ""
 ---
 
 # Project State: CHESA Fork Team Toolkit

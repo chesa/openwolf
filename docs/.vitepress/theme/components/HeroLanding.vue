@@ -206,7 +206,7 @@ const archFiles = [
             <h3 class="ow-why__comparison-title">Same project. Same prompts. Different setups.</h3>
             <div class="ow-why__bar-group">
               <div class="ow-why__bar-row">
-                <span class="ow-why__bar-label">OpenClaw + Claude</span>
+                <span class="ow-why__bar-label">Claude CLI (no context mgmt)</span>
                 <div class="ow-why__bar-track">
                   <div class="ow-why__bar ow-why__bar--red" style="width: 100%"></div>
                 </div>
