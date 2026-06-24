@@ -165,5 +165,27 @@ export function createProgram(): Command {
       bugSearch(term);
     });
 
+  // --- Learnings command ---
+  const learnings = program
+    .command("learnings")
+    .description("Manage staged learnings");
+
+  learnings
+    .command("list")
+    .description("List pending proposal entries across all sessions")
+    .option("--session <id>", "Filter by session ID")
+    .action(async (opts: { session?: string }) => {
+      const { learningsCommand } = await import("./learnings-cmd.js");
+      learningsCommand(opts.session);
+    });
+
+  learnings
+    .command("merge")
+    .description("Interactively merge selected proposals into shared markdown")
+    .action(async () => {
+      const { learningsMergeCommand } = await import("./learnings-cmd.js");
+      await learningsMergeCommand();
+    });
+
   return program;
 }
