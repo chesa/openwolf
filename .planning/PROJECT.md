@@ -32,8 +32,21 @@ Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and man
 - ✓ Documentation update (configuration.md, getting-started.md) — v1.0
 - ✓ `pnpm clean` script with explicit path guards — v1.0
 
+## Current Milestone: v1.1 Shared-Checkout Concurrency — Pillar C
+
+**Goal:** Add a propose-and-review layer for shared markdown (`cerebrum.md`, `anatomy.md`) so concurrent Claude Code sessions cannot silently overwrite each other's learnings.
+
+**Target features:**
+- C1 — `appendProposal()` staging helper: hooks write to per-session `.wolf/sessions/<id>/proposed-learnings.md` instead of directly editing shared markdown
+- C2 — Protocol update: `OPENWOLF.md` template and `claude-rules-openwolf.md` instruct Claude to use the proposal path, not direct edits
+- C3 — `openwolf learnings` CLI: lists pending proposals across all sessions; interactive merge into `cerebrum.md` and `anatomy.md`
+- Tests: C-level concurrency (two sessions propose → both survive merge intact)
+
+**Active requirements:** see REQUIREMENTS.md
+
 ## Status
 **v1.0 shipped** (2026-06-07) — all 5 phases complete (8 plans total). The toolkit is ready for team adoption.
+**v1.1 in planning** (2026-06-23) — Pillar C: propose-mode for shared markdown.
 
 ## Context
 
@@ -53,10 +66,28 @@ Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and man
 | D-06: Zero-consumer-changes for lock wrapper | 6 hook consumers unchanged | ✓ Good |
 | D-07: Dual-path resolution (metadata vs hooks dirs) | Hooks always deploy to projectRoot/.wolf/hooks/ | ✓ Good |
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ## Reference
-- Specification: `docs/superpowers/specs/2026-06-06-chesa-fork-team-toolkit-design.md`
+- Specification (v1.0): `docs/superpowers/specs/2026-06-06-chesa-fork-team-toolkit-design.md`
+- Specification (v1.1): `docs/superpowers/specs/2026-06-23-shared-checkout-concurrency-design.md`
 - Archive: `.planning/milestones/v1.0-ROADMAP.md`
 - Archive: `.planning/milestones/v1.0-REQUIREMENTS.md`
 
 ---
-*Last updated: 2026-06-07 after v1.0 milestone*
+*Last updated: 2026-06-23 — v1.1 milestone started*
