@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Shared-Checkout Concurrency — Pillar C
 status: planning
-last_updated: "2026-06-24T03:56:11.671Z"
-last_activity: 2026-06-24
+last_updated: "2026-06-23"
+last_activity: 2026-06-23
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -15,59 +15,65 @@ progress:
 
 # Project State: CHESA Fork Team Toolkit
 
-## Current Status
-
-All 5 phases complete.
-
-## Completed Plans
-
-03-01: Dynamic hook discovery — Complete (3/3 tasks)
-
-- `src/cli/hook-copy.ts` created with 4 exported functions
-- `init.ts`, `update.ts`, `status.ts` updated to use dynamic directory scan
-- `HOOK_FILES` constant removed from `hook-settings.ts`
-
-03-02: Advisory file locking — Complete (2/2 tasks)
-
-- `src/hooks/wolf-lock.ts` with `withFileLock`, `acquireLock`, `releaseLock`
-- `writeJSON` wrapped in `withFileLock` in `wolf-json.ts`
-- Re-exported through `shared.ts`
-
-03-03: OPENWOLF_METADATA_DIR — Complete (3/3 tasks)
-
-- `wolf-paths.ts` `getWolfDir()` checks env var
-- `init.ts` and `update.ts` resolve metadata directory from env var
-- `Hooks always deploy to `projectRoot/.wolf/hooks/`
-
-03-04: .wolf/.gitignore template — Complete (2/2 tasks)
-
-- `src/templates/.gitignore` with `*` + 4 opt-in exceptions
-- `init.ts` writes template via `ALWAYS_OVERWRITE`; old `writeGitIgnore()` call removed
-
-03-05: Documentation update — Complete (2/2 tasks)
-
-- `docs/configuration.md` updated with new env vars and `.wolf/.gitignore` section
-- `docs/getting-started.md` updated with mixed commit strategy and concurrent write safety sections
-
-04-01: P2 Cleanup — Complete (2/2 tasks)
-
-- `pnpm clean` script added to `package.json` with explicit path guards
-- `.DS_Store` files deleted from repo root and `.claude/`
-
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-07)
+See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and manageable to keep synced with upstream.
-**Current focus:** Planning next milestone
+**Current focus:** Phase 5 — Propose-Mode Infrastructure (ready to plan)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 5 of 7 (Propose-Mode Infrastructure)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-24 — Milestone v1.1 started
+Status: Ready to plan
+Last activity: 2026-06-23 — v1.1 roadmap created (Phases 5-7)
 
-## Operator Next Steps
+Progress: [░░░░░░░░░░] 0% (v1.1 milestone; v1.0 complete)
 
-- Start the next milestone with /gsd-new-milestone
+## Performance Metrics
+
+**Velocity (v1.0 reference):**
+- Total plans completed: 10
+- v1.0 phases: 5 phases, 8 plans
+
+**v1.1 By Phase:**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| 5. Propose-Mode Infrastructure | TBD | - | - |
+| 6. Learnings Review CLI | TBD | - | - |
+| 7. Concurrency & Integration Tests | TBD | - | - |
+
+*Updated after each plan completion*
+
+## Accumulated Context
+
+### Decisions
+
+Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
+
+- D-06 (v1.0): Zero-consumer-changes for lock wrapper — withFileLock already available from Phase 1 Pillar A; no new lock infrastructure needed in v1.1
+- v1.1 design: Dashboard deferred to v1.2 — CLI ships first; staging path is `.wolf/sessions/<worktreeId|sessionId>/proposed-learnings.md`
+- v1.1 design: `openwolf learnings merge` is the sole writer of `cerebrum.md` and `anatomy.md`; all hooks redirect to `appendProposal()`
+
+### Pending Todos
+
+None yet.
+
+### Blockers/Concerns
+
+None yet.
+
+## Deferred Items
+
+| Category | Item | Status | Deferred At |
+|----------|------|--------|-------------|
+| Dashboard | DASH-01, DASH-02 (learning panel) | Deferred to v1.2 | v1.1 planning |
+
+## Session Continuity
+
+Last session: 2026-06-23
+Stopped at: Roadmap created — Phases 5-7 defined; ready to plan Phase 5
+Resume file: None

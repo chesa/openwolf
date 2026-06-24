@@ -44,24 +44,22 @@
 
 ## Traceability
 
-Populated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROP-01 | — | Pending |
-| PROP-02 | — | Pending |
-| PROTO-01 | — | Pending |
-| MERGE-01 | — | Pending |
-| MERGE-02 | — | Pending |
-| MERGE-03 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
+| PROP-01 | Phase 5 | Pending |
+| PROP-02 | Phase 5 | Pending |
+| PROTO-01 | Phase 5 | Pending |
+| MERGE-01 | Phase 6 | Pending |
+| MERGE-02 | Phase 6 | Pending |
+| MERGE-03 | Phase 6 | Pending |
+| TEST-01 | Phase 7 | Pending |
+| TEST-02 | Phase 7 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 8 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 8 ⚠️
+- Mapped to phases: 8 (100%) ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-23*
-*Last updated: 2026-06-23 after initial definition*
+*Last updated: 2026-06-23 — phase assignments added after roadmap creation*
