@@ -24,7 +24,6 @@ describe("learnings integration - learningsCommand", () => {
   afterEach(() => {
     rmSync(tmpDir, { recursive: true, force: true });
     vi.clearAllMocks();
-    logSpy.mockClear();
   });
 
   it("enumerates proposals from multiple session directories", async () => {
