@@ -1,6 +1,6 @@
 # Project: CHESA Fork Team Toolkit
 
-## Overview
+## What This Is
 The CHESA Fork Team Toolkit is a set of enhancements for the OpenWolf project (forked from `cytostack/openwolf`) designed to support team adoption, streamline fork management, and ensure concurrent-write safety.
 
 ## Core Value
