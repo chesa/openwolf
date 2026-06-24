@@ -48,7 +48,10 @@
   2. `openwolf learnings merge` interactively merges selected proposals into `cerebrum.md` and/or `anatomy.md`; the write is protected by `withFileLock`
   3. After a successful merge, processed entries move from `proposed-learnings.md` to `merged-learnings.md` in the same session directory; the staging file contains only unmerged proposals
   4. No other process writes `cerebrum.md` or `anatomy.md` — the merge command is the single writer
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 06-01-PLAN.md — openwolf learnings list and merge commands with consumed-tracking archive
 
 ### Phase 7: Concurrency & Integration Tests
 **Goal**: Automated tests confirm the propose-and-merge workflow survives concurrent sessions without data loss
@@ -70,5 +73,5 @@
 | 3. .wolf/ Team Workflow Improvements | v1.0 | 5/5 | Complete | 2026-06-06 |
 | 4. P2 Cleanup | v1.0 | 1/1 | Complete | 2026-06-06 |
 | 5. Propose-Mode Infrastructure | v1.1 | 0/1 | Planning | - |
-| 6. Learnings Review CLI | v1.1 | 0/? | Not started | - |
+| 6. Learnings Review CLI | v1.1 | 0/1 | Planned | - |
 | 7. Concurrency & Integration Tests | v1.1 | 0/? | Not started | - |
