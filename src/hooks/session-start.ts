@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getWolfDir, ensureWolfDir, getSessionDir, ensureSessionDir, getWorktreeContext, writeJSON, appendMarkdown, updateJSON, timestamp, timeShort, countBugEntries } from "./shared.js";
+import { selfHealAnatomy } from "./wolf-selfheal.js";
 
 async function main(): Promise<void> {
   ensureWolfDir();
@@ -97,6 +98,10 @@ async function main(): Promise<void> {
   } catch (err) {
     process.stderr.write(`OpenWolf: buglog check failed (${err instanceof Error ? err.message : String(err)})\n`);
   }
+
+  // Self-heal anatomy.md when missing/stub (e.g. a fresh clone — anatomy is now
+  // a gitignored, regenerated artifact). Best-effort background rescan.
+  selfHealAnatomy(wolfDir);
 
   // Increment total_sessions in token-ledger
   initializeSessionLedger(sessionDir);
