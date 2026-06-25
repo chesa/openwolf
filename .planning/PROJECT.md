@@ -109,6 +109,10 @@ v1.2 — Shared-Context Tracking & Curation (see `.planning/REQUIREMENTS.md`):
 | D-14: Remove STATUS.md; OpenWolf stays framework-blind | Status belongs to the execution layer (abandoned after 225 acme sessions); negative boundary + optional config.json execution_layer slot, no tool names hardcoded | ✓ Good |
 | D-15: R7 split — capture via stop hook, promotion at the Git boundary | Capture is continuous via the universal Claude Code `stop` primitive; promotion gated by a pull-based status count + opt-in exit-code check wired to pre-push/PR/CI — blind to both execution layer and VCS/CI host. Avoids the session-end lifecycle-modeling trap | ✓ Good |
 | D-16: Defer R10/R12 to a later rollout milestone | Provenance + pantry-owner role are behavioral/org-design; don't block core engine code on team rituals | ✓ Good |
+| D-17: Untrack compiled `hooks/` (Q4) | Derived build output; committing JS artifacts causes merge conflicts + path noise — rebuild on clone via self-heal / `openwolf update` | ✓ Good |
+| D-18: R6 — keep `ignore` dep CLI/daemon-only; zero-dep matcher in the hook | Honors C2 (no deps in hook build); full scan stays the authoritative backstop; accept the hook/scanner `.gitignore` engine split | ✓ Good |
+| D-19: R7b — `openwolf learnings check` subcommand (not a `--check` flag) | Keeps the top-level CLI namespace clean; scales with future `learnings list/prune` | ✓ Good |
+| D-20: R9 — `status` is read-only; baseline updates only via sanctioned curation | A read command must not mutate state; baseline = "last *sanctioned* content" (merge + explicit `learnings accept` + bootstrap-on-missing), not "last content a status run observed" | ✓ Good |
 
 ## Evolution
 
