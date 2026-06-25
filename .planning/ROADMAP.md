@@ -50,7 +50,9 @@
   2. A verification report records every behavior mapped to its `develop-preview` commit (R1→`cac925a`, R2→`c430a9b`, R3→`cac925a`, R5→`9f63395`, Q1→`3ef255c`, Q2→`2f3e1f6`).
   3. R3's out-of-project `../` guard and R5's exclude semantics are confirmed to still hold — the foundation Phase 10 (R6) extends.
   4. Nothing is re-implemented; the phase produces evidence, not code changes.
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 08-01-PLAN.md — Lock R3/R5 with acme-grounded regression tests; confirm R2/Q1/Q2 suites green; capture field-data audit
+- [ ] 08-02-PLAN.md — Author 08-VERIFICATION.md commit↔behavior record (PASS/FAIL + evidence for all six P0 behaviors)
 
 ### Phase 9: Tracking Hygiene — One Authoritative Ignore List
 **Goal**: Re-base the `.wolf/` commit model on authored-vs-derived (D-13) by establishing a single authoritative ignore list, so committed shared context contains only what a named human can own and validate.
