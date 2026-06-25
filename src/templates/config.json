@@ -27,7 +27,8 @@
         ".output",
         "*.min.js",
         "*.min.css"
-      ]
+      ],
+      "respect_gitignore": false
     },
     "token_audit": {
       "enabled": true,

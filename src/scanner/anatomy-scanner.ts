@@ -5,6 +5,11 @@ import { readJSON, writeText } from "../utils/fs-safe.js";
 import { normalizePath } from "../utils/paths.js";
 import { parseAnatomy, type AnatomyEntry } from "../hooks/shared.js";
 import { CODE_EXTENSIONS, PROSE_EXTENSIONS } from "../utils/extensions.js";
+// `ignore` powers the opt-in respect_gitignore feature. It is a CLI/daemon-only
+// dependency: this module (src/scanner) must NEVER be imported by a hook
+// (src/hooks compiles standalone with no node_modules), or this require would
+// fail at runtime — the same failure class as the WOLF_ROOT MODULE_NOT_FOUND bug.
+import ignore, { type Ignore } from "ignore";
 
 interface WolfConfig {
   version?: number;
@@ -13,6 +18,7 @@ interface WolfConfig {
       max_description_length?: number;
       max_files?: number;
       exclude_patterns?: string[];
+      respect_gitignore?: boolean;
     };
     token_audit?: {
       chars_per_token_code?: number;
@@ -143,12 +149,28 @@ export function shouldExclude(
   return false;
 }
 
+// Load the project-root .gitignore into an `ignore` matcher when the opt-in
+// respect_gitignore feature is enabled. Returns null when disabled, or when no
+// .gitignore is present/readable (nothing extra to exclude). Only the root
+// .gitignore is consulted — nested .gitignore files and global excludes are out
+// of scope.
+function loadGitignoreMatcher(projectRoot: string, respect: boolean): Ignore | null {
+  if (!respect) return null;
+  try {
+    const content = fs.readFileSync(path.join(projectRoot, ".gitignore"), "utf-8");
+    return ignore().add(content);
+  } catch {
+    return null;
+  }
+}
+
 function walkDir(
   dir: string,
   rootDir: string,
   excludePatterns: string[],
   maxFiles: number,
-  entries: Map<string, AnatomyEntry[]>
+  entries: Map<string, AnatomyEntry[]>,
+  ig: Ignore | null
 ): void {
   let totalFiles = 0;
   for (const [, list] of entries) totalFiles += list.length;
@@ -168,9 +190,11 @@ function walkDir(
     const relPath = normalizePath(path.relative(rootDir, fullPath));
 
     if (shouldExclude(relPath, excludePatterns)) continue;
+    // Opt-in: also honor the project's .gitignore (prunes dirs + skips files).
+    if (ig && relPath && ig.ignores(relPath)) continue;
 
     if (item.isDirectory()) {
-      walkDir(fullPath, rootDir, excludePatterns, maxFiles, entries);
+      walkDir(fullPath, rootDir, excludePatterns, maxFiles, entries, ig);
     } else if (item.isFile()) {
       const ext = path.extname(item.name).toLowerCase();
       if (BINARY_EXTENSIONS.has(ext)) continue;
@@ -258,13 +282,19 @@ export function buildAnatomy(wolfDir: string, projectRoot: string): { content: s
     },
   });
 
+  const ig = loadGitignoreMatcher(
+    projectRoot,
+    config.openwolf?.anatomy?.respect_gitignore ?? false
+  );
+
   const entries = new Map<string, AnatomyEntry[]>();
   walkDir(
     projectRoot,
     projectRoot,
     config.openwolf?.anatomy?.exclude_patterns ?? DEFAULT_EXCLUDE_PATTERNS,
     config.openwolf?.anatomy?.max_files ?? DEFAULT_MAX_FILES,
-    entries
+    entries,
+    ig
   );
 
   let fileCount = 0;

@@ -50,6 +50,7 @@ Controls the project file scanner.
 | `max_description_length` | `100` | Max characters for file descriptions. |
 | `max_files` | `500` | Stop scanning after this many files. |
 | `exclude_patterns` | *(see below)* | Directories and patterns to skip. |
+| `respect_gitignore` | `false` | When `true`, also skip files/dirs matched by the project-root `.gitignore` (union with `exclude_patterns`). |
 
 **Default `exclude_patterns`:**
 
@@ -61,6 +62,11 @@ Controls the project file scanner.
   ".netlify", ".output", "*.min.js", "*.min.css"
 ]
 ```
+
+**`respect_gitignore`.** With `respect_gitignore: true`, the scanner also loads
+the project-root `.gitignore` and skips anything it matches, in addition to
+`exclude_patterns`. Off by default. Only the root `.gitignore` is read — nested
+`.gitignore` files and global / `core.excludesFile` patterns are not consulted.
 
 **Pattern matching.** Each entry is matched against every project-relative
 path (forward-slash separated, anchored at the project root):

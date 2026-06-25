@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { shouldExclude } from "../../src/scanner/anatomy-scanner.js";
+import { shouldExclude, buildAnatomy } from "../../src/scanner/anatomy-scanner.js";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import * as path from "node:path";
 
 // Patterns roughly mirroring the default config plus the nested forms that
 // the matcher must now support.
@@ -71,5 +74,51 @@ describe("shouldExclude", () => {
       expect(shouldExclude("a/tmp123/file.txt", ["tmp*"])).toBe(true);
       expect(shouldExclude("a/b/file.txt", ["tmp*"])).toBe(false);
     });
+  });
+});
+
+describe("buildAnatomy — respect_gitignore (opt-in)", () => {
+  // Discriminators chosen NOT to collide with DEFAULT_EXCLUDE_PATTERNS:
+  // "*.log" and a "gen/" dir are not default-excluded, so they isolate the
+  // gitignore behavior from the built-in pattern excludes.
+  function setup(respect: boolean): { root: string; wolf: string } {
+    const root = mkdtempSync(path.join(tmpdir(), "ow-gi-"));
+    const wolf = path.join(root, ".wolf");
+    mkdirSync(wolf, { recursive: true });
+    writeFileSync(path.join(root, "keep.ts"), "export const a = 1;\n");
+    writeFileSync(path.join(root, "secret.log"), "noise\n");
+    mkdirSync(path.join(root, "gen"), { recursive: true });
+    writeFileSync(path.join(root, "gen", "out.js"), "x\n");
+    writeFileSync(path.join(root, ".gitignore"), "*.log\ngen/\n");
+    writeFileSync(
+      path.join(wolf, "config.json"),
+      JSON.stringify({ version: 1, openwolf: { anatomy: { respect_gitignore: respect } } })
+    );
+    return { root, wolf };
+  }
+
+  it("excludes .gitignored files and dirs when enabled", () => {
+    const { root, wolf } = setup(true);
+    try {
+      const { content } = buildAnatomy(wolf, root);
+      expect(content).toContain("keep.ts");
+      expect(content).not.toContain("secret.log");
+      expect(content).not.toContain("out.js");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores .gitignore when the option is off (default behavior)", () => {
+    const { root, wolf } = setup(false);
+    try {
+      const { content } = buildAnatomy(wolf, root);
+      expect(content).toContain("keep.ts");
+      // not excluded — feature off, and neither matches a default pattern
+      expect(content).toContain("secret.log");
+      expect(content).toContain("out.js");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
