@@ -52,7 +52,80 @@ function estimateTokens(text: string, filePath: string): number {
 // Files that should never appear in anatomy (secrets, env files)
 const ALWAYS_EXCLUDE_FILES = new Set([".env", ".env.local", ".env.production", ".env.staging", ".env.development"]);
 
-function shouldExclude(
+// Translate a glob pattern into an anchored RegExp.
+//   `*`  matches any run of characters within a single path segment (no "/")
+//   `**` matches any run of characters across segments (including "/")
+// Every other regex metacharacter is escaped so the rest of the pattern
+// matches literally.
+function globToRegExp(glob: string): RegExp {
+  let re = "";
+  for (let i = 0; i < glob.length; i++) {
+    const c = glob[i];
+    if (c === "*") {
+      if (glob[i + 1] === "*") {
+        re += ".*"; // ** spans path segments
+        i++; // consume the second "*"
+      } else {
+        re += "[^/]*"; // * stays within one segment
+      }
+    } else if ("\\^$.|?+()[]{}".includes(c)) {
+      re += "\\" + c;
+    } else {
+      re += c;
+    }
+  }
+  return new RegExp(`^${re}$`);
+}
+
+// Decide whether one exclude pattern matches a project-relative path. All
+// patterns are anchored at the project root. Supported forms:
+//   "node_modules"        bare name   -> matches that segment at ANY depth
+//   "*.min.js"            ext glob    -> matches any path ending in ".min.js"
+//   "docs/superpowers"    path prefix -> matches that dir AND everything under it
+//   "docs/superpowers/*"  path glob   -> matches direct children
+//   ".claude/**/cache"    path glob   -> "**" spans segments
+//   "tmp*"                name glob   -> matches any single segment by glob
+//
+// Prior behavior only handled bare names (via parts.includes) and a leading
+// "*.ext" glob, so any pattern containing "/" silently matched nothing — e.g.
+// ".claude/worktrees" and "docs/superpowers/*" were never actually excluded.
+function matchesPattern(
+  relPath: string,
+  parts: string[],
+  pattern: string
+): boolean {
+  if (pattern.length === 0) return false;
+
+  // Extension glob (backward compatible): "*.min.js"
+  if (pattern.startsWith("*.") && !pattern.includes("/")) {
+    return relPath.endsWith(pattern.slice(1));
+  }
+
+  const hasSlash = pattern.includes("/");
+  const hasGlob = pattern.includes("*");
+
+  // Bare segment name (backward compatible): match at any depth.
+  if (!hasSlash && !hasGlob) {
+    return parts.includes(pattern);
+  }
+
+  if (hasSlash) {
+    // Path pattern without a glob -> directory-prefix semantics: the named
+    // path itself and everything beneath it.
+    if (!hasGlob) {
+      return relPath === pattern || relPath.startsWith(`${pattern}/`);
+    }
+    // Path pattern with a glob -> match against the full relative path.
+    return globToRegExp(pattern).test(relPath);
+  }
+
+  // Single-segment glob (e.g. "tmp*") -> match any one path segment.
+  const segRe = globToRegExp(pattern);
+  return parts.some((p) => segRe.test(p));
+}
+
+// Exported for unit testing (tests/scanner/anatomy-scanner.test.ts).
+export function shouldExclude(
   relPath: string,
   excludePatterns: string[]
 ): boolean {
@@ -65,13 +138,7 @@ function shouldExclude(
   if (basename.startsWith(".env.") || basename === ".env") return true;
 
   for (const pattern of excludePatterns) {
-    // Simple glob: check if any path segment matches
-    if (pattern.startsWith("*.")) {
-      const ext = pattern.slice(1);
-      if (relPath.endsWith(ext)) return true;
-    } else {
-      if (parts.includes(pattern)) return true;
-    }
+    if (matchesPattern(relPath, parts, pattern)) return true;
   }
   return false;
 }

@@ -62,6 +62,21 @@ Controls the project file scanner.
 ]
 ```
 
+**Pattern matching.** Each entry is matched against every project-relative
+path (forward-slash separated, anchored at the project root):
+
+| Form | Example | Matches |
+|------|---------|---------|
+| Bare name | `node_modules` | a directory or file of that name at **any** depth |
+| Extension glob | `*.min.js` | any path ending in `.min.js` |
+| Path prefix | `.claude/worktrees` | that directory **and everything under it** |
+| Path glob | `docs/superpowers/*` | direct children (`*` stays within one segment; `**` spans segments) |
+| Name glob | `tmp*` | any single path segment matching the glob |
+
+> Any pattern containing a `/` is anchored at the project root. Previously only
+> bare names and `*.ext` were honored — a pattern with a `/` silently matched
+> nothing.
+
 ### `token_audit`
 
 Controls token estimation and waste detection.
