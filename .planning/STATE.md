@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Shared-Context Tracking & Curation
 current_phase: 8
-current_phase_name: ready to plan
-status: roadmapped
+current_phase_name: verify-landed-p0-hygiene
+status: executing
 stopped_at: Phase 12 context gathered
-last_updated: "2026-06-25T23:15:17.513Z"
+last_updated: "2026-06-25T23:56:23.288Z"
 last_activity: 2026-06-25
-last_activity_desc: v1.2 roadmap created (Phases 8-12, 7 requirements mapped)
+last_activity_desc: Phase 8 execution started
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-25)
 
 **Core value:** Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and manageable to keep synced with upstream.
-**Current focus:** v1.2 Shared-Context Tracking & Curation — roadmap created (Phases 8-12); Phase 8 ready to plan.
+**Current focus:** Phase 8 — verify-landed-p0-hygiene
 
 ## Current Position
 
-Phase: Phase 8 — Verify Landed P0 Hygiene (ready to plan)
-Plan: —
-Status: Roadmap created — awaiting `/gsd-plan-phase 8`
-Last activity: 2026-06-25 — v1.2 roadmap created (Phases 8-12, 7 requirements mapped)
+Phase: 8 (verify-landed-p0-hygiene) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-06-25 — Phase 8 execution started
 
 Progress: [          ] 0/5 phases (v1.2)
 
@@ -51,6 +51,7 @@ Progress: [          ] 0/5 phases (v1.2)
 | 7. Concurrency & Integration Tests | 1 | - | - |
 
 *Updated after each plan completion*
+| Phase 08 P01 | 3m | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,7 @@ Recent decisions affecting current work:
 - D-18: R6 — keep `ignore` dep CLI/daemon-only; zero-dep matcher in the hook — Phase 10.
 - D-19: R7b — `openwolf learnings check` subcommand (not a `--check` flag) — Phase 12.
 - D-20: R9 — `status` is read-only; baseline updates only via sanctioned curation — Phase 12.
+- [Phase ?]: Regression tests grounded in acme field inputs serve as dual-purpose evidence+safety net for Phase 10 (R6)
 
 ### Build-Order Dependency Edges (honor when planning)
 
@@ -95,7 +97,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-25T23:15:17.506Z
+Last session: 2026-06-25T23:56:19.567Z
 Stopped at: Phase 12 context gathered
 Resume file: .planning/phases/12-framework-blind-curation-machinery/12-CONTEXT.md
 

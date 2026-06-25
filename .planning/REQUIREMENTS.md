@@ -13,7 +13,7 @@
 
 ### Verification — confirm landed P0 hygiene (no re-implementation)
 
-- [ ] **VER-01**: Verify the already-shipped P0 hygiene against the acme replay and the `develop-preview` commits, mapping each behavior to its commit. Covers **R1** (untrack `anatomy.md`, `cac925a`), **R2** (self-heal scan, `c430a9b`), **R3** (out-of-project `../` guard, `cac925a`), **R5** (buglog code-file gating, `9f63395`), **Q1** (`respect_gitignore`, `3ef255c`), **Q2** (nested/glob excludes, `2f3e1f6`).
+- [x] **VER-01**: Verify the already-shipped P0 hygiene against the acme replay and the `develop-preview` commits, mapping each behavior to its commit. Covers **R1** (untrack `anatomy.md`, `cac925a`), **R2** (self-heal scan, `c430a9b`), **R3** (out-of-project `../` guard, `cac925a`), **R5** (buglog code-file gating, `9f63395`), **Q1** (`respect_gitignore`, `3ef255c`), **Q2** (nested/glob excludes, `2f3e1f6`).
   *Accept:* each behaves per its PRD acceptance criterion on the acme repo; the verification report records commit↔behavior; nothing is re-implemented.
 
 ### Tracking Hygiene
@@ -37,9 +37,11 @@
 
 - [ ] **R7a**: `proposed-learnings` is the **default capture path**, written via the universal Claude Code `stop` hook (`appendProposal()`). Capture is continuous and execution-layer-agnostic.
   *Accept:* a session that learns something leaves a staged entry regardless of execution layer; capture path is dependency-free (C2).
+
 - [ ] **R7b**: Promotion gate **primitive** anchored to the Git/PR boundary — `openwolf learnings check`: exit code `0` clean / `1` pending / `2` operational error; concise summary to **stderr** on pending; **stdout** clean (JSON only under `--json`); `--quiet` for CI. Plus a pending count in `openwolf status` (both routed through `collectAllEntries()`). OpenWolf names no execution layer and no VCS/CI host; host wiring (pre-push / Bitbucket Pipelines / GitHub Actions) lives only in docs.
   *Accept:* command exits non-zero when staging is pending; `openwolf status` reports the count; `grep -rIiE 'bitbucket|github|pipelines|pre-push' src/` returns zero (C1).
   *Decided (→ D-19):* dedicated **`openwolf learnings check`** subcommand (keeps the top-level CLI namespace clean; scales with future `learnings list/prune`). Exit-code contract unchanged.
+
 - [ ] **R9**: Freshness integrity for `cerebrum.md` — flag a `> Last updated:` bump with no content delta ("freshness theater") via a content-body SHA-256 stored in a gitignored sidecar (`.wolf/cerebrum-freshness.json`); baseline captured at `learnings merge` (the sole content writer); surfaced in `openwolf status`; bootstrap-on-missing for fresh clones (self-healing, like R2). `node:crypto` only — no new dep.
   *Accept:* a date-only bump is flagged in `openwolf status`; a real content change is not flagged.
   *Re-baseline (→ D-20):* `openwolf status` is **read-only** — it detects and flags, never mutates. The baseline sidecar updates only on sanctioned curation: auto at `learnings merge` (sole content writer) + an explicit `openwolf learnings accept` affordance for blessed hand-edits; bootstrap-on-missing for fresh clones. Baseline means "last *sanctioned* content," not "last content a `status` run observed."
