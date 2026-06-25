@@ -8,11 +8,11 @@
  * with two distinct ids (no lost entry, no duplicate id).
  */
 import { describe, it, expect } from "vitest";
-import { mkdtempSync, rmSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { appendBugEntry, newBugId, readBugEntries } from "../../src/hooks/buglog-ndjson.js";
-import { autoDetectBugFix } from "../../src/hooks/post-write.js";
+import { autoDetectBugFix, recordAnatomyWrite } from "../../src/hooks/post-write.js";
 
 describe("buglog NDJSON appends (Task 8 — autoDetectBugFix path)", () => {
   it("two concurrent-ish appends produce two NDJSON lines with distinct ids", () => {
@@ -102,6 +102,40 @@ describe("autoDetectBugFix — only flags code files", () => {
       const entries = readBugEntries(dir);
       expect(entries.length).toBeGreaterThanOrEqual(1);
       expect(entries[0].tags).toContain("auto-detected");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("recordAnatomyWrite — out-of-project guard (R3)", () => {
+  it("does NOT write anatomy for a path outside the project root", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "ow-anat-oop-"));
+    try {
+      const wolfDir = path.join(dir, ".wolf");
+      mkdirSync(wolfDir, { recursive: true });
+      // A scratch file outside the project root (simulates /tmp / scratchpad leak).
+      const outside = path.join(tmpdir(), "ow-scratch-zzz", "note.md");
+      recordAnatomyWrite(wolfDir, outside, dir, "# scratch\n");
+      // No anatomy.md should be created for an out-of-project path.
+      expect(existsSync(path.join(wolfDir, "anatomy.md"))).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("DOES record an in-project file (positive control)", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "ow-anat-ip-"));
+    try {
+      const wolfDir = path.join(dir, ".wolf");
+      mkdirSync(wolfDir, { recursive: true });
+      const inProject = path.join(dir, "src", "foo.ts");
+      mkdirSync(path.dirname(inProject), { recursive: true });
+      writeFileSync(inProject, "export const x = 1;\n");
+      recordAnatomyWrite(wolfDir, inProject, dir, "");
+      const anatomy = readFileSync(path.join(wolfDir, "anatomy.md"), "utf-8");
+      expect(anatomy).toContain("foo.ts");
+      expect(anatomy).toContain("src/");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

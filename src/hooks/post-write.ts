@@ -13,6 +13,84 @@ interface SessionData {
   [key: string]: unknown;
 }
 
+// ─── Anatomy Update ──────────────────────────────────────────────
+//
+// Record (or refresh) a single file's entry in anatomy.md after a Write/Edit.
+// Exported for unit testing (tests/hooks/post-write.test.ts).
+//
+// Out-of-project paths (scratchpad, /tmp, sibling repos) are skipped: they are not
+// part of THIS project's map, and recording them leaks machine-local paths into the
+// shared, committed anatomy.md (observed in acme_translators: tmp.xxxxxxxx dirs).
+// relPath is project-root-relative + forward-slashed, so a leading "../" means the
+// write target lives outside the project root.
+export function recordAnatomyWrite(
+  wolfDir: string,
+  absolutePath: string,
+  projectRoot: string,
+  contentFallback: string,
+): void {
+  const relPathLocal = normalizePath(path.relative(projectRoot, absolutePath));
+  if (relPathLocal.startsWith("../")) return;
+
+  const anatomyPath = path.join(wolfDir, "anatomy.md");
+  let anatomyContent: string;
+  try {
+    anatomyContent = fs.readFileSync(anatomyPath, "utf-8");
+  } catch {
+    anatomyContent = "# anatomy.md\n\n> Auto-maintained by OpenWolf.";
+  }
+
+  const sections = parseAnatomy(anatomyContent);
+  const dir = path.dirname(relPathLocal);
+  const fileName = path.basename(relPathLocal);
+  const sectionKey = dir === "." ? "./" : dir + "/";
+
+  let fileContent = "";
+  try {
+    fileContent = fs.readFileSync(absolutePath, "utf-8");
+  } catch {
+    fileContent = contentFallback;
+  }
+
+  const desc = extractDescription(absolutePath).slice(0, 100);
+  const ext = path.extname(absolutePath).toLowerCase();
+  const codeExts = new Set([".ts", ".js", ".tsx", ".jsx", ".py", ".json", ".yaml", ".yml", ".css"]);
+  const proseExts = new Set([".md", ".txt", ".rst"]);
+  const type = codeExts.has(ext) ? "code" : proseExts.has(ext) ? "prose" : "mixed";
+  const tokens = estimateTokens(fileContent, type as "code" | "prose" | "mixed");
+
+  if (!sections.has(sectionKey)) sections.set(sectionKey, []);
+  const entries = sections.get(sectionKey)!;
+  const idx = entries.findIndex((e) => e.file === fileName);
+  if (idx !== -1) {
+    entries[idx] = { file: fileName, description: desc, tokens };
+  } else {
+    entries.push({ file: fileName, description: desc, tokens });
+  }
+
+  let fileCount = 0;
+  for (const [, list] of sections) fileCount += list.length;
+
+  const serialized = serializeAnatomy(sections, {
+    lastScanned: new Date().toISOString(),
+    fileCount,
+    hits: 0,
+    misses: 0,
+  });
+
+  const tmp = anatomyPath + "." + crypto.randomBytes(4).toString("hex") + ".tmp";
+  try {
+    fs.writeFileSync(tmp, serialized, "utf-8");
+    fs.renameSync(tmp, anatomyPath);
+  } catch {
+    try { fs.writeFileSync(anatomyPath, serialized, "utf-8"); }
+    catch (fallbackErr) {
+      process.stderr.write(`OpenWolf post-write: failed to write anatomy.md (${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)})\n`);
+    }
+    try { fs.unlinkSync(tmp); } catch {}
+  }
+}
+
 
 async function main(): Promise<void> {
   ensureWolfDir();
@@ -49,66 +127,9 @@ async function main(): Promise<void> {
   const oldStr = input.tool_input?.old_string ?? "";
   const newStr = input.tool_input?.new_string ?? "";
 
-  // 1. Update anatomy.md
+  // 1. Update anatomy.md (recordAnatomyWrite skips out-of-project paths).
   try {
-    const anatomyPath = path.join(wolfDir, "anatomy.md");
-    let anatomyContent: string;
-    try {
-      anatomyContent = fs.readFileSync(anatomyPath, "utf-8");
-    } catch {
-      anatomyContent = "# anatomy.md\n\n> Auto-maintained by OpenWolf.";
-    }
-
-    const sections = parseAnatomy(anatomyContent);
-    const relPathLocal = normalizePath(path.relative(projectRoot, absolutePath));
-    const dir = path.dirname(relPathLocal);
-    const fileName = path.basename(relPathLocal);
-    const sectionKey = dir === "." ? "./" : dir + "/";
-
-    let fileContent = "";
-    try {
-      fileContent = fs.readFileSync(absolutePath, "utf-8");
-    } catch {
-      fileContent = input.tool_input?.content ?? "";
-    }
-
-    const desc = extractDescription(absolutePath).slice(0, 100);
-    const ext = path.extname(absolutePath).toLowerCase();
-    const codeExts = new Set([".ts", ".js", ".tsx", ".jsx", ".py", ".json", ".yaml", ".yml", ".css"]);
-    const proseExts = new Set([".md", ".txt", ".rst"]);
-    const type = codeExts.has(ext) ? "code" : proseExts.has(ext) ? "prose" : "mixed";
-    const tokens = estimateTokens(fileContent, type as "code" | "prose" | "mixed");
-
-    if (!sections.has(sectionKey)) sections.set(sectionKey, []);
-    const entries = sections.get(sectionKey)!;
-    const idx = entries.findIndex((e) => e.file === fileName);
-    if (idx !== -1) {
-      entries[idx] = { file: fileName, description: desc, tokens };
-    } else {
-      entries.push({ file: fileName, description: desc, tokens });
-    }
-
-    let fileCount = 0;
-    for (const [, list] of sections) fileCount += list.length;
-
-    const serialized = serializeAnatomy(sections, {
-      lastScanned: new Date().toISOString(),
-      fileCount,
-      hits: 0,
-      misses: 0,
-    });
-
-    const tmp = anatomyPath + "." + crypto.randomBytes(4).toString("hex") + ".tmp";
-    try {
-      fs.writeFileSync(tmp, serialized, "utf-8");
-      fs.renameSync(tmp, anatomyPath);
-    } catch {
-      try { fs.writeFileSync(anatomyPath, serialized, "utf-8"); }
-      catch (fallbackErr) {
-        process.stderr.write(`OpenWolf post-write: failed to write anatomy.md (${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)})\n`);
-      }
-      try { fs.unlinkSync(tmp); } catch {}
-    }
+    recordAnatomyWrite(wolfDir, absolutePath, projectRoot, input.tool_input?.content ?? "");
   } catch (err) {
     process.stderr.write(`OpenWolf post-write: anatomy update failed (${err instanceof Error ? err.message : String(err)})\n`);
   }

@@ -9,11 +9,16 @@ suggestions.json
 backups/
 sessions/
 
+# Derived / regenerated locally — NOT committed. anatomy.md is rebuilt by
+# `openwolf scan`, the daemon, or session-start self-heal. Committing it churned
+# every session and leaked machine-local paths into shared git (see
+# PRD-OpenWolf-Shared-Context-and-Curation.md §3.2 / §4).
+anatomy.md
+
 # Transient lock files from concurrent-write protection
 *.lock
 
 # Shared knowledge files are NOT listed here, so they ARE committed:
-#   anatomy.md        — project file map
 #   cerebrum.md       — learned conventions and do-not-repeat list
 #   OPENWOLF.md       — operating protocol
 #   config.json       — project configuration
@@ -23,3 +28,8 @@ sessions/
 #   hooks/            — compiled hook scripts
 #   reframe-frameworks.md
 #   cron-manifest.json  — cron config (cron-state.json is per-dev, above)
+#
+# NOTE: A consumer repo's ROOT .gitignore must NOT re-list `.wolf/` paths — that
+# silently overrides this file (in acme_translators a root rule ignored
+# `.wolf/hooks/` despite the line above, contradicting intent). This file is the
+# single source of truth for what `.wolf/` commits.
