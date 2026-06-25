@@ -1,46 +1,46 @@
 {
   "version": "1.0",
-  "timestamp": "2026-06-25T19:25:18.656Z",
+  "timestamp": "2026-06-25T19:48:35Z",
   "context": "default",
   "phase": "0",
-  "phase_name": "Cross-cutting: shared-context tracking & curation (no active phase)",
+  "phase_name": "Cross-cutting: shared-context tracking & curation — ready to formalize as the next GSD milestone",
   "phase_dir": ".planning/",
   "plan": null,
   "task": null,
   "total_tasks": null,
   "status": "paused",
   "completed_tasks": [
-    {"id": 1, "name": "Peer review develop…develop-preview (--fix); 3 consensus fixes applied", "status": "done", "commit": "e48c502"},
-    {"id": 2, "name": "Q3 + curation deep-dive grounded in acme_translators field evidence (3 devs, 225 sessions)", "status": "done"},
-    {"id": 3, "name": "Authored PRD-OpenWolf-Shared-Context-and-Curation.md (kept local/untracked)", "status": "done"},
-    {"id": 4, "name": "Resolved open questions: untrack anatomy.md; remove STATUS.md; framework-blind execution-layer seam", "status": "done"},
-    {"id": 5, "name": "P0: R1 untrack anatomy.md + R3 ../-guard + recordAnatomyWrite extraction + 2 tests + R4 comment accuracy", "status": "done", "commit": "cac925a"}
+    {"id": 1, "name": "Deep review of 6 questions; fixes: Q6 hook MODULE_NOT_FOUND, Q2 nested/glob excludes, status per-dev wording, buglog non-code skip", "status": "done", "commit": "4f1d304..9f63395"},
+    {"id": 2, "name": "Q1 opt-in respect_gitignore (scanner-side, ignore dep CLI-only); version 1.2.0-beta -> 1.3.0-beta", "status": "done", "commit": "3ef255c,239f2c9"},
+    {"id": 3, "name": "Peer panel APPROVE on develop..develop-preview; 3 fixes applied", "status": "done", "commit": "e48c502"},
+    {"id": 4, "name": "Authored PRD-OpenWolf-Shared-Context-and-Curation.md (repo root, untracked by choice)", "status": "done"},
+    {"id": 5, "name": "Resolved open questions: untrack anatomy.md; remove STATUS.md; framework-blind execution-layer seam; authored-vs-derived axis", "status": "done"},
+    {"id": 6, "name": "R1 untrack anatomy.md + R3 out-of-project guard + recordAnatomyWrite() + 2 tests", "status": "done", "commit": "cac925a"},
+    {"id": 7, "name": "R2 anatomy self-heal: src/hooks/wolf-selfheal.ts; session-start fires a detached `openwolf scan` on missing/stub anatomy. Verified 157/157, tsc x2, no ignore import in dist/hooks", "status": "done", "commit": "c430a9b"}
   ],
   "remaining_tasks": [
-    {"id": 6, "name": "R6 (P1, NEXT): hook-side exclusion — port matchesPattern/globToRegExp + parse root .gitignore into shared.ts (dependency-free); closes in-project leak", "status": "not_started"},
-    {"id": 7, "name": "R2: self-heal anatomy scan on missing/stub (session-start/pre-read)", "status": "blocked", "progress": "blocked on shell-out-vs-port-walkDir decision"},
-    {"id": 8, "name": "R4: untrack hooks/ — Q4-entangled (settings.json references hooks)", "status": "blocked"},
-    {"id": 9, "name": "R11: remove STATUS.md from OpenWolf protocol (template/OPENWOLF.md/init/stop/tests/docs) — framework-blind replacement", "status": "not_started"},
-    {"id": 10, "name": "P1/P2 curation machinery: proposed-learnings gate default, buglog read-path, freshness integrity, provenance, pantry-owner role", "status": "not_started"}
+    {"id": 8, "name": "R6: hook-side in-project exclusion — port matchesPattern/globToRegExp into src/hooks/shared.ts; read exclude_patterns; parse root .gitignore into the same matcher (dependency-free, NO ignore import)", "status": "not_started"},
+    {"id": 9, "name": "R11: remove STATUS.md from the protocol (framework-blind replacement); two stop.ts branches; missed docs/superpowers/* + stale docs/configuration.md gitignore block; >= minor bump", "status": "not_started"},
+    {"id": 10, "name": "R4: decide whether to commit compiled hooks/ (untrack -> guarantee rebuild-on-clone). Q4-entangled", "status": "not_started"},
+    {"id": 11, "name": "R7/R8 (rescope): staging gate + buglog read-path already EXIST; residual = surface pending-proposal count in `openwolf status`", "status": "not_started"},
+    {"id": 12, "name": "R9/R10/R12: curation discipline — freshness integrity, provenance on cerebrum entries, monthly prune ritual, named pantry-owner role", "status": "not_started"}
   ],
   "blockers": [
-    {"description": "R2 self-heal needs scan-invocation decision (shell out to `openwolf scan` vs port walkDir into shared.ts)", "type": "technical", "workaround": "interim: daemon 6h rescan / manual `openwolf scan`; R1+R3 already stop the bleeding"},
-    {"description": "R4 hooks/ untracking would leave a fresh clone with registered-but-missing hooks until `openwolf update`", "type": "technical", "workaround": "defer to Q4 decision"}
+    {"description": "R4 hooks/ untracking would leave a fresh clone with registered-but-missing hooks until `openwolf update`", "type": "technical", "workaround": "defer to the Q4 decision inside the milestone"}
   ],
   "async_jobs": [],
   "human_actions_pending": [
-    {"action": "Decide R2 approach (shell-out vs port walkDir)", "context": "needed before self-heal", "blocking": false},
-    {"action": "Decide R4 hooks/ tracking (Q4)", "context": "install-flow impact", "blocking": false},
-    {"action": "Approve R11 protocol change (team-visible workflow change; ≥ minor bump)", "context": "removes STATUS.md", "blocking": false},
-    {"action": "Decide whether to push cac925a / open PR (variant on GitHub, PRs target develop)", "context": "cac925a committed locally, not pushed", "blocking": false}
+    {"action": "In a new session: /gsd-resume-work then /gsd-new-milestone @PRD-OpenWolf-Shared-Context-and-Curation.md", "context": "formalize the shared-context & curation milestone", "blocking": false},
+    {"action": "Push develop-preview (5 commits ahead) to refresh draft PR #20; then refresh PR body + .planning/tmp/develop-preview-context.md", "context": "PR #20 predates Q1/R2", "blocking": false},
+    {"action": "Decide R4 hooks/ tracking (Q4) and approve R11 protocol change (team-visible; >= minor bump)", "context": "milestone planning inputs", "blocking": false}
   ],
   "decisions": [
-    {"decision": "Untrack anatomy.md", "rationale": "Derived/regenerable/leaky; axis is authored-vs-derived not shared-vs-per-dev"},
-    {"decision": "Remove STATUS.md from OpenWolf", "rationale": "Abandoned in field (bare template after 225 sessions); project status belongs to the execution layer"},
-    {"decision": "OpenWolf stays framework-blind", "rationale": "Team uses GSD/Superpowers/gstack/plan-mode heterogeneously; couple to none. Negative boundary + optional config.json openwolf.execution_layer slot"},
-    {"decision": "Decision-shelf split by expiry test", "rationale": "Initiative-scoped → execution layer; standing/systemic → cerebrum.md"}
+    {"decision": "Commit model = authored-vs-derived; untrack anatomy.md + derived/noise", "rationale": "anatomy.md churned 49 commits + leaked machine-local paths in acme"},
+    {"decision": "Remove STATUS.md from OpenWolf", "rationale": "abandoned bare template after 225 acme sessions; project status belongs to the execution layer"},
+    {"decision": "OpenWolf stays framework-blind", "rationale": "team uses GSD/Superpowers/gstack/plan-mode heterogeneously; negative boundary + optional config.json openwolf.execution_layer slot"},
+    {"decision": "R2 implemented via detached CLI `openwolf scan`, not a hook-side scanner port", "rationale": "keeps the scanner/ignore dep out of the standalone hook build (no MODULE_NOT_FOUND)"}
   ],
   "uncommitted_files": [],
-  "next_action": "Implement R6 (hook-side exclusion). Confirm the dependency-free approach first: port matchesPattern/globToRegExp into src/hooks/shared.ts and parse the root .gitignore lines into the same matcher (do NOT import the `ignore` package into the hook build — would reintroduce MODULE_NOT_FOUND).",
-  "context_notes": "Primary deliverable is PRD-OpenWolf-Shared-Context-and-Curation.md (repo root, UNTRACKED by choice). Evidence basis = acme_translators git/disk + 225-session transcripts. Q1 respect_gitignore (3ef255c) and v1.3.0-beta (239f2c9) landed separately during the window — scanner-side only; the hook still has no exclusion, which is exactly what R6 fixes."
+  "next_action": "New session: /gsd-resume-work (loads this handoff), then /gsd-new-milestone @PRD-OpenWolf-Shared-Context-and-Curation.md. CRITICAL: treat R1/R2/R3/R5/Q1/Q2 + status/buglog fixes as ALREADY LANDED (verify against the commits, do not re-implement); scope phases for the residual: R6 -> R11 -> R4 -> R7/R8-surface -> R9/R10/R12.",
+  "context_notes": "PRD §6 drifted from shipped reality (peer review). Primary context = PRD-OpenWolf-Shared-Context-and-Curation.md (untracked). Evidence basis = acme_translators git/disk + 225-session transcripts (Brian's machine). develop-preview @ c430a9b, 5 commits ahead of origin (draft PR #20 stale). Version 1.3.0-beta. Hook source changed but live .wolf/hooks not rebuilt (needs pnpm build:hooks + openwolf update)."
 }
