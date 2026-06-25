@@ -5,12 +5,12 @@ milestone_name: Shared-Context Tracking & Curation
 current_phase: 8
 current_phase_name: ready to plan
 status: roadmapped
-stopped_at: Phase 9 context gathered
-last_updated: "2026-06-25T22:27:02.980Z"
+stopped_at: Phase 10 context gathered
+last_updated: "2026-06-25T22:52:54.207Z"
 last_activity: 2026-06-25
 last_activity_desc: v1.2 roadmap created (Phases 8-12, 7 requirements mapped)
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -95,9 +95,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-25T22:27:02.973Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-tracking-hygiene-one-authoritative-ignore-list/09-CONTEXT.md
+Last session: 2026-06-25T22:52:54.199Z
+Stopped at: Phase 10 context gathered
+Resume file: .planning/phases/10-hook-side-in-project-exclusion/10-CONTEXT.md
 
 ## Operator Next Steps
 
