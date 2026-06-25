@@ -81,4 +81,34 @@ describe("status.ts", () => {
 
         rmSync(dir, { recursive: true, force: true });
     });
+
+    it("reports gitignored per-dev files (memory.md, cron-state.json) softly, not as ✗ errors", async () => {
+        const dir = mkdtempSync(path.join(tmpdir(), "ow-status-"));
+        fs.mkdirSync(path.join(dir, ".wolf"), { recursive: true });
+        // intentionally do NOT create memory.md or cron-state.json
+
+        vi.mocked(findProjectRoot).mockReturnValue(dir);
+        vi.mocked(detectWorktreeContext).mockReturnValue({
+            isWorktree: false,
+            mainRepoRoot: dir,
+            worktreePath: dir,
+            branch: "main",
+        });
+
+        await statusCommand();
+        const lines = consoleSpy.log.mock.calls.map((c) => String(c[0] ?? ""));
+
+        // neither is flagged as a hard missing-file error
+        expect(lines.some((l) => l.includes("✗ Missing: .wolf/cron-state.json"))).toBe(false);
+        expect(lines.some((l) => l.includes("✗ Missing: .wolf/memory.md"))).toBe(false);
+        // both are reported as informational "Not yet created" notices
+        expect(
+            lines.some((l) => l.includes("Not yet created") && l.includes("cron-state.json"))
+        ).toBe(true);
+        expect(
+            lines.some((l) => l.includes("Not yet created") && l.includes("memory.md"))
+        ).toBe(true);
+
+        rmSync(dir, { recursive: true, force: true });
+    });
 });

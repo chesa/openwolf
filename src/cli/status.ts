@@ -37,9 +37,16 @@ export async function statusCommand(): Promise<void> {
   const sharedFiles = [
     "OPENWOLF.md", "identity.md", "cerebrum.md",
     "anatomy.md", "config.json", "buglog.ndjson",
-    "cron-manifest.json", "cron-state.json", "memory.md",
+    "cron-manifest.json",
   ];
   const sessionFiles = ["token-ledger.json"];
+  // Per-developer / runtime files: gitignored and created lazily (by init, the
+  // daemon, or session hooks), so they are legitimately absent on a fresh
+  // install or clone. Report them as informational, never as ✗ errors.
+  const perDevFiles: Array<{ file: string; note: string }> = [
+    { file: "memory.md", note: "per-developer session log" },
+    { file: "cron-state.json", note: "daemon runtime state" },
+  ];
 
   let missingCount = 0;
   for (const file of sharedFiles) {
@@ -54,6 +61,11 @@ export async function statusCommand(): Promise<void> {
         ? `.wolf/sessions/${wtCtx.worktreeId}/${file}`
         : `.wolf/${file}`;
       console.log(`  - Not yet created: ${loc} (appears after first session)`);
+    }
+  }
+  for (const { file, note } of perDevFiles) {
+    if (!fs.existsSync(path.join(wolfDir, file))) {
+      console.log(`  - Not yet created: .wolf/${file} (${note})`);
     }
   }
   if (missingCount === 0) {
