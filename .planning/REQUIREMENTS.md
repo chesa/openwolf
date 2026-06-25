@@ -62,14 +62,14 @@
 
 ## Traceability
 
-*(Filled by the roadmapper — every requirement maps to exactly one phase.)*
+*(Every requirement maps to exactly one phase. Coverage: 7/7.)*
 
 | Requirement | Phase |
 |-------------|-------|
-| VER-01 | — |
-| R4 | — |
-| R6 | — |
-| R11 | — |
-| R7a | — |
-| R7b | — |
-| R9 | — |
+| VER-01 | Phase 8 — Verify Landed P0 Hygiene |
+| R4 | Phase 9 — Tracking Hygiene (One Authoritative Ignore List) |
+| R6 | Phase 10 — Hook-Side In-Project Exclusion |
+| R11 | Phase 11 — Framework-Blind Resume Protocol |
+| R7a | Phase 12 — Framework-Blind Curation Machinery |
+| R7b | Phase 12 — Framework-Blind Curation Machinery |
+| R9 | Phase 12 — Framework-Blind Curation Machinery |
