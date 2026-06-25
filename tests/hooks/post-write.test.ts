@@ -141,3 +141,117 @@ describe("recordAnatomyWrite — out-of-project guard (R3)", () => {
     }
   });
 });
+
+// ─── Acme field replay: R3 out-of-project guard ──────────────────────────────
+//
+// PRD evidence E7: acme's pre-fix anatomy.md contained an entry for
+// ".claude/plans/tmp.pwYfhCNiar/draft/tmp.zIDPKm5EAB" — a scratch dir that
+// resolve OUTSIDE the project root via a "../" relative path.
+// The frozen symptom is preserved in tests/fixtures/acme-snapshot-verify/anatomy-leak.md.
+// Commit cac925a (R3) prevents this class of leak by checking relPath.startsWith("../").
+//
+describe("recordAnatomyWrite — acme field replay (R3)", () => {
+  it("does NOT write anatomy for an acme-shaped out-of-project scratch path", () => {
+    // Two sibling tmp dirs: one is the project root, the other is the scratch location.
+    // path.relative(projectRoot, outsideAbs) will begin with "../" — triggering the R3 guard.
+    const projectRoot = mkdtempSync(path.join(tmpdir(), "ow-r3-project-"));
+    const scratchBase = mkdtempSync(path.join(tmpdir(), "ow-r3-scratch-"));
+    try {
+      const wolfDir = path.join(projectRoot, ".wolf");
+      mkdirSync(wolfDir, { recursive: true });
+
+      // Mimic the acme scratch shape: .../tmp.pwYfhCNiar/draft/tmp.zIDPKm5EAB
+      // The key property is that this resolves outside projectRoot (starts with "../")
+      const outsideAbs = path.join(
+        scratchBase,
+        "tmp.pwYfhCNiar",
+        "draft",
+        "tmp.zIDPKm5EAB",
+      );
+
+      // Confirm the relative path does start with "../" (the condition R3 guards on)
+      const rel = path.relative(projectRoot, outsideAbs);
+      expect(rel.startsWith("../")).toBe(true);
+
+      // Call the hook function — must silently skip and produce NO anatomy.md
+      recordAnatomyWrite(wolfDir, outsideAbs, projectRoot, "# scratch\n");
+
+      // R3 assertion: no anatomy.md created for out-of-project path
+      expect(existsSync(path.join(wolfDir, "anatomy.md"))).toBe(false);
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+      rmSync(scratchBase, { recursive: true, force: true });
+    }
+  });
+});
+
+// ─── Acme field replay: R5 buglog code-file gate ─────────────────────────────
+//
+// PRD evidence E5/E6 / acme bug-020 shape: acme's pre-fix buglog.ndjson contained
+// auto-detected entries for prose edits — a "lambdas/README.md" value-swap and a
+// "docs/superpowers/specs/x.md" multi-line restructure.  Both carried fix-pattern
+// signal that WOULD trigger the heuristic on a .ts file, but the R5 gate
+// (CODE_FILE_EXTENSIONS) in commit 9f63395 must now suppress them.
+//
+describe("autoDetectBugFix — acme prose field replay (R5)", () => {
+  it("does NOT log for a lambdas/README.md quoted-value swap (acme bug-020 shape)", () => {
+    // acme bug-020: a quoted API key name was renamed in a README —
+    // "acme_api_token" → "acme_api_key_id".  The wrong-value heuristic would
+    // fire on this if the extension guard is absent.
+    const dir = mkdtempSync(path.join(tmpdir(), "ow-r5-readme-"));
+    try {
+      const prosePath = path.join(dir, "lambdas", "README.md");
+      mkdirSync(path.dirname(prosePath), { recursive: true });
+      const oldStr = 'The function expects the `"acme_api_token"` header.';
+      const newStr = 'The function expects the `"acme_api_key_id"` header.';
+      autoDetectBugFix(dir, prosePath, dir, oldStr, newStr);
+      expect(readBugEntries(dir)).toHaveLength(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does NOT log for a docs/superpowers/specs/x.md multi-line refactor", () => {
+    // docs/superpowers/specs/*.md was in exclude_patterns yet leaked into acme's
+    // anatomy AND generated spurious buglog entries.  This asserts R5 silences it.
+    const dir = mkdtempSync(path.join(tmpdir(), "ow-r5-docs-"));
+    try {
+      const prosePath = path.join(dir, "docs", "superpowers", "specs", "x.md");
+      mkdirSync(path.dirname(prosePath), { recursive: true });
+      // Multi-line restructure diff with enough removed lines to trip the
+      // "significant refactor" catch-all on a code file.
+      const oldStr = [
+        "## Overview",
+        "This function validates input.",
+        "Returns null on error.",
+        "Uses try/catch internally.",
+      ].join("\n");
+      const newStr = [
+        "## Overview",
+        "Validates input and returns a result.",
+        "Throws on invalid schema.",
+      ].join("\n");
+      autoDetectBugFix(dir, prosePath, dir, oldStr, newStr);
+      expect(readBugEntries(dir)).toHaveLength(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("DOES log for the same quoted-value swap on a .ts file (positive control)", () => {
+    // Confirms the gate is the extension, not the diff content.
+    const dir = mkdtempSync(path.join(tmpdir(), "ow-r5-ts-"));
+    try {
+      const tsPath = path.join(dir, "src", "client.ts");
+      mkdirSync(path.dirname(tsPath), { recursive: true });
+      const oldStr = 'const headerName = "acme_api_token";';
+      const newStr = 'const headerName = "acme_api_key_id";';
+      autoDetectBugFix(dir, tsPath, dir, oldStr, newStr);
+      const entries = readBugEntries(dir);
+      expect(entries.length).toBeGreaterThanOrEqual(1);
+      expect(entries[0].tags).toContain("auto-detected");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
