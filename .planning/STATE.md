@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Shared-Checkout Concurrency — Pillar C
-current_phase: 0
-status: Awaiting next milestone
-stopped_at: Completed Phase 7 plan — all v1.1 phases delivered. Ready for milestone completion.
-last_updated: "2026-06-24T19:23:45.682Z"
-last_activity: 2026-06-24
-last_activity_desc: Milestone v1.1 completed and archived
+milestone: v1.2
+milestone_name: Shared-Context Tracking & Curation
+status: planning
+last_updated: "2026-06-25T20:08:20.600Z"
+last_activity: 2026-06-25
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
-current_phase_name: ""
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State: CHESA Fork Team Toolkit
@@ -28,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 ## Current Position
 
-Phase: Milestone v1.1 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-24 — Milestone v1.1 completed and archived
+Status: Defining requirements
+Last activity: 2026-06-25 — Milestone v1.2 started
 
 ## Performance Metrics
 
@@ -77,9 +73,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24
-Stopped at: Completed Phase 7 plan — all v1.1 phases delivered. Ready for milestone completion.
-Resume file: None
+Last session: 2026-06-25
+Stopped at: Session resumed. v1.1 archived; cross-cutting shared-context & curation work landed on develop-preview (R1/R2/R3/Q1/Q2 + status/buglog fixes). Next: formalize the next milestone from PRD-OpenWolf-Shared-Context-and-Curation.md.
+Resume file: .planning/.continue-here.md (durable checkpoint; HANDOFF.json consumed)
 
 ## Operator Next Steps
 
