@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import { findProjectRoot } from "../../src/scanner/project-root.js";
 import { detectWorktreeContext } from "../../src/utils/worktree.js";
 import type { WorktreeId } from "../../src/hooks/worktree-helper.js";
-import { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks } from "../../src/cli/hook-settings.js";
+import { makeHookSettings, isOpenWolfHook, replaceOpenWolfHooks } from "../../src/cli/hook-settings.js";
 import { mkdtempSync, realpathSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
@@ -23,6 +23,11 @@ vi.mock("node:fs", async (importOriginal) => {
   const mod = await importOriginal<typeof import("node:fs")>();
   return { ...mod, existsSync: vi.fn() };
 });
+
+// A fixed test project root used wherever tests need a concrete HOOK_SETTINGS
+// value. Must be absolute and single-quote-free.
+const TEST_PROJECT_ROOT = "/Users/test/project";
+const HOOK_SETTINGS = makeHookSettings(TEST_PROJECT_ROOT);
 
 // ---------------------------------------------------------------------------
 // isOpenWolfHook

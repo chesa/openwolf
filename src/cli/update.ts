@@ -54,7 +54,7 @@ const BACKUP_FILES = [
   ...USER_DATA_FILES,
 ];
 
-import { HOOK_SETTINGS, replaceOpenWolfHooks } from "./hook-settings.js";
+import { makeHookSettings, replaceOpenWolfHooks } from "./hook-settings.js";
 import { findHookSourceDir, copyHookFiles, writeHooksPackageJson } from "./hook-copy.js";
 import { findTemplatesDir } from "./templates.js";
 import { migrateBugLog } from "./migrate-buglog.js";
@@ -222,12 +222,13 @@ async function updateProject(
     const claudeDir = path.join(root, ".claude");
     ensureDir(claudeDir);
     const settingsPath = path.join(claudeDir, "settings.json");
+    const hookSettings = makeHookSettings(root);
     if (fs.existsSync(settingsPath)) {
       const existing = readJSON<Record<string, unknown>>(settingsPath, {});
-      const merged = replaceOpenWolfHooks(existing, HOOK_SETTINGS);
+      const merged = replaceOpenWolfHooks(existing, hookSettings);
       writeJSON(settingsPath, merged);
     } else {
-      writeJSON(settingsPath, { hooks: HOOK_SETTINGS });
+      writeJSON(settingsPath, { hooks: hookSettings });
     }
     console.log(`    ✓ Claude settings updated`);
 

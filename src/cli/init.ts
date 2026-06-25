@@ -60,11 +60,11 @@ const RUNTIME_CREATED_NO_TEMPLATE = new Set<string>([
   "suggestions.json",
 ]);
 
-import { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks } from "./hook-settings.js";
+import { makeHookSettings, isOpenWolfHook, replaceOpenWolfHooks } from "./hook-settings.js";
 import { findHookSourceDir, copyHookFiles, writeHooksPackageJson } from "./hook-copy.js";
 import { findTemplatesDir } from "./templates.js";
 import { migrateBugLog } from "./migrate-buglog.js";
-export { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks };
+export { makeHookSettings, isOpenWolfHook, replaceOpenWolfHooks };
 
 // Template name → destination filename mapping.
 // Template files use plain names but some destinations need a different name
@@ -146,7 +146,7 @@ function writeSettings(projectRoot: string): void {
     }
   }
 
-  const merged = replaceOpenWolfHooks(existing, HOOK_SETTINGS);
+  const merged = replaceOpenWolfHooks(existing, makeHookSettings(projectRoot));
   writeJSON(settingsPath, merged);
 }
 
