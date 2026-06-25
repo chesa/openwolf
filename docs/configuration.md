@@ -68,14 +68,26 @@ path (forward-slash separated, anchored at the project root):
 | Form | Example | Matches |
 |------|---------|---------|
 | Bare name | `node_modules` | a directory or file of that name at **any** depth |
-| Extension glob | `*.min.js` | any path ending in `.min.js` |
-| Path prefix | `.claude/worktrees` | that directory **and everything under it** |
-| Path glob | `docs/superpowers/*` | direct children (`*` stays within one segment; `**` spans segments) |
-| Name glob | `tmp*` | any single path segment matching the glob |
+| Extension glob | `*.min.js` | any path ending in `.min.js` (only when the pattern has **no** `/`) |
+| Path prefix | `.claude/worktrees` | that directory **and everything under it** (a `/`-pattern with **no** `*`) |
+| Path glob | `docs/superpowers/*` | the path as an anchored glob: `*` stays within one segment, `**` spans segments (a `/`-pattern that **contains** `*`) |
+| Name glob | `tmp*` | any single path segment matching the glob (no `/`, contains `*`) |
 
-> Any pattern containing a `/` is anchored at the project root. Previously only
-> bare names and `*.ext` were honored — a pattern with a `/` silently matched
-> nothing.
+> **The form is chosen by structure, not declared** — the presence of `/` and
+> `*` selects the rule:
+>
+> - `*.ext` with no `/` → extension glob (so `src/*.min.js` is *not* an
+>   extension glob; it falls through to the path-glob rule below).
+> - A `/`-bearing pattern with **no** `*` → path prefix: it excludes that path
+>   and its entire subtree (`docs/superpowers` excludes everything under
+>   `docs/superpowers/`).
+> - A `/`-bearing pattern **with** `*` → anchored path glob: `*` matches within
+>   one segment (`docs/superpowers/*` = direct children only), `**` spans
+>   segments (`docs/**/LEARNINGS.md`).
+> - A `*`-bearing pattern with no `/` → name glob against any single segment.
+>
+> Previously only bare names and `*.ext` were honored — a pattern with a `/`
+> silently matched nothing.
 
 ### `token_audit`
 

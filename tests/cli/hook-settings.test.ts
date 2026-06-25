@@ -27,6 +27,11 @@ describe("makeHookSettings validation", () => {
     expect(() => makeHookSettings("")).toThrow(/non-empty/);
   });
 
+  it("throws when projectRoot is relative (re-introduces the MODULE_NOT_FOUND bug)", () => {
+    expect(() => makeHookSettings("meep")).toThrow(/absolute/);
+    expect(() => makeHookSettings("./meep")).toThrow(/absolute/);
+  });
+
   it("throws when projectRoot contains a single quote", () => {
     expect(() => makeHookSettings("/Users/brian/it's-bad")).toThrow(/single-quote/);
   });

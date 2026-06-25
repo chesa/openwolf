@@ -8,6 +8,8 @@
  * in PR #25.
  */
 
+import * as path from "node:path";
+
 // ---------------------------------------------------------------------------
 // makeWolfRootShell — bake the project root at generation time
 // ---------------------------------------------------------------------------
@@ -57,11 +59,22 @@ function makeWolfRootShell(projectRoot: string): string {
 // ---------------------------------------------------------------------------
 //
 // A project root containing a single-quote (') would break the shell-quoted
-// node -e string produced by makeWolfRootShell. Validate before embedding.
+// node -e string produced by makeWolfRootShell. It must also be ABSOLUTE: the
+// whole point of baking the root in is that WOLF_ROOT resolves the same no
+// matter the hook's runtime cwd — a relative root would re-introduce the exact
+// MODULE_NOT_FOUND bug this fix closes (path.resolve anchoring it against
+// ~/.claude/hooks/). Validate both before embedding.
 function validateProjectRoot(projectRoot: string): void {
   if (!projectRoot || projectRoot.trim().length === 0) {
     throw new Error(
       `OpenWolf: projectRoot must be a non-empty string (got ${JSON.stringify(projectRoot)})`
+    );
+  }
+  if (!path.isAbsolute(projectRoot)) {
+    throw new Error(
+      `OpenWolf: projectRoot must be an absolute path so the generated hook ` +
+      `command resolves independently of the hook's runtime cwd. ` +
+      `Path: ${projectRoot}`
     );
   }
   if (projectRoot.includes("'")) {

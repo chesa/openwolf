@@ -279,6 +279,12 @@ function extractCalls(code: string): string[] {
 // look for code constructs (try/catch, null guards, function signatures), so
 // running them on prose/docs/config (e.g. .md, .json, .yaml) only produces
 // false positives — guard against that.
+//
+// Intentionally NOT shared with the canonical CODE_EXTENSIONS in
+// src/utils/extensions.ts (hooks compile standalone and cannot import
+// src/utils/), and deliberately narrower than the `codeExts` token-
+// classification sets earlier in this file: this gate must EXCLUDE data/config
+// (.json/.yaml/.css) so doc edits don't log phantom bugs. Do not merge them.
 const CODE_FILE_EXTENSIONS = new Set([
   ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
   ".py", ".go", ".rs", ".java", ".rb", ".php",
