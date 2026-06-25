@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-06-25T19:25:18.656Z",
+  "context": "default",
+  "phase": "0",
+  "phase_name": "Cross-cutting: shared-context tracking & curation (no active phase)",
+  "phase_dir": ".planning/",
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "Peer review develop…develop-preview (--fix); 3 consensus fixes applied", "status": "done", "commit": "e48c502"},
+    {"id": 2, "name": "Q3 + curation deep-dive grounded in acme_translators field evidence (3 devs, 225 sessions)", "status": "done"},
+    {"id": 3, "name": "Authored PRD-OpenWolf-Shared-Context-and-Curation.md (kept local/untracked)", "status": "done"},
+    {"id": 4, "name": "Resolved open questions: untrack anatomy.md; remove STATUS.md; framework-blind execution-layer seam", "status": "done"},
+    {"id": 5, "name": "P0: R1 untrack anatomy.md + R3 ../-guard + recordAnatomyWrite extraction + 2 tests + R4 comment accuracy", "status": "done", "commit": "cac925a"}
+  ],
+  "remaining_tasks": [
+    {"id": 6, "name": "R6 (P1, NEXT): hook-side exclusion — port matchesPattern/globToRegExp + parse root .gitignore into shared.ts (dependency-free); closes in-project leak", "status": "not_started"},
+    {"id": 7, "name": "R2: self-heal anatomy scan on missing/stub (session-start/pre-read)", "status": "blocked", "progress": "blocked on shell-out-vs-port-walkDir decision"},
+    {"id": 8, "name": "R4: untrack hooks/ — Q4-entangled (settings.json references hooks)", "status": "blocked"},
+    {"id": 9, "name": "R11: remove STATUS.md from OpenWolf protocol (template/OPENWOLF.md/init/stop/tests/docs) — framework-blind replacement", "status": "not_started"},
+    {"id": 10, "name": "P1/P2 curation machinery: proposed-learnings gate default, buglog read-path, freshness integrity, provenance, pantry-owner role", "status": "not_started"}
+  ],
+  "blockers": [
+    {"description": "R2 self-heal needs scan-invocation decision (shell out to `openwolf scan` vs port walkDir into shared.ts)", "type": "technical", "workaround": "interim: daemon 6h rescan / manual `openwolf scan`; R1+R3 already stop the bleeding"},
+    {"description": "R4 hooks/ untracking would leave a fresh clone with registered-but-missing hooks until `openwolf update`", "type": "technical", "workaround": "defer to Q4 decision"}
+  ],
+  "async_jobs": [],
+  "human_actions_pending": [
+    {"action": "Decide R2 approach (shell-out vs port walkDir)", "context": "needed before self-heal", "blocking": false},
+    {"action": "Decide R4 hooks/ tracking (Q4)", "context": "install-flow impact", "blocking": false},
+    {"action": "Approve R11 protocol change (team-visible workflow change; ≥ minor bump)", "context": "removes STATUS.md", "blocking": false},
+    {"action": "Decide whether to push cac925a / open PR (variant on GitHub, PRs target develop)", "context": "cac925a committed locally, not pushed", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "Untrack anatomy.md", "rationale": "Derived/regenerable/leaky; axis is authored-vs-derived not shared-vs-per-dev"},
+    {"decision": "Remove STATUS.md from OpenWolf", "rationale": "Abandoned in field (bare template after 225 sessions); project status belongs to the execution layer"},
+    {"decision": "OpenWolf stays framework-blind", "rationale": "Team uses GSD/Superpowers/gstack/plan-mode heterogeneously; couple to none. Negative boundary + optional config.json openwolf.execution_layer slot"},
+    {"decision": "Decision-shelf split by expiry test", "rationale": "Initiative-scoped → execution layer; standing/systemic → cerebrum.md"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "Implement R6 (hook-side exclusion). Confirm the dependency-free approach first: port matchesPattern/globToRegExp into src/hooks/shared.ts and parse the root .gitignore lines into the same matcher (do NOT import the `ignore` package into the hook build — would reintroduce MODULE_NOT_FOUND).",
+  "context_notes": "Primary deliverable is PRD-OpenWolf-Shared-Context-and-Curation.md (repo root, UNTRACKED by choice). Evidence basis = acme_translators git/disk + 225-session transcripts. Q1 respect_gitignore (3ef255c) and v1.3.0-beta (239f2c9) landed separately during the window — scanner-side only; the hook still has no exclusion, which is exactly what R6 fixes."
+}
