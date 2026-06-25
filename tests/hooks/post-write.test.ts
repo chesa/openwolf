@@ -12,6 +12,7 @@ import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { appendBugEntry, newBugId, readBugEntries } from "../../src/hooks/buglog-ndjson.js";
+import { autoDetectBugFix } from "../../src/hooks/post-write.js";
 
 describe("buglog NDJSON appends (Task 8 — autoDetectBugFix path)", () => {
   it("two concurrent-ish appends produce two NDJSON lines with distinct ids", () => {
@@ -70,6 +71,37 @@ describe("buglog NDJSON appends (Task 8 — autoDetectBugFix path)", () => {
       const obj2 = JSON.parse(lines[1]);
       expect(obj1.error_message).toBe("missing null check");
       expect(obj2.error_message).toBe("unhandled catch");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("autoDetectBugFix — only flags code files", () => {
+  it("does NOT log a bug entry for prose/markdown edits", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "ow-pw-md-"));
+    try {
+      // A diff that WOULD trip the error-handling heuristic ("catch" appears),
+      // but on a .md file it must be ignored.
+      const oldStr = "# Notes\n\nstatus: investigating\n";
+      const newStr = "# Notes\n\ntry to catch up; status: root_cause_found\n";
+      autoDetectBugFix(dir, path.join(dir, "notes.md"), dir, oldStr, newStr);
+      expect(readBugEntries(dir)).toHaveLength(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("DOES log a bug entry for an equivalent fix in a code file", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "ow-pw-ts-"));
+    try {
+      const oldStr = "function load() { return JSON.parse(read()); }";
+      const newStr =
+        "function load() { try { return JSON.parse(read()); } catch (e) { return null; } }";
+      autoDetectBugFix(dir, path.join(dir, "src", "foo.ts"), dir, oldStr, newStr);
+      const entries = readBugEntries(dir);
+      expect(entries.length).toBeGreaterThanOrEqual(1);
+      expect(entries[0].tags).toContain("auto-detected");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

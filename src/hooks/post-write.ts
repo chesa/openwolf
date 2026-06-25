@@ -275,10 +275,27 @@ function extractCalls(code: string): string[] {
 
 // ─── Auto Bug Detection ──────────────────────────────────────────
 
-function autoDetectBugFix(wolfDir: string, absolutePath: string, projectRoot: string, oldStr: string, newStr: string): void {
+// Code-source extensions the fix-pattern heuristics understand. The detectors
+// look for code constructs (try/catch, null guards, function signatures), so
+// running them on prose/docs/config (e.g. .md, .json, .yaml) only produces
+// false positives — guard against that.
+const CODE_FILE_EXTENSIONS = new Set([
+  ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+  ".py", ".go", ".rs", ".java", ".rb", ".php",
+  ".c", ".cc", ".cpp", ".h", ".hpp", ".cs",
+  ".swift", ".kt", ".scala", ".sh", ".bash",
+  ".vue", ".svelte",
+]);
+
+// Exported for unit testing (tests/hooks/post-write.test.ts).
+export function autoDetectBugFix(wolfDir: string, absolutePath: string, projectRoot: string, oldStr: string, newStr: string): void {
   const relFile = normalizePath(path.relative(projectRoot, absolutePath));
   const basename = path.basename(absolutePath);
   const ext = path.extname(basename).toLowerCase();
+
+  // The fix-pattern heuristics are code-specific. Skip docs/data/config files
+  // so prose edits (e.g. editing a .md) don't generate phantom bug entries.
+  if (!CODE_FILE_EXTENSIONS.has(ext)) return;
 
   // Detect what kind of fix this is
   const detection = detectFixPattern(oldStr, newStr, ext, basename);
