@@ -113,26 +113,11 @@ describe("wolf-pantry - collectAllEntries", () => {
       "\n## 2026-06-23T12:00:00.000Z → cerebrum\n\nGood content\n",
       "utf-8",
     );
-    writeFileSync(
-      path.join(badDir, "proposed-learnings.md"),
-      "stub content without arrow\n",
-      "utf-8",
-    );
-
-    const originalReadFile = fs.readFileSync;
-    const readSpy = vi
-      .spyOn(fs, "readFileSync")
-      .mockImplementation((filePath: fs.PathLike, ...args: any[]) => {
-        if (filePath.toString().startsWith(badDir)) {
-          const err = new Error("EACCES: permission denied") as NodeJS.ErrnoException;
-          err.code = "EACCES";
-          throw err;
-        }
-        return originalReadFile(filePath, ...(args as [any]));
-      });
+    // A directory named proposed-learnings.md causes readFileSync to throw a
+    // non-ENOENT error, exercising the per-session error-skip path.
+    mkdirSync(path.join(badDir, "proposed-learnings.md"), { recursive: true });
 
     const entries = collectAllEntries();
-    readSpy.mockRestore();
 
     expect(entries).toHaveLength(1);
     expect(entries[0].sessionId).toBe(goodId);

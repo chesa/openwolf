@@ -3,64 +3,15 @@ import * as path from "node:path";
 import * as readline from "node:readline";
 import { getWolfDir } from "../hooks/wolf-paths.js";
 import { withFileLock } from "../hooks/wolf-lock.js";
+import {
+  collectAllEntries,
+  parseProposals,
+  type ProposalEntry,
+} from "../hooks/wolf-pantry.js";
 import { readText } from "../utils/fs-safe.js";
 
-export interface ProposalEntry {
-  sessionId: string;
-  timestamp: string;
-  target: "cerebrum" | "anatomy";
-  content: string;
-  raw: string;
-}
-
-const ENTRY_HEADER_REGEX = /^(.+?) → (.+)\n\n([\s\S]*)$/;
-
-export function parseProposals(sessionDir: string, sessionId: string): ProposalEntry[] {
-  const stagingPath = path.join(sessionDir, "proposed-learnings.md");
-  const raw = readText(stagingPath);
-  if (!raw) return [];
-
-  const blocks = raw.split("\n## ");
-  const entries: ProposalEntry[] = [];
-
-  for (const block of blocks) {
-    const trimmed = block.trim();
-    if (!trimmed) continue;
-
-    const headerLine = "## " + trimmed;
-    const headerMatch = headerLine.match(/^## (.+)$/m);
-    if (!headerMatch) {
-      process.stderr.write(`OpenWolf: unparseable proposal entry in session ${sessionId}, skipping\n`);
-      continue;
-    }
-
-    const bodyAfterHeader = trimmed.slice(headerMatch[0].replace("## ", "").length).trim();
-    const bodyMatch = trimmed.match(ENTRY_HEADER_REGEX);
-    if (!bodyMatch) {
-      process.stderr.write(`OpenWolf: unparseable proposal entry in session ${sessionId}, skipping\n`);
-      continue;
-    }
-
-    const timestamp = bodyMatch[1];
-    const targetRaw = bodyMatch[2].toLowerCase();
-    if (targetRaw !== "cerebrum" && targetRaw !== "anatomy") {
-      process.stderr.write(`OpenWolf: unparseable proposal entry in session ${sessionId}, skipping\n`);
-      continue;
-    }
-    const target = targetRaw as "cerebrum" | "anatomy";
-    const content = bodyMatch[3].trim();
-
-    entries.push({
-      sessionId,
-      timestamp,
-      target,
-      content,
-      raw: block,
-    });
-  }
-
-  return entries;
-}
+export { parseProposals } from "../hooks/wolf-pantry.js";
+export type { ProposalEntry } from "../hooks/wolf-pantry.js";
 
 export function listProposals(entries: ProposalEntry[]): void {
   if (entries.length === 0) {
@@ -87,33 +38,6 @@ export function listProposals(entries: ProposalEntry[]): void {
       `${entry.sessionId.padEnd(14)} ${entry.timestamp.padEnd(28)} ${entry.target.padEnd(12)} ${truncated}`
     );
   }
-}
-
-function collectAllEntries(): ProposalEntry[] {
-  const wolfDir = getWolfDir();
-  const sessionsDir = path.join(wolfDir, "sessions");
-
-  if (!fs.existsSync(sessionsDir)) return [];
-
-  const dirs = fs.readdirSync(sessionsDir, { withFileTypes: true });
-  const entries: ProposalEntry[] = [];
-
-  for (const dirent of dirs) {
-    if (!dirent.isDirectory()) continue;
-    const sessionDir = path.join(sessionsDir, dirent.name);
-
-    let parsed: ProposalEntry[];
-    try {
-      parsed = parseProposals(sessionDir, dirent.name);
-    } catch {
-      process.stderr.write(`OpenWolf: cannot read session directory ${dirent.name}, skipping\n`);
-      continue;
-    }
-
-    entries.push(...parsed);
-  }
-
-  return entries;
 }
 
 export function learningsCommand(sessionFilter?: string): void {
