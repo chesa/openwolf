@@ -24,6 +24,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Per-developer state
+_session.json
 memory.md
 token-ledger.json
 cron-state.json
