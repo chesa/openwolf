@@ -883,24 +883,24 @@ function parseGitignoreLine(raw: string): GitignoreEntry {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`shouldExclude` export from `anatomy-scanner.ts` after the move**
+1. **`shouldExclude` export from `anatomy-scanner.ts` after the move** — RESOLVED
    - What we know: `tests/scanner/anatomy-scanner.test.ts` imports `shouldExclude`
      from `../../src/scanner/anatomy-scanner.js`
    - What's unclear: Whether to keep a re-export shim in `anatomy-scanner.ts` or
      update the test import
-   - Recommendation: Update the test import to point at `wolf-ignore.ts` directly
-     (cleaner; tests the authoritative source). If backward compat of
-     `anatomy-scanner`'s public API matters (external consumers), add the re-export.
+   - Resolution: Update the test import to point at `wolf-ignore.ts` directly
+     (Option 2, Pitfall 2). Implemented in Plan 01 Task 2 action.
 
-2. **Gate 3 performance: re-read `.gitignore` every call**
+2. **Gate 3 performance: re-read `.gitignore` every call** — RESOLVED
    - What we know: `respect_gitignore` defaults to `false`; most projects will
      not enable it; `.gitignore` is a small file
    - What's unclear: Whether reading the same file N times per session is
      noticeably slow on very active projects
-   - Recommendation: Acceptable per R6-D3. The full scan is the authoritative
-     source for anatomy; the hook's incremental update is best-effort.
+   - Resolution: Acceptable per R6-D3 (no caching by design). The full scan is
+     the authoritative source for anatomy; the hook's incremental update is
+     best-effort.
 
 ---
 
