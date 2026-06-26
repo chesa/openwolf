@@ -35,7 +35,7 @@
 - [x] **Phase 9: Tracking Hygiene — One Authoritative Ignore List** - Correct the `.wolf/.gitignore` template; untrack derived `hooks/`/`buglog.json`/`suggestions.json` (R4) (2 plans) (completed 2026-06-26)
 - [x] **Phase 10: Hook-Side In-Project Exclusion** - Dependency-free shared matcher honoring `exclude_patterns` + root `.gitignore` in the post-write hook (R6) (completed 2026-06-26)
 - [x] **Phase 11: Framework-Blind Resume Protocol** - Remove STATUS.md; assert the negative boundary + generic resume seam in OPENWOLF.md (R11) (3 plans) (completed 2026-06-25)
-- [ ] **Phase 12: Framework-Blind Curation Machinery** - Continuous capture, Git-boundary promotion gate, and cerebrum freshness integrity (R7a, R7b, R9)
+- [x] **Phase 12: Framework-Blind Curation Machinery** - Continuous capture, Git-boundary promotion gate, and cerebrum freshness integrity (R7a, R7b, R9) (completed 2026-06-26)
 
 </details>
 
@@ -167,4 +167,4 @@
 | 9. Tracking Hygiene — One Authoritative Ignore List | v1.2 | 2/2 | Complete    | 2026-06-26 |
 | 10. Hook-Side In-Project Exclusion | v1.2 | 2/2 | Complete    | 2026-06-26 |
 | 11. Framework-Blind Resume Protocol | v1.2 | 3/3 | Complete   | 2026-06-26 |
-| 12. Framework-Blind Curation Machinery | v1.2 | 4/4 | Complete   | 2026-06-26 |
+| 12. Framework-Blind Curation Machinery | v1.2 | 4/4 | Complete    | 2026-06-26 |
