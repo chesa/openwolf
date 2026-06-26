@@ -190,7 +190,7 @@ function writeGitIgnore(projectRoot: string): void {
   }
 }
 
-function checkRootGitIgnore(projectRoot: string): void {
+export function checkRootGitIgnore(projectRoot: string): void {
   const gitignorePath = path.join(projectRoot, ".gitignore");
   try {
     const content = fs.readFileSync(gitignorePath, "utf-8");
@@ -200,6 +200,27 @@ function checkRootGitIgnore(projectRoot: string): void {
       console.log("    To use the mixed commit strategy (recommended for teams), remove");
       console.log("    the '.wolf/' line — the new .wolf/.gitignore handles per-file");
       console.log("    exclusions.");
+    }
+    // D-09-09: also warn when any .wolf/-prefixed path override exists (e.g.
+    // `.wolf/hooks/` or `.wolf/anatomy.md`). These are distinct from the blanket
+    // `.wolf/` rule above — they silently override the per-file .wolf/.gitignore
+    // template (observed in acme_translators where `.wolf/hooks/` masked the
+    // hook-ignore rule). Scan line-by-line; skip comment lines.
+    const hasPrefixedOverride = content
+      .split("\n")
+      .some((line) => {
+        const trimmed = line.trimStart();
+        if (trimmed.startsWith("#")) return false; // skip comment lines
+        // Match lines starting with `.wolf/` followed by at least one more char
+        // (distinguishes the bare `.wolf/` blanket from specific path rules).
+        return /^\.wolf\/.+/.test(trimmed);
+      });
+    if (hasPrefixedOverride) {
+      console.log("");
+      console.log("  ℹ Your root .gitignore contains a .wolf/-prefixed path rule.");
+      console.log("    Root rules silently override .wolf/.gitignore (git precedence).");
+      console.log("    Remove any .wolf/ path rules from your root .gitignore —");
+      console.log("    .wolf/.gitignore is the single source of truth for .wolf/ tracking.");
     }
   } catch {
     // No .gitignore or can't read — not an error
