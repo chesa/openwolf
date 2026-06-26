@@ -398,7 +398,10 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string, filename:
 
   // --- Error handling added ---
   if (newStr.includes("catch") && !oldStr.includes("catch")) {
-    const fn = newStr.match(/(?:function|def|async)\s+(\w+)/)?.[1] || "unknown";
+    const fn =
+      newStr.match(/(?:function|def)\s+(\w+)/)?.[1] ??
+      newStr.match(/async\s+(?:function|def)\s+(\w+)/)?.[1] ??
+      "unknown";
     return {
       category: "error-handling",
       summary: `Missing error handling in ${fn}`,
