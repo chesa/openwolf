@@ -475,17 +475,33 @@ The other four superpowers files may not reference STATUS.md — planner should 
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Superpowers docs banner scope**
-   - What we know: grep confirmed STATUS.md in `plans/2026-06-07` and `specs/2026-06-06` only.
-   - What's unclear: CONTEXT.md names two files (D11-09) but the canonical_refs section lists all six superpowers files.
-   - Recommendation: Planner should grep all six files for "STATUS" before deciding which get the banner. The safe choice is to banner all six since the banner is low-cost and historically informative.
+1. **Superpowers docs banner scope** — **RESOLVED:** banner only the two
+   grep-confirmed files (`docs/superpowers/plans/2026-06-07-chesa-fork-team-toolkit.md`
+   and `docs/superpowers/specs/2026-06-06-chesa-fork-team-toolkit-design.md`).
+   - What we know: `grep -rIl 'STATUS' docs/superpowers/` confirmed STATUS.md
+     references in `plans/2026-06-07` and `specs/2026-06-06` only — the other
+     four superpowers files contain no STATUS reference and therefore receive no
+     banner. CONTEXT.md D11-09 names exactly these two files.
+   - Resolution: Banner is scoped to the two STATUS-referencing files. Plan
+     11-03 Task 4 already targets exactly these two files and asserts
+     `grep -rIl 'Historical design artifact' docs/superpowers/` lists exactly
+     them. No "banner all six" fallback is needed — the grep result is
+     authoritative.
 
-2. **wolf-gitignore STATUS line exact location**
-   - What we know: The file was read in full. No active ignore rule line for STATUS.md exists. The STATUS.md comment is in the header "Not listed below" comment block. The CONTEXT.md cites `:27`.
-   - What's unclear: Whether `:27` refers to a specific version of the file that has since been edited.
-   - Recommendation: Search for `STATUS` in wolf-gitignore at implementation time; remove the matching comment line. Do not trust the `:27` line number.
+2. **wolf-gitignore STATUS line exact location** — **RESOLVED:** search for the
+   `STATUS` string at implementation time rather than relying on the `:27` line
+   number.
+   - What we know: The file was read in full. No active ignore rule line for
+     STATUS.md exists. The `:27` line number cited in CONTEXT.md D11-10 is stale
+     — line 27 is now `memory.md`; any STATUS.md comment in the header
+     "Not listed below" block has already been removed in a prior edit.
+   - Resolution: Plan 11-01 Task 1 removes any line matching `STATUS.md` in
+     `src/templates/wolf-gitignore` by searching the string at implementation
+     time (idempotent — a no-op for the current repo file, but correct for older
+     consumer states), and gates on `grep -c 'STATUS.md' src/templates/wolf-gitignore`
+     returning 0. The `:27` line number is NOT trusted.
 
 ---
 
