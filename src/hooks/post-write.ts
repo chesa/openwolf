@@ -635,7 +635,12 @@ function tokenizeCode(code: string): string[] {
 }
 
 function findOperatorChange(oldStr: string, newStr: string): { old: string; new: string } | null {
-  const operators = ["===", "!==", "==", "!=", ">=", "<=", ">>", "<<", "&&", "||", "??"];
+  const operators = [
+    "===", "!==", "==", "!=",
+    ">=", "<=", ">>", "<<",
+    "&&", "||", "??",
+    ">", "<",
+  ];
   const oldTokens = tokenizeOperators(oldStr);
   const newTokens = tokenizeOperators(newStr);
   for (const op of operators) {
@@ -656,8 +661,9 @@ function findOperatorChange(oldStr: string, newStr: string): { old: string; new:
 
 function tokenizeOperators(code: string): string[] {
   // Match multi-character operators as whole tokens so `===` does not get counted
-  // as a `==` substring and `!==` does not get counted as `!=`.
-  const re = /===|!==|==|!=|>=|<=|>>|<<|&&|\|\||\?\?/g;
+  // as a `==` substring and `!==` does not get counted as `!=`. Multi-char
+  // operators are listed before single-char `>` / `<` so they take precedence.
+  const re = /===|!==|==|!=|>=|<=|>>|<<|&&|\|\||\?\?|>|</g;
   return [...code.matchAll(re)].map((m) => m[0]);
 }
 
