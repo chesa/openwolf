@@ -1,9 +1,17 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { findProjectRoot } from "../scanner/project-root.js";
-import { readJSON, readText } from "../utils/fs-safe.js";
+import { readJSON, readText, writeJSON } from "../utils/fs-safe.js";
 import { detectWorktreeContext } from "../utils/worktree.js";
+import { collectAllEntries, hashCerebrumBody } from "../hooks/wolf-pantry.js";
 
+interface FreshnessSidecar {
+  version: number;
+  content_sha256: string;
+  last_updated_seen: string;
+  captured_at: string;
+  captured_by: string;
+}
 
 export async function statusCommand(): Promise<void> {
   const projectRoot = findProjectRoot();
@@ -139,6 +147,53 @@ export async function statusCommand(): Promise<void> {
   const anatomyContent = readText(path.join(wolfDir, "anatomy.md"));
   const entryCount = (anatomyContent.match(/^- `/gm) || []).length;
   console.log(`\nAnatomy: ${entryCount} files tracked`);
+
+  // Curation — pending learnings count (R7b, D12-08)
+  try {
+    const pending = collectAllEntries();
+    console.log("\nCuration:");
+    if (pending.length > 0) {
+      console.log(`  - ${pending.length} learnings awaiting review`);
+    } else {
+      console.log("  ✓ No pending learnings");
+    }
+  } catch {
+    console.log("\nCuration:");
+    console.log("  - Curation: (unavailable)");
+  }
+
+  // R9 freshness integrity check (D12-14)
+  const cerebrumPath = path.join(wolfDir, "cerebrum.md");
+  const sidecarPath = path.join(wolfDir, "cerebrum-freshness.json");
+  try {
+    const content = readText(cerebrumPath);
+    const currentHash = hashCerebrumBody(content);
+    const sidecar = readJSON<FreshnessSidecar | null>(sidecarPath, null);
+    const dateMatch = content.match(/>\s*Last\s+updated\s*:\s*(.+)/i);
+    const currentDate = dateMatch ? dateMatch[1].trim() : "—";
+
+    if (!sidecar) {
+      // Bootstrap-on-missing — the ONE write status may do (D12-14)
+      writeJSON(sidecarPath, {
+        version: 1,
+        content_sha256: currentHash,
+        last_updated_seen: currentDate,
+        captured_at: new Date().toISOString(),
+        captured_by: "status-bootstrap",
+      });
+      console.log("  - cerebrum.md: baseline captured (no prior history)");
+    } else if (currentHash === sidecar.content_sha256) {
+      if (currentDate !== sidecar.last_updated_seen) {
+        console.log(`  ✗ cerebrum.md: "Last updated" bumped with no content change (freshness theater)`);
+      } else {
+        console.log("  ✓ cerebrum.md: current");
+      }
+    } else {
+      console.log("  ✓ cerebrum.md: current");
+    }
+  } catch {
+    console.log("  - cerebrum.md: (freshness check unavailable)");
+  }
 
   // Cron state
   const cronState = readJSON<{ engine_status: string; last_heartbeat: string | null }>(
