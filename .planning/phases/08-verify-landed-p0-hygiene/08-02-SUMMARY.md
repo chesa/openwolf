@@ -102,5 +102,6 @@ planning document was written.
 - [x] All five distinct commit hashes present: cac925a, c430a9b, 9f63395, 3ef255c, 2f3e1f6
 - [x] Results Summary table with one row per behavior R1/R2/R3/R5/Q1/Q2 (49 matches >= 6)
 - [x] Foundation for Phase 10 / R6 statement present
-- [x] Commit `c861d70` exists in git log
+- [x] Commit `c861d70` (VERIFICATION.md) exists in git log
+- [x] Commit `4b2e1c4` (docs/STATE/ROADMAP) exists in git log
 - [x] `git status --porcelain src/ tests/` is empty (no source changes)
