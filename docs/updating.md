@@ -21,11 +21,11 @@ openwolf update
 1. **Creates a timestamped backup** of each project's `.wolf/` directory before making any changes
 2. **Overwrites protocol files** with the latest versions:
    - `.wolf/OPENWOLF.md`
-   - `.wolf/config.json`
    - `.wolf/reframe-frameworks.md`
    - Hook scripts in `.wolf/hooks/`
    - Claude rules in `.claude/rules/openwolf.md`
 3. **Preserves user data** -- these files are never overwritten:
+   - `.wolf/config.json` (daemon/dashboard port assignments and other tunables)
    - `.wolf/cerebrum.md` (learned preferences and conventions)
    - `.wolf/memory.md` (session history)
    - `.wolf/buglog.ndjson` (bug tracking)
