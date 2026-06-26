@@ -121,6 +121,7 @@ export function learningsAcceptCommand(): void {
     process.stderr.write(
       `OpenWolf: failed to accept cerebrum baseline: ${err instanceof Error ? err.message : String(err)}\n`,
     );
+    process.exitCode = 1;
   }
 }
 
@@ -254,14 +255,18 @@ export async function learningsMergeCommand(): Promise<void> {
 
     const remaining: string[] = [];
     const currentBlocks = currentRaw.split("\n## ");
+    const consumedRaws = new Set(consumed.map((c) => c.raw.trim()));
 
     for (const block of currentBlocks) {
       const trimmed = block.trim();
       if (!trimmed) continue;
       const fullBlock = "## " + trimmed;
 
-      const isConsumed = consumed.some((c) => fullBlock.includes(c.timestamp) && fullBlock.includes("→ " + c.target));
-      if (!isConsumed) {
+      // Remove by exact block identity rather than substring matches on timestamp
+      // or target, which could delete an unrelated proposal that mentions the
+      // same value (WR-003).
+      const stripped = fullBlock.replace(/^\n?##\s+/, "").trim();
+      if (!consumedRaws.has(stripped)) {
         remaining.push(fullBlock);
       }
     }
@@ -278,11 +283,18 @@ export async function learningsMergeCommand(): Promise<void> {
     fs.appendFileSync(archivePath, archiveContent, "utf-8");
   }
 
+  if (successEntries.length === 0) {
+    console.log("No entries could be merged.");
+    process.exitCode = 1;
+    return;
+  }
+
   console.log(`Merged ${successEntries.length} proposal(s) into cerebrum.md/anatomy.md`);
   if (failedCount > 0) {
     process.stderr.write(
       `OpenWolf: ${failedCount} of ${results.length} entries could not be merged. See warnings above.\n`
     );
+    process.exitCode = 1;
   }
 
   if (successEntries.some((e) => e.target === "cerebrum")) {
