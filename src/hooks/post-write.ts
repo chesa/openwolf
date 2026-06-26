@@ -32,7 +32,7 @@ export function recordAnatomyWrite(
   contentFallback: string,
 ): void {
   const relPathLocal = normalizePath(path.relative(projectRoot, absolutePath));
-  if (relPathLocal.startsWith("../")) return;
+  if (relPathLocal.startsWith("../") || path.isAbsolute(relPathLocal)) return;
 
   // ─── R6 gate: read .wolf/config.json fresh on every call (D10-07/R6-D3 — no caching).
   // Missing, unreadable, or malformed config falls back to defaults silently (T-10-03).
@@ -350,7 +350,7 @@ const CODE_FILE_EXTENSIONS = new Set([
 // Exported for unit testing (tests/hooks/post-write.test.ts).
 export function autoDetectBugFix(wolfDir: string, absolutePath: string, projectRoot: string, oldStr: string, newStr: string): void {
   const relFile = normalizePath(path.relative(projectRoot, absolutePath));
-  if (relFile.startsWith("../")) return;
+  if (relFile.startsWith("../") || path.isAbsolute(relFile)) return;
   const basename = path.basename(absolutePath);
   const ext = path.extname(basename).toLowerCase();
 
