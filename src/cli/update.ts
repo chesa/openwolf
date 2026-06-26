@@ -1,7 +1,8 @@
 /**
- * openwolf update — Update all registered OpenWolf projects.
+ * openwolf update — Update registered OpenWolf projects.
  *
- * For each project:
+ * Requires a project name (partial match) or --all flag.
+ * For each matched project:
  * 1. Creates a timestamped backup in .wolf/backups/
  * 2. Updates hooks, templates, protocol files, and claude rules
  * 3. Preserves all user data (cerebrum, memory, anatomy, buglog, ledger)
@@ -74,7 +75,7 @@ interface UpdateResult {
   message: string;
 }
 
-export async function updateCommand(options: { dryRun?: boolean; force?: boolean; project?: string }): Promise<void> {
+export async function updateCommand(options: { dryRun?: boolean; name?: string; all?: boolean }): Promise<void> {
   const version = getVersion();
 
   // Worktree guard — update should run from the main checkout
@@ -95,20 +96,41 @@ export async function updateCommand(options: { dryRun?: boolean; force?: boolean
     return;
   }
 
-  // Filter to specific project if requested
+  // Reject ambiguous intent
+  if (options.name && options.all) {
+    console.error("Cannot use both <name> and --all. Pick one.");
+    process.exitCode = 1;
+    return;
+  }
+
+  // Require either a project name or --all
+  if (!options.name && !options.all) {
+    console.error("Usage: openwolf update <name>   — update a specific project (partial name match)");
+    console.error("       openwolf update --all    — update all registered projects");
+    console.error("       openwolf update --list   — list all registered projects\n");
+    console.error("Registered projects:");
+    for (const p of projects) {
+      console.error(`  - ${p.name} (${p.root})`);
+    }
+    process.exitCode = 1;
+    return;
+  }
+
+  // Filter to specific project if a name was given
   let targets = projects;
-  if (options.project) {
-    const search = options.project.toLowerCase();
+  if (options.name) {
+    const search = options.name.toLowerCase();
     targets = projects.filter(p =>
       p.name.toLowerCase().includes(search) ||
       p.root.toLowerCase().includes(search)
     );
     if (targets.length === 0) {
-      console.log(`No registered project matching "${options.project}".`);
-      console.log("Registered projects:");
+      console.error(`No registered project matching "${options.name}".`);
+      console.error("Registered projects:");
       for (const p of projects) {
-        console.log(`  - ${p.name} (${p.root})`);
+        console.error(`  - ${p.name} (${p.root})`);
       }
+      process.exitCode = 1;
       return;
     }
   }

@@ -7,6 +7,33 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.3.3-beta] — Daemon status and update CLI safety
+
+### Added
+
+- **`openwolf daemon status` subcommand.** Reports whether the daemon is running,
+  its PID, port, and PM2 managed status (name, uptime, restart count) when
+  available. Shows "not running (port XXXX)" when stopped.
+
+### Changed
+
+- **`openwolf update` now requires `<name>` or `--all`.** Running bare
+  `openwolf update` no longer updates all projects silently — it shows usage
+  and exits with code 1. Use `openwolf update <name>` for a specific project
+  (partial name match) or `openwolf update --all` for the old behavior.
+
+- **Conflicting `<name>` and `--all` is an error.** Passing both now exits
+  with a clear message instead of silently ignoring `--all`.
+
+### Fixed
+
+- **`findPidOnPort` no longer prints confusing stderr on normal "no match".**
+  `lsof` exits with code 1 when no process is found — this is now suppressed
+  alongside `ENOENT`, so `daemon status` and `daemon stop` produce clean output.
+
+- **Non-matching project name exits with code 1.** `openwolf update nonexistent`
+  previously exited 0; now correctly signals failure.
+
 ## [1.3.2-beta] — Portable hook commands
 
 ### Fixed

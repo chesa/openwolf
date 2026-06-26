@@ -66,7 +66,7 @@ describe("openwolf update — symlinked registry entries", () => {
     registerProject(symlinkDir, "meep", "1.3.0-beta");
 
     process.chdir(projectDir);
-    await updateCommand({ project: "meep" });
+    await updateCommand({ name: "meep" });
 
     const settingsPath = path.join(projectDir, ".claude", "settings.json");
     expect(fs.existsSync(settingsPath)).toBe(true);

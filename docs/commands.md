@@ -108,6 +108,30 @@ The dashboard opens at `http://localhost:18791` and connects via WebSocket for l
 
 Manage the background daemon process.
 
+### `openwolf daemon status`
+
+Show whether the daemon is running and its runtime details.
+
+```bash
+openwolf daemon status
+```
+
+**When running:**
+```
+  Daemon: running
+    PID:  44117
+    Port: 18791
+    PM2:  online (name: openwolf-myproject)
+    Up:   2h 15m
+```
+
+**When stopped:**
+```
+  Daemon: not running (port 18791)
+```
+
+If PM2 is installed and managing the daemon, the output includes the PM2 process status, uptime, and restart count. If PM2 is not installed, it shows `PM2: not installed`.
+
 ### `openwolf daemon start`
 
 Start the daemon via [PM2](https://pm2.keymetrics.io/) for persistent background operation.
@@ -488,5 +512,5 @@ openwolf --version
 ```
 
 ```
-1.3.2-beta
+1.3.3-beta
 ```

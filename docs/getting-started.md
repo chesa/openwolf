@@ -26,7 +26,7 @@ Install directly from the GitHub repository:
 npm install -g --install-links "chesa/openwolf#develop"
 
 # Pinned to a stable release tag (recommended for team environments)
-npm install -g --install-links "chesa/openwolf#release/1.3.2-beta"
+npm install -g --install-links "chesa/openwolf#release/1.3.3-beta"
 ```
 
 npm accepts a branch name, tag name, or commit SHA after the `#`. Use `#develop`
@@ -47,7 +47,7 @@ source on first install (requires `git` and Node 20+).
    openwolf --version
    ```
 
-   You should see the installed version printed (e.g., `1.3.2-beta`).
+   You should see the installed version printed (e.g., `1.3.3-beta`).
 
 3. (Optional) If you plan to use **Design QC**, install the optional dependency:
 

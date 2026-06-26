@@ -61,6 +61,14 @@ export function createProgram(): Command {
     .description("Daemon management");
 
   daemon
+    .command("status")
+    .description("Show runtime status information")
+    .action(async () => {
+      const { daemonStatus } = await import("./daemon-cmd.js");
+      daemonStatus();
+    });
+
+  daemon
     .command("start")
     .description("Start daemon via pm2")
     .action(async () => {
@@ -122,17 +130,17 @@ export function createProgram(): Command {
 
   // --- Update command ---
   program
-    .command("update")
-    .description("Update all registered OpenWolf projects to latest version")
+    .command("update [name]")
+    .description("Update registered project(s) — by name or --all")
     .option("--dry-run", "Show what would be updated without making changes")
-    .option("--project <name>", "Update only a specific project (partial name match)")
+    .option("--all", "Update all registered OpenWolf projects")
     .option("--list", "List all registered projects")
-    .action(async (opts: { dryRun?: boolean; project?: string; list?: boolean }) => {
+    .action(async (name: string | undefined, opts: { dryRun?: boolean; all?: boolean; list?: boolean }) => {
       const { updateCommand, listProjects } = await import("./update.js");
       if (opts.list) {
         listProjects();
       } else {
-        await updateCommand(opts);
+        await updateCommand({ ...opts, name });
       }
     });
 

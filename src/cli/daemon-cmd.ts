@@ -53,9 +53,10 @@ function findPidOnPort(port: number): number | null {
       if (pid > 0) return pid;
     }
   } catch (err) {
-    // ENOENT = lsof/netstat not installed on this system — expected on some
-    // minimal environments. Other codes (EACCES, etc.) indicate a real problem.
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+    const e = err as NodeJS.ErrnoException & { status?: number };
+    // lsof/netstat exit non-zero when no process is on the port — not an error.
+    // ENOENT = tool not installed. Only log truly unexpected failures.
+    if (e.code !== "ENOENT" && e.status !== 1) {
       process.stderr.write(
         `[openwolf] findPidOnPort(${port}): ${err instanceof Error ? err.message : String(err)}\n`
       );
@@ -86,6 +87,59 @@ function killPid(pid: number): boolean {
       );
     }
     return false;
+  }
+}
+
+export function daemonStatus(): void {
+  const projectRoot = findProjectRoot();
+  const wolfDir = path.join(projectRoot, ".wolf");
+
+  if (!fs.existsSync(wolfDir)) {
+    console.log("OpenWolf not initialized. Run: openwolf init");
+    return;
+  }
+
+  const port = getDashboardPort();
+  const pid = findPidOnPort(port);
+
+  if (!pid) {
+    console.log(`  Daemon: not running (port ${port})`);
+    return;
+  }
+
+  console.log(`  Daemon: running`);
+  console.log(`    PID:  ${pid}`);
+  console.log(`    Port: ${port}`);
+
+  if (hasPm2()) {
+    const name = getPm2Name();
+    try {
+      const pm2Cmd = isWindows() ? "pm2.cmd" : "pm2";
+      const jlist = execFileSync(pm2Cmd, ["jlist"], { encoding: "utf-8" });
+      const procs = JSON.parse(jlist) as Array<{
+        name: string;
+        pm2_env?: { status?: string; pm_uptime?: number; restart_time?: number };
+      }>;
+      const proc = procs.find(p => p.name === name);
+      if (proc?.pm2_env) {
+        const env = proc.pm2_env;
+        console.log(`    PM2:  ${env.status ?? "unknown"} (name: ${name})`);
+        if (env.pm_uptime) {
+          const uptimeMs = Date.now() - env.pm_uptime;
+          const mins = Math.floor(uptimeMs / 60000);
+          const hrs = Math.floor(mins / 60);
+          const upStr = hrs > 0 ? `${hrs}h ${mins % 60}m` : mins > 0 ? `${mins}m` : `${Math.floor(uptimeMs / 1000)}s`;
+          console.log(`    Up:   ${upStr}`);
+        }
+        if (typeof env.restart_time === "number" && env.restart_time > 0) {
+          console.log(`    Restarts: ${env.restart_time}`);
+        }
+      }
+    } catch {
+      // PM2 query failed — not critical
+    }
+  } else {
+    console.log(`    PM2:  not installed`);
   }
 }
 
