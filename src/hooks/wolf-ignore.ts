@@ -69,7 +69,9 @@ function globToRegExp(glob: string): RegExp {
             } else {
                 re += "[^/]*"; // * stays within one segment
             }
-        } else if ("\\^$.|?+()[]{}".includes(c)) {
+        } else if (c === "?") {
+            re += "[^/]"; // ? matches any single character within a segment
+        } else if ("\\^$.|+()[]{}".includes(c)) {
             re += "\\" + c;
         } else {
             re += c;
@@ -102,7 +104,7 @@ function matchesPattern(
     // Leading slash -> root-anchored prefix/glob semantics.
     if (pattern.startsWith("/")) {
         const anchored = pattern.slice(1).replace(/\/+$/g, "");
-        if (anchored.includes("*")) return globToRegExp(anchored).test(relPath);
+        if (anchored.includes("*") || anchored.includes("?")) return globToRegExp(anchored).test(relPath);
         return relPath === anchored || relPath.startsWith(`${anchored}/`);
     }
 
@@ -115,7 +117,7 @@ function matchesPattern(
     }
 
     const hasSlash = pattern.includes("/");
-    const hasGlob = pattern.includes("*");
+    const hasGlob = pattern.includes("*") || pattern.includes("?");
 
     // Bare segment name (backward compatible): match at any depth.
     if (!hasSlash && !hasGlob) {
@@ -186,7 +188,11 @@ type GitignoreEntry =
  *   - `**` spanning segments → glob
  */
 function parseGitignoreLine(raw: string): GitignoreEntry {
-    const line = raw.trim();
+    let line = raw.trim();
+    // Unescape escaped gitignore tokens so they are not mistaken for comments,
+    // negation, or literal backslashes (R6-D5 / D10-04).
+    line = line.replace(/\\([#! ])/g, "$1");
+
     // Blank or comment → skip.
     if (!line || line.startsWith("#")) return { kind: "skip" };
     // Negation → fail-closed: treat as skip (over-exclusion acceptable, not a
@@ -199,17 +205,17 @@ function parseGitignoreLine(raw: string): GitignoreEntry {
     // Leading slash → root-anchored.
     if (stripped.startsWith("/")) {
         const anchor = stripped.slice(1);
-        if (anchor.includes("*")) return { kind: "glob", re: globToRegExp(anchor) };
+        if (anchor.includes("*") || anchor.includes("?")) return { kind: "glob", re: globToRegExp(anchor) };
         return { kind: "prefix", prefix: anchor };
     }
 
     // No slash and no glob → bare name (matches at any depth via parts.includes).
-    if (!stripped.includes("/") && !stripped.includes("*")) {
+    if (!stripped.includes("/") && !stripped.includes("*") && !stripped.includes("?")) {
         return { kind: "bare", name: stripped };
     }
 
-    // Glob pattern (contains `*`).
-    if (stripped.includes("*")) return { kind: "glob", re: globToRegExp(stripped) };
+    // Glob pattern (contains `*` or `?`).
+    if (stripped.includes("*") || stripped.includes("?")) return { kind: "glob", re: globToRegExp(stripped) };
 
     // Path without glob → prefix semantics.
     return { kind: "prefix", prefix: stripped };
