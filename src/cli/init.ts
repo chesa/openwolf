@@ -396,10 +396,6 @@ export async function initCommand(): Promise<void> {
 
   // --- Template files ---
   let createdCount = 0;
-  let skippedCount = 0;
-  // Track which CREATE_IF_MISSING files were newly written so we can seed
-  // their placeholders even when isUpgrade is true.
-  const newlyCreated = new Set<string>();
 
   for (const file of ALWAYS_OVERWRITE) {
     if (writeTemplateFile(actualTemplatesDir, wolfDir, file)) createdCount++;
@@ -407,11 +403,8 @@ export async function initCommand(): Promise<void> {
 
   for (const file of CREATE_IF_MISSING) {
     const destPath = path.join(wolfDir, file);
-    if (fs.existsSync(destPath)) {
-      skippedCount++;
-    } else {
+    if (!fs.existsSync(destPath)) {
       if (writeTemplateFile(actualTemplatesDir, wolfDir, file)) {
-        newlyCreated.add(file);
         createdCount++;
       }
     }
