@@ -72,16 +72,18 @@ const TEMPLATE_NAME_MAP: Record<string, string> = {
   "wolf-gitignore": ".gitignore",
 };
 
-function writeTemplateFile(templatesDir: string, wolfDir: string, file: string): void {
+function writeTemplateFile(templatesDir: string, wolfDir: string, file: string): boolean {
   const srcPath = path.join(templatesDir, file);
   const destName = TEMPLATE_NAME_MAP[file] ?? file;
   const destPath = path.join(wolfDir, destName);
   if (fs.existsSync(srcPath)) {
     const content = fs.readFileSync(srcPath, "utf-8");
     fs.writeFileSync(destPath, content, "utf-8");
+    return true;
   } else if (!RUNTIME_CREATED_NO_TEMPLATE.has(file)) {
     console.warn(`Template not found: ${file}`);
   }
+  return false;
 }
 
 /**
@@ -421,8 +423,7 @@ export async function initCommand(): Promise<void> {
   const newlyCreated = new Set<string>();
 
   for (const file of ALWAYS_OVERWRITE) {
-    writeTemplateFile(actualTemplatesDir, wolfDir, file);
-    createdCount++;
+    if (writeTemplateFile(actualTemplatesDir, wolfDir, file)) createdCount++;
   }
 
   for (const file of CREATE_IF_MISSING) {
@@ -430,9 +431,10 @@ export async function initCommand(): Promise<void> {
     if (fs.existsSync(destPath)) {
       skippedCount++;
     } else {
-      writeTemplateFile(actualTemplatesDir, wolfDir, file);
-      newlyCreated.add(file);
-      createdCount++;
+      if (writeTemplateFile(actualTemplatesDir, wolfDir, file)) {
+        newlyCreated.add(file);
+        createdCount++;
+      }
     }
   }
 
