@@ -6,6 +6,12 @@ How to keep OpenWolf current across projects and recover from problems.
 
 OpenWolf tracks every project where `openwolf init` has been run. The `update` command pushes new protocol files to all registered projects at once, while `restore` lets you roll back if something goes wrong.
 
+## Migrating from upstream v1.0.4
+
+If your team is moving from the upstream `openwolf` package to the CHESA fork (`chesa/openwolf`) at the v1.3.x-beta line, see the dedicated guide:
+
+- [Migrating from upstream OpenWolf v1.0.4 to CHESA OpenWolf v1.3.x-beta](./migration-v1.0.4-to-v1.3)
+
 ---
 
 ## `openwolf update`

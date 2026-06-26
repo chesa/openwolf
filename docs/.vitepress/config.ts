@@ -118,6 +118,7 @@ export default defineConfig({
           { text: "Commands", link: "/commands" },
           { text: "Configuration", link: "/configuration" },
           { text: "Update & Restore", link: "/updating" },
+          { text: "Migration: v1.0.4 → v1.3", link: "/migration-v1.0.4-to-v1.3" },
           { text: "Troubleshooting", link: "/troubleshooting" },
         ],
       },
