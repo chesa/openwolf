@@ -36,7 +36,12 @@ export interface ProposalEntry {
 // Private parsing helpers
 // ---------------------------------------------------------------------------
 
-const ENTRY_HEADER_REGEX = /^(.+?) → (.+)\n\n([\s\S]*)$/;
+// Match proposal entries by their arrow-header boundary without splitting on every
+// `##` in the body. This preserves content that contains markdown headings such as
+// `## Subsection` and also tolerates an entry at the very start of the file (no
+// leading newline required) (WR-07).
+const ENTRY_REGEX =
+  /(?:^|\n)##\s+(.+?)\s*→\s*(cerebrum|anatomy)\s*\n\n([\s\S]*?)(?=\n##\s+[^\n]+\s*→\s*(?:cerebrum|anatomy)|$)/gi;
 
 /**
  * ENOENT-safe file read. Non-ENOENT errors are logged to stderr and swallowed
@@ -64,31 +69,15 @@ export function parseProposals(sessionDir: string, sessionId: string): ProposalE
   const raw = readStaging(stagingPath);
   if (!raw) return [];
 
-  const blocks = raw.split("\n## ");
   const entries: ProposalEntry[] = [];
-
-  for (const block of blocks) {
-    const trimmed = block.trim();
-    if (!trimmed) continue;
-
-    const bodyMatch = trimmed.match(ENTRY_HEADER_REGEX);
-    if (!bodyMatch) {
-      process.stderr.write(
-        `OpenWolf: unparseable proposal entry in session ${sessionId}, skipping\n`,
-      );
-      continue;
-    }
-
-    const timestamp = bodyMatch[1];
-    const targetRaw = bodyMatch[2].toLowerCase();
-    if (targetRaw !== "cerebrum" && targetRaw !== "anatomy") {
-      process.stderr.write(
-        `OpenWolf: unparseable proposal entry in session ${sessionId}, skipping\n`,
-      );
-      continue;
-    }
+  for (const match of raw.matchAll(ENTRY_REGEX)) {
+    const timestamp = match[1];
+    const targetRaw = match[2].toLowerCase();
     const target = targetRaw as "cerebrum" | "anatomy";
-    const content = bodyMatch[3].trim();
+    const content = match[3].trim();
+    // Preserve the old split-style raw shape (header text without the leading `## `)
+    // so downstream consumers such as learnings-cmd.ts see the same format.
+    const block = match[0].replace(/^(?:\n)?##\s+/, "");
 
     entries.push({
       sessionId,
