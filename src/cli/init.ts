@@ -172,25 +172,6 @@ function writeIdentity(projectRoot: string, wolfDir: string): void {
   fs.writeFileSync(identityPath, identity, "utf-8");
 }
 
-/** @deprecated Replaced by .wolf/.gitignore template (D-04). Call is removed from initCommand(). */
-function writeGitIgnore(projectRoot: string): void {
-  const gitignorePath = path.join(projectRoot, ".gitignore");
-  let gitignore = "";
-  try {
-    gitignore = fs.readFileSync(gitignorePath, "utf-8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.warn(`  ⚠ Cannot read ${gitignorePath}: ${(err as Error).message}. Skipping .gitignore update.`);
-      return;
-    }
-  }
-
-  if (!gitignore.includes(".wolf/")) {
-    gitignore += "\n\n# OpenWolf\n.wolf/\n";
-    fs.writeFileSync(gitignorePath, gitignore, "utf-8");
-  }
-}
-
 export function checkRootGitIgnore(projectRoot: string): void {
   const gitignorePath = path.join(projectRoot, ".gitignore");
   try {
