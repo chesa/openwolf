@@ -5,6 +5,7 @@ import {
   getWolfDir, ensureWolfDir, getSessionDir, updateJSON, readMarkdown, parseAnatomy, serializeAnatomy,
   extractDescription, estimateTokens, appendMarkdown, timeShort, timestamp, readStdin, normalizePath, isWolfFile,
   appendBugEntry, newBugId,
+  shouldExclude, parseAndMatchGitignore, DEFAULT_EXCLUDE_PATTERNS,
 } from "./shared.js";
 
 interface SessionData {
@@ -31,6 +32,32 @@ export function recordAnatomyWrite(
 ): void {
   const relPathLocal = normalizePath(path.relative(projectRoot, absolutePath));
   if (relPathLocal.startsWith("../")) return;
+
+  // ─── R6 gate: read .wolf/config.json fresh on every call (D10-07/R6-D3 — no caching).
+  // Missing, unreadable, or malformed config falls back to defaults silently (T-10-03).
+  let excludePatterns: string[] = DEFAULT_EXCLUDE_PATTERNS;
+  let respectGitignore = false;
+  try {
+    const rawCfg = fs.readFileSync(path.join(wolfDir, "config.json"), "utf-8");
+    const cfg = JSON.parse(rawCfg) as { openwolf?: { anatomy?: { exclude_patterns?: string[]; respect_gitignore?: boolean } } };
+    excludePatterns = cfg.openwolf?.anatomy?.exclude_patterns ?? DEFAULT_EXCLUDE_PATTERNS;
+    respectGitignore = cfg.openwolf?.anatomy?.respect_gitignore ?? false;
+  } catch {
+    // Any I/O or parse failure → defaults (D10-07/R6-D3)
+  }
+
+  // Gate 1: exclude_patterns — E6 regression (ROADMAP SC2)
+  if (shouldExclude(relPathLocal, excludePatterns)) return;
+
+  // Gate 2: root .gitignore — opt-in only (D10-08/R6-D4: default false)
+  if (respectGitignore) {
+    try {
+      const gi = fs.readFileSync(path.join(projectRoot, ".gitignore"), "utf-8");
+      if (parseAndMatchGitignore(relPathLocal, gi)) return;
+    } catch {
+      // No .gitignore or unreadable — skip gate silently
+    }
+  }
 
   const anatomyPath = path.join(wolfDir, "anatomy.md");
   let anatomyContent: string;
