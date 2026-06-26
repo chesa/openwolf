@@ -215,6 +215,23 @@ export function checkRootGitIgnore(projectRoot: string): void {
       console.warn("    Remove any .wolf/ path rules from your root .gitignore —");
       console.warn("    .wolf/.gitignore is the single source of truth for .wolf/ tracking.");
     }
+
+    // D-09-09: warn on generic dot-directory rules (e.g. ".*", "/.*/",
+    // "**/.*/") that silently ignore .wolf/ before the nested .wolf/.gitignore
+    // is consulted.
+    const isGenericDotDir = (line: string): boolean => {
+      const trimmed = line.trimStart();
+      if (trimmed.startsWith("#")) return false;
+      return /^!?\.\*\/?$|^!?\/\.\*\/?$|^!?\*\*\/\.\*\/?$/.test(trimmed);
+    };
+    if (lines.some(isGenericDotDir)) {
+      console.warn("");
+      console.warn("  ℹ Your root .gitignore contains a generic dot-directory rule.");
+      console.warn("    Patterns like '.*' or '**/.*/' are evaluated before");
+      console.warn("    .wolf/.gitignore and silently ignore the entire .wolf/ directory.");
+      console.warn("    Remove any '.*' or '**/.*/' rules from your root .gitignore —");
+      console.warn("    .wolf/.gitignore is the single source of truth for .wolf/ tracking.");
+    }
   } catch {
     // No .gitignore or can't read — not an error
   }
