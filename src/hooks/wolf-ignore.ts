@@ -82,8 +82,8 @@ function globToRegExp(glob: string): RegExp {
  * patterns are anchored at the project root. Supported forms:
  *   "node_modules"        bare name   -> matches that segment at ANY depth
  *   "*.min.js"            ext glob    -> matches any path ending in ".min.js"
- *   "docs/superpowers"   path prefix  -> matches that dir AND everything under it
- *   "docs/superpowers/*" path glob   -> matches direct children
+ *   "docs/archive"        path prefix  -> matches that dir AND everything under it
+ *   "docs/archive/*"     path glob   -> matches direct children
  *   ".claude/**\/cache"   path glob   -> double-star spans segments
  *   "tmp*"               name glob   -> matches any single segment by glob
  */
