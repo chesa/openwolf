@@ -88,3 +88,65 @@ describe("session-start.ts ledger init", () => {
         expect(ledger.lifetime.total_sessions).toBe(N);
     });
 });
+
+describe("session-start.ts execution_layer hint", () => {
+    let dir: string;
+    let stderrOutput: string;
+    let stderrSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+        dir = realpathSync(mkdtempSync(path.join(tmpdir(), "ow-sess-hint-")));
+        process.env.OPENWOLF_METADATA_DIR = dir;
+        stderrOutput = "";
+        stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(
+            (chunk: Uint8Array | string) => {
+                stderrOutput += typeof chunk === "string" ? chunk : chunk.toString();
+                return true;
+            }
+        );
+        const exitMock = vi.spyOn(process, "exit");
+        exitMock.mockImplementationOnce((code?: number | string | null) => {
+            throw new Error(`exit:${code}`);
+        });
+        exitMock.mockImplementation(() => {
+            return undefined as never;
+        });
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        delete process.env.OPENWOLF_METADATA_DIR;
+        rmSync(dir, { recursive: true, force: true });
+        stderrOutput = "";
+    });
+
+    it("emits execution layer hint to stderr when openwolf.execution_layer is set", async () => {
+        writeFileSync(
+            path.join(dir, "config.json"),
+            JSON.stringify({ openwolf: { execution_layer: "gsd" } }),
+            "utf-8"
+        );
+        vi.resetModules();
+        try {
+            await import("../../src/hooks/session-start.js");
+        } catch {
+            // swallow exit throw
+        }
+        expect(stderrOutput).toContain("execution layer = gsd");
+    });
+
+    it("does NOT emit execution layer hint to stderr when openwolf.execution_layer is null", async () => {
+        writeFileSync(
+            path.join(dir, "config.json"),
+            JSON.stringify({ openwolf: { execution_layer: null } }),
+            "utf-8"
+        );
+        vi.resetModules();
+        try {
+            await import("../../src/hooks/session-start.js");
+        } catch {
+            // swallow exit throw
+        }
+        expect(stderrOutput).not.toContain("execution layer =");
+    });
+});

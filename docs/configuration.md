@@ -50,6 +50,7 @@ Controls the project file scanner.
 | `max_description_length` | `100` | Max characters for file descriptions. |
 | `max_files` | `500` | Stop scanning after this many files. |
 | `exclude_patterns` | *(see below)* | Directories and patterns to skip. |
+| `respect_gitignore` | `false` | When `true`, also skip files/dirs matched by the project-root `.gitignore` (union with `exclude_patterns`). |
 
 **Default `exclude_patterns`:**
 
@@ -61,6 +62,38 @@ Controls the project file scanner.
   ".netlify", ".output", "*.min.js", "*.min.css"
 ]
 ```
+
+**`respect_gitignore`.** With `respect_gitignore: true`, the scanner also loads
+the project-root `.gitignore` and skips anything it matches, in addition to
+`exclude_patterns`. Off by default. Only the root `.gitignore` is read — nested
+`.gitignore` files and global / `core.excludesFile` patterns are not consulted.
+
+**Pattern matching.** Each entry is matched against every project-relative
+path (forward-slash separated, anchored at the project root):
+
+| Form | Example | Matches |
+|------|---------|---------|
+| Bare name | `node_modules` | a directory or file of that name at **any** depth |
+| Extension glob | `*.min.js` | any path ending in `.min.js` (only when the pattern has **no** `/`) |
+| Path prefix | `.claude/worktrees` | that directory **and everything under it** (a `/`-pattern with **no** `*`) |
+| Path glob | `docs/superpowers/*` | the path as an anchored glob: `*` stays within one segment, `**` spans segments (a `/`-pattern that **contains** `*`) |
+| Name glob | `tmp*` | any single path segment matching the glob (no `/`, contains `*`) |
+
+> **The form is chosen by structure, not declared** — the presence of `/` and
+> `*` selects the rule:
+>
+> - `*.ext` with no `/` → extension glob (so `src/*.min.js` is *not* an
+>   extension glob; it falls through to the path-glob rule below).
+> - A `/`-bearing pattern with **no** `*` → path prefix: it excludes that path
+>   and its entire subtree (`docs/superpowers` excludes everything under
+>   `docs/superpowers/`).
+> - A `/`-bearing pattern **with** `*` → anchored path glob: `*` matches within
+>   one segment (`docs/superpowers/*` = direct children only), `**` spans
+>   segments (`docs/**/LEARNINGS.md`).
+> - A `*`-bearing pattern with no `/` → name glob against any single segment.
+>
+> Previously only bare names and `*.ext` were honored — a pattern with a `/`
+> silently matched nothing.
 
 ### `token_audit`
 
@@ -131,7 +164,7 @@ Controls the DesignQC screenshot capture system.
 | Key | Default | Description |
 |-----|---------|-------------|
 | `enabled` | `true` | Enable DesignQC features. |
-| `viewports` | `[{desktop: 1440x900}, {mobile: 375x812}]` | Capture viewports. |
+| `viewports` | `[{ "name": "desktop", "width": 1440, "height": 900 }, { "name": "mobile", "width": 375, "height": 812 }]` | Capture viewports. |
 | `max_screenshots` | `6` | Maximum screenshots per run. |
 | `chrome_path` | `null` | Custom Chrome or Edge executable path. |
 
@@ -142,6 +175,36 @@ Controls the DesignQC screenshot capture system.
   { "name": "desktop", "width": 1440, "height": 900 },
   { "name": "mobile", "width": 375, "height": 812 }
 ]
+```
+
+### `execution_layer`
+
+OpenWolf is execution-layer-agnostic: it does not own your project's plan, roadmap, or
+intent files. The optional `execution_layer` key lets you record which tool your team
+uses so OpenWolf can surface a reminder at session start.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `execution_layer` | `null` | Name of the execution layer in use (e.g. `"gsd"`, `"superpowers"`, `"gstack"`). When set to a non-empty string, `openwolf status` prints `Execution layer: <value>` and the session-start hook writes `OpenWolf: execution layer = <value> — read its plan/status first.` to stderr. When `null` or absent, both outputs are suppressed. |
+| `execution_layer_note` | *(explanatory string)* | Human-readable hint about what the key does. This key is informational only — OpenWolf does not read it at runtime. |
+
+**Resume order (framework-blind):** OpenWolf does not mandate a specific status file.
+When resuming a session, follow this generic order regardless of execution layer:
+
+1. Check your execution layer's own plan or status file first (if present).
+2. Read `.wolf/cerebrum.md` for project conventions and do-not-repeat items.
+3. Scan recent `.wolf/memory.md` entries for session context.
+
+**Example `.wolf/config.json` snippet:**
+
+```json
+{
+  "version": 1,
+  "openwolf": {
+    "execution_layer": "gsd",
+    "execution_layer_note": "Optional: set to your execution layer name so OpenWolf can surface a resume hint. null = generic resume order."
+  }
+}
 ```
 
 ## Required vs optional settings
@@ -174,17 +237,18 @@ suggestions.json
 backups/
 sessions/
 
+# Derived / regenerated locally
+anatomy.md
+
 # Transient lock files from concurrent-write protection
 *.lock
 
 # Shared knowledge files are NOT listed here, so they ARE committed:
-#   anatomy.md        — project file map
 #   cerebrum.md       — learned conventions and do-not-repeat list
 #   OPENWOLF.md       — operating protocol
 #   config.json       — project configuration
 #   buglog.ndjson     — known bugs and fixes
 #   identity.md       — project identity
-#   STATUS.md         — project status
 #   hooks/            — compiled hook scripts
 #   reframe-frameworks.md
 #   cron-manifest.json  — cron config (cron-state.json is per-dev, above)

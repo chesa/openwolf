@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, updateJSON, appendMarkdown, timeShort } from "./shared.js";
+import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, updateJSON, appendMarkdown, timeShort, readMarkdown } from "./shared.js";
 
 interface FileRead {
   count: number;
@@ -69,8 +69,10 @@ export function finalizeSession(wolfDir: string, sessionDir: string, session: Se
   // Check if cerebrum was updated this session (it should be if there were edits)
   checkCerebrumFreshness(wolfDir, session);
 
-  // Check if STATUS.md is stale relative to this session
-  checkStatusFreshness(wolfDir, session);
+  // Stage a structural learning breadcrumb when code was written but the model
+  // authored no proposed-learnings.md this session. Purely a fixed literal stub;
+  // never synthesizes semantic content from file diffs (D12-01).
+  captureStubIfNeeded(wolfDir, sessionDir, session);
 
   // Build session entry for ledger
   const reads = Object.entries(session.files_read).map(([file, data]) => ({
@@ -214,51 +216,13 @@ function checkForMissingBugLogs(wolfDir: string, session: SessionData): void {
 
   // Check if buglog was written to this session
   const buglogWritten = session.files_written.some(w =>
-    w.file.includes("buglog")
+    path.basename(w.file) === "buglog.ndjson"
   );
 
   if (!buglogWritten) {
     process.stderr.write(
       `⚠️ OpenWolf: Files edited 3+ times this session (${multiEditFiles.join(", ")}) but buglog.ndjson was not updated. If you fixed bugs, please log them.\n`
     );
-  }
-}
-
-/**
- * Check if STATUS.md is older than the session start AND there was meaningful
- * code activity (3+ writes outside .wolf/). If so, nudge Claude to update
- * STATUS.md so the next /clear has fresh handoff context.
- */
-function checkStatusFreshness(wolfDir: string, session: SessionData): void {
-  const statusPath = path.join(wolfDir, "STATUS.md");
-  const codeWrites = session.files_written.filter(
-    (w) =>
-      !w.file.includes(`${path.sep}.wolf${path.sep}`) &&
-      !w.file.includes("/.wolf/") &&
-      !w.file.endsWith(".tmp")
-  );
-
-  try {
-    const stat = fs.statSync(statusPath);
-    const sessionStartMs = session.started ? Date.parse(session.started) : 0;
-    if (!sessionStartMs) return;
-
-    if (codeWrites.length >= 3 && stat.mtimeMs < sessionStartMs) {
-      process.stderr.write(
-        `📌 OpenWolf: STATUS.md not updated this session despite ${codeWrites.length} code writes. Update .wolf/STATUS.md (✅ done / 🚀 next quest) before /clear so next session resumes in 1 read.\n`
-      );
-    }
-  } catch (err: unknown) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "ENOENT") {
-      // STATUS.md doesn't exist — nudge to create it if there were code writes
-      if (codeWrites.length >= 3) {
-        process.stderr.write(
-          `📌 OpenWolf: .wolf/STATUS.md missing. Create it with current quest summary + next steps so /clear stays cheap.\n`
-        );
-      }
-    }
-    // Non-ENOENT errors: silently skip (don't disrupt the stop hook)
   }
 }
 
@@ -281,12 +245,53 @@ function checkCerebrumFreshness(wolfDir: string, session: SessionData): void {
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
       // ENOENT: cerebrum.md doesn't exist yet — expected on first init, skip silently.
-      // Other errors (EACCES, I/O) indicate a real problem worth surfacing,
-      // matching the pattern checkStatusFreshness uses in this same file.
+      // Other errors (EACCES, I/O) indicate a real problem worth surfacing
+      // rather than swallowing them silently.
       process.stderr.write(
         `OpenWolf: could not check cerebrum.md freshness: ${err instanceof Error ? err.message : String(err)}\n`
       );
     }
+  }
+}
+
+/**
+ * Stage a fixed structural breadcrumb when the session mutated code but the
+ * model did not author any proposed learning. The stub is idempotent across
+ * multiple stop fires and never infers content from file changes.
+ */
+function captureStubIfNeeded(wolfDir: string, sessionDir: string, session: SessionData): void {
+  // (a) Only trigger for non-.wolf/, non-scratch code writes (D12-02a).
+  // Normalize the path and compare .wolf as a whole segment so paths like
+  // "/project/sub.wolf/file.ts" are not mistakenly excluded on any platform.
+  const SCRATCH_EXTENSIONS = new Set([".tmp"]);
+  const codeWrites = session.files_written.filter((w) => {
+    const normalized = path.normalize(w.file);
+    const segments = normalized.split(path.sep);
+    const isWolfFile = segments.some((seg) => seg === ".wolf");
+    const ext = path.extname(normalized).toLowerCase();
+    return !isWolfFile && !SCRATCH_EXTENSIONS.has(ext);
+  });
+  if (codeWrites.length === 0) return;
+
+  // (b) If the model already wrote proposed-learnings.md, do not overwrite
+  //     or duplicate its content (D12-02b).
+  const proposalPath = path.join(sessionDir, "proposed-learnings.md");
+  const existing = readMarkdown(proposalPath);
+  if (existing.trim().length > 0) return;
+
+  const STUB_MARKER = "### Staged Session Metadata";
+  try {
+    // Write the stub as raw content (no arrow header). This keeps it countable
+    // by collectAllEntries() (which synthesizes isStub:true for unparseable
+    // content) while ensuring it can never be merged into cerebrum.md by
+    // learningsMergeCommand, which filters out isStub entries (R7a → R7b).
+    const stub = `${STUB_MARKER}\n\nSession ended with code changes but no explicit learning recorded. Review and add context if relevant.\n`;
+    fs.mkdirSync(path.dirname(proposalPath), { recursive: true });
+    fs.writeFileSync(proposalPath, stub, "utf-8");
+  } catch (err) {
+    process.stderr.write(
+      `OpenWolf: could not stage learning breadcrumb: ${err instanceof Error ? err.message : String(err)}\n`
+    );
   }
 }
 

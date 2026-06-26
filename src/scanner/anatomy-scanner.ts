@@ -3,8 +3,20 @@ import * as path from "node:path";
 import { extractDescription, capDescription } from "./description-extractor.js";
 import { readJSON, writeText } from "../utils/fs-safe.js";
 import { normalizePath } from "../utils/paths.js";
-import { parseAnatomy, type AnatomyEntry } from "../hooks/shared.js";
+import {
+  parseAnatomy,
+  serializeAnatomy,
+  type AnatomyEntry,
+  withFileLock,
+  shouldExclude,
+  DEFAULT_EXCLUDE_PATTERNS,
+} from "../hooks/shared.js";
 import { CODE_EXTENSIONS, PROSE_EXTENSIONS } from "../utils/extensions.js";
+// `ignore` powers the opt-in respect_gitignore feature. It is a CLI/daemon-only
+// dependency: this module (src/scanner) must NEVER be imported by a hook
+// (src/hooks compiles standalone with no node_modules), or this require would
+// fail at runtime — the same failure class as the WOLF_ROOT MODULE_NOT_FOUND bug.
+import ignore, { type Ignore } from "ignore";
 
 interface WolfConfig {
   version?: number;
@@ -13,6 +25,7 @@ interface WolfConfig {
       max_description_length?: number;
       max_files?: number;
       exclude_patterns?: string[];
+      respect_gitignore?: boolean;
     };
     token_audit?: {
       chars_per_token_code?: number;
@@ -22,12 +35,6 @@ interface WolfConfig {
 }
 
 const DEFAULT_MAX_FILES = 500;
-const DEFAULT_EXCLUDE_PATTERNS = [
-  "node_modules", ".git", "dist", "build", ".wolf",
-  ".next", ".nuxt", "coverage", "__pycache__", ".cache",
-  "target", ".vscode", ".idea", ".turbo", ".vercel",
-  ".netlify", ".output", "*.min.js", "*.min.css",
-];
 
 const BINARY_EXTENSIONS = new Set([
   ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".svg",
@@ -49,31 +56,19 @@ function estimateTokens(text: string, filePath: string): number {
   return Math.ceil(text.length / ratio);
 }
 
-// Files that should never appear in anatomy (secrets, env files)
-const ALWAYS_EXCLUDE_FILES = new Set([".env", ".env.local", ".env.production", ".env.staging", ".env.development"]);
-
-function shouldExclude(
-  relPath: string,
-  excludePatterns: string[]
-): boolean {
-  const parts = relPath.split("/");
-  const basename = parts[parts.length - 1];
-
-  // Always exclude sensitive files regardless of config
-  if (ALWAYS_EXCLUDE_FILES.has(basename)) return true;
-  // Also exclude .env.* variants not in the set (e.g., .env.backup)
-  if (basename.startsWith(".env.") || basename === ".env") return true;
-
-  for (const pattern of excludePatterns) {
-    // Simple glob: check if any path segment matches
-    if (pattern.startsWith("*.")) {
-      const ext = pattern.slice(1);
-      if (relPath.endsWith(ext)) return true;
-    } else {
-      if (parts.includes(pattern)) return true;
-    }
+// Load the project-root .gitignore into an `ignore` matcher when the opt-in
+// respect_gitignore feature is enabled. Returns null when disabled, or when no
+// .gitignore is present/readable (nothing extra to exclude). Only the root
+// .gitignore is consulted — nested .gitignore files and global excludes are out
+// of scope.
+function loadGitignoreMatcher(projectRoot: string, respect: boolean): Ignore | null {
+  if (!respect) return null;
+  try {
+    const content = fs.readFileSync(path.join(projectRoot, ".gitignore"), "utf-8");
+    return ignore().add(content);
+  } catch {
+    return null;
   }
-  return false;
 }
 
 function walkDir(
@@ -81,7 +76,8 @@ function walkDir(
   rootDir: string,
   excludePatterns: string[],
   maxFiles: number,
-  entries: Map<string, AnatomyEntry[]>
+  entries: Map<string, AnatomyEntry[]>,
+  ig: Ignore | null
 ): void {
   let totalFiles = 0;
   for (const [, list] of entries) totalFiles += list.length;
@@ -101,9 +97,11 @@ function walkDir(
     const relPath = normalizePath(path.relative(rootDir, fullPath));
 
     if (shouldExclude(relPath, excludePatterns)) continue;
+    // Opt-in: also honor the project's .gitignore (prunes dirs + skips files).
+    if (ig && relPath && ig.ignores(relPath)) continue;
 
     if (item.isDirectory()) {
-      walkDir(fullPath, rootDir, excludePatterns, maxFiles, entries);
+      walkDir(fullPath, rootDir, excludePatterns, maxFiles, entries, ig);
     } else if (item.isFile()) {
       const ext = path.extname(item.name).toLowerCase();
       if (BINARY_EXTENSIONS.has(ext)) continue;
@@ -145,35 +143,6 @@ function walkDir(
   }
 }
 
-export function serializeAnatomy(
-  sections: Map<string, AnatomyEntry[]>,
-  metadata: { lastScanned: string; fileCount: number; hits: number; misses: number }
-): string {
-  const lines: string[] = [
-    "# anatomy.md",
-    "",
-    `> Auto-maintained by OpenWolf. Last scanned: ${metadata.lastScanned}`,
-    `> Files: ${metadata.fileCount} tracked | Anatomy hits: ${metadata.hits} | Misses: ${metadata.misses}`,
-    "",
-  ];
-
-  const sortedKeys = [...sections.keys()].sort();
-
-  for (const key of sortedKeys) {
-    lines.push(`## ${key}`);
-    lines.push("");
-    const entries = sections.get(key)!;
-    entries.sort((a, b) => a.file.localeCompare(b.file));
-    for (const entry of entries) {
-      const desc = entry.description ? ` — ${entry.description}` : "";
-      lines.push(`- \`${entry.file}\`${desc} (~${entry.tokens} tok)`);
-    }
-    lines.push("");
-  }
-
-  return lines.join("\n");
-}
-
 /**
  * Scan the project and return the anatomy content and file count WITHOUT writing to disk.
  */
@@ -191,13 +160,25 @@ export function buildAnatomy(wolfDir: string, projectRoot: string): { content: s
     },
   });
 
+  const rawPatterns = config.openwolf?.anatomy?.exclude_patterns;
+  const excludePatterns =
+    Array.isArray(rawPatterns) && rawPatterns.every((p) => typeof p === "string")
+      ? rawPatterns
+      : DEFAULT_EXCLUDE_PATTERNS;
+
+  const ig = loadGitignoreMatcher(
+    projectRoot,
+    config.openwolf?.anatomy?.respect_gitignore ?? false
+  );
+
   const entries = new Map<string, AnatomyEntry[]>();
   walkDir(
     projectRoot,
     projectRoot,
-    config.openwolf?.anatomy?.exclude_patterns ?? DEFAULT_EXCLUDE_PATTERNS,
+    excludePatterns,
     config.openwolf?.anatomy?.max_files ?? DEFAULT_MAX_FILES,
-    entries
+    entries,
+    ig
   );
 
   let fileCount = 0;
@@ -226,61 +207,65 @@ export function updateAnatomyEntry(
   projectRoot: string,
   action: "upsert" | "delete"
 ): void {
-  const anatomyPath = path.join(wolfDir, "anatomy.md");
-  let content: string;
-  try {
-    content = fs.readFileSync(anatomyPath, "utf-8");
-  } catch {
-    content = "# anatomy.md\n\n> Auto-maintained by OpenWolf.\n";
-  }
-
-  const sections = parseAnatomy(content);
   const relPath = normalizePath(path.relative(projectRoot, filePath));
-  const dir = path.dirname(relPath);
-  const fileName = path.basename(relPath);
-  const sectionKey = dir === "." ? "./" : dir + "/";
+  if (relPath.startsWith("../") || path.isAbsolute(relPath)) return;
 
-  if (action === "delete") {
-    const entries = sections.get(sectionKey);
-    if (entries) {
-      const idx = entries.findIndex((e) => e.file === fileName);
-      if (idx !== -1) entries.splice(idx, 1);
-      if (entries.length === 0) sections.delete(sectionKey);
-    }
-  } else {
-    // upsert
-    let fileContent: string;
+  const anatomyPath = path.join(wolfDir, "anatomy.md");
+  withFileLock(anatomyPath, () => {
+    let content: string;
     try {
-      fileContent = fs.readFileSync(filePath, "utf-8");
+      content = fs.readFileSync(anatomyPath, "utf-8");
     } catch {
-      return;
+      content = "# anatomy.md\n\n> Auto-maintained by OpenWolf.\n";
     }
 
-    const desc = capDescription(extractDescription(filePath));
-    const tokens = estimateTokens(fileContent, filePath);
-    const entry: AnatomyEntry = { file: fileName, description: desc, tokens };
+    const sections = parseAnatomy(content);
+    const dir = path.dirname(relPath);
+    const fileName = path.basename(relPath);
+    const sectionKey = dir === "." ? "./" : dir + "/";
 
-    if (!sections.has(sectionKey)) {
-      sections.set(sectionKey, []);
-    }
-    const entries = sections.get(sectionKey)!;
-    const idx = entries.findIndex((e) => e.file === fileName);
-    if (idx !== -1) {
-      entries[idx] = entry;
+    if (action === "delete") {
+      const entries = sections.get(sectionKey);
+      if (entries) {
+        const idx = entries.findIndex((e) => e.file === fileName);
+        if (idx !== -1) entries.splice(idx, 1);
+        if (entries.length === 0) sections.delete(sectionKey);
+      }
     } else {
-      entries.push(entry);
+      // upsert
+      let fileContent: string;
+      try {
+        fileContent = fs.readFileSync(filePath, "utf-8");
+      } catch {
+        return;
+      }
+
+      const desc = capDescription(extractDescription(filePath));
+      const tokens = estimateTokens(fileContent, filePath);
+      const entry: AnatomyEntry = { file: fileName, description: desc, tokens };
+
+      if (!sections.has(sectionKey)) {
+        sections.set(sectionKey, []);
+      }
+      const entries = sections.get(sectionKey)!;
+      const idx = entries.findIndex((e) => e.file === fileName);
+      if (idx !== -1) {
+        entries[idx] = entry;
+      } else {
+        entries.push(entry);
+      }
     }
-  }
 
-  let fileCount = 0;
-  for (const [, list] of sections) fileCount += list.length;
+    let fileCount = 0;
+    for (const [, list] of sections) fileCount += list.length;
 
-  const serialized = serializeAnatomy(sections, {
-    lastScanned: new Date().toISOString(),
-    fileCount,
-    hits: 0,
-    misses: 0,
+    const serialized = serializeAnatomy(sections, {
+      lastScanned: new Date().toISOString(),
+      fileCount,
+      hits: 0,
+      misses: 0,
+    });
+
+    writeText(anatomyPath, serialized);
   });
-
-  writeText(anatomyPath, serialized);
 }

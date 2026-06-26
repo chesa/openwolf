@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "openwolf": {
+    "anatomy": {
+      "exclude_patterns": [
+        "node_modules",
+        ".git",
+        ".wolf",
+        "docs/superpowers",
+        ".claude/plans/tmp.pwYfhCNiar"
+      ]
+    }
+  }
+}

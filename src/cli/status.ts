@@ -1,16 +1,29 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { findProjectRoot } from "../scanner/project-root.js";
-import { readJSON, readText } from "../utils/fs-safe.js";
+import { readJSON, readText, writeJSON } from "../utils/fs-safe.js";
 import { detectWorktreeContext } from "../utils/worktree.js";
+import { collectAllEntries, hashCerebrumBody } from "../hooks/wolf-pantry.js";
 
+interface FreshnessSidecar {
+  version: number;
+  content_sha256: string;
+  last_updated_seen: string;
+  captured_at: string;
+  captured_by: string;
+}
 
 export async function statusCommand(): Promise<void> {
   const projectRoot = findProjectRoot();
   const wtCtx = detectWorktreeContext(projectRoot);
-  const wolfDir = wtCtx.isWorktree
-    ? path.join(wtCtx.mainRepoRoot, ".wolf")
-    : path.join(projectRoot, ".wolf");
+
+  // OPENWOLF_METADATA_DIR overrides the default .wolf/ location (D-03).
+  const envDir = process.env.OPENWOLF_METADATA_DIR;
+  const wolfDir = envDir && envDir.trim().length > 0
+    ? path.resolve(envDir.trim())
+    : (wtCtx.isWorktree
+        ? path.join(wtCtx.mainRepoRoot, ".wolf")
+        : path.join(projectRoot, ".wolf"));
 
   if (!fs.existsSync(wolfDir)) {
     console.log("OpenWolf not initialized. Run: openwolf init");
@@ -24,6 +37,8 @@ export async function statusCommand(): Promise<void> {
     ? path.join(wolfDir, "sessions", wtCtx.worktreeId)
     : wolfDir;
 
+  // (OPENWOLF_METADATA_DIR already folded into wolfDir above.)
+
   if (wtCtx.isWorktree) {
     console.log(`  Mode: Worktree  (${wtCtx.branch || wtCtx.worktreeId})`);
     console.log(`  Main repo: ${wtCtx.mainRepoRoot}`);
@@ -31,15 +46,32 @@ export async function statusCommand(): Promise<void> {
   } else {
     console.log(`  Mode: Main checkout`);
   }
+
+  // Surface optional execution_layer hint from config.json (D11-07)
+  const config = readJSON<{
+    openwolf?: { execution_layer?: string | null };
+  }>(path.join(wolfDir, "config.json"), {});
+  const executionLayer = (config.openwolf?.execution_layer ?? "").trim();
+  if (executionLayer) {
+    console.log(`  Execution layer: ${executionLayer}`);
+  }
+
   console.log("");
 
   // File integrity check
   const sharedFiles = [
     "OPENWOLF.md", "identity.md", "cerebrum.md",
     "anatomy.md", "config.json", "buglog.ndjson",
-    "cron-manifest.json", "cron-state.json", "memory.md",
+    "cron-manifest.json",
   ];
   const sessionFiles = ["token-ledger.json"];
+  // Per-developer / runtime files: gitignored and created lazily (by init, the
+  // daemon, or session hooks), so they are legitimately absent on a fresh
+  // install or clone. Report them as informational, never as ✗ errors.
+  const perDevFiles: Array<{ file: string; note: string }> = [
+    { file: "memory.md", note: "per-developer session log" },
+    { file: "cron-state.json", note: "daemon runtime state" },
+  ];
 
   let missingCount = 0;
   for (const file of sharedFiles) {
@@ -54,6 +86,11 @@ export async function statusCommand(): Promise<void> {
         ? `.wolf/sessions/${wtCtx.worktreeId}/${file}`
         : `.wolf/${file}`;
       console.log(`  - Not yet created: ${loc} (appears after first session)`);
+    }
+  }
+  for (const { file, note } of perDevFiles) {
+    if (!fs.existsSync(path.join(wolfDir, file))) {
+      console.log(`  - Not yet created: .wolf/${file} (${note})`);
     }
   }
   if (missingCount === 0) {
@@ -118,6 +155,57 @@ export async function statusCommand(): Promise<void> {
   const entryCount = (anatomyContent.match(/^- `/gm) || []).length;
   console.log(`\nAnatomy: ${entryCount} files tracked`);
 
+  // Curation — pending learnings count (R7b, D12-08)
+  try {
+    const pending = collectAllEntries();
+    console.log("\nCuration:");
+    if (pending.length > 0) {
+      console.log(`  - ${pending.length} learnings awaiting review`);
+    } else {
+      console.log("  ✓ No pending learnings");
+    }
+  } catch {
+    console.log("\nCuration:");
+    console.log("  - Curation: (unavailable)");
+  }
+
+  // R9 freshness integrity check (D12-14)
+  const cerebrumPath = path.join(wolfDir, "cerebrum.md");
+  const sidecarPath = path.join(wolfDir, "cerebrum-freshness.json");
+  try {
+    if (!fs.existsSync(cerebrumPath)) {
+      console.log("  - cerebrum.md: not present (skipped baseline)");
+    } else {
+      const content = readText(cerebrumPath);
+      const currentHash = hashCerebrumBody(content);
+      const sidecar = readJSON<FreshnessSidecar | null>(sidecarPath, null);
+      const dateMatch = content.match(/>\s*Last\s+updated\s*:\s*(.+)/i);
+      const currentDate = dateMatch ? dateMatch[1].trim() : "—";
+
+      if (!sidecar) {
+        // Bootstrap-on-missing — the ONE write status may do (D12-14)
+        writeJSON(sidecarPath, {
+          version: 1,
+          content_sha256: currentHash,
+          last_updated_seen: currentDate,
+          captured_at: new Date().toISOString(),
+          captured_by: "status-bootstrap",
+        });
+        console.log("  - cerebrum.md: baseline captured (no prior history)");
+      } else if (currentHash === sidecar.content_sha256) {
+        if (currentDate !== sidecar.last_updated_seen) {
+          console.log(`  ✗ cerebrum.md: "Last updated" bumped with no content change (freshness theater)`);
+        } else {
+          console.log("  ✓ cerebrum.md: current");
+        }
+      } else {
+        console.log("  ✓ cerebrum.md: current");
+      }
+    }
+  } catch {
+    console.log("  - cerebrum.md: (freshness check unavailable)");
+  }
+
   // Cron state
   const cronState = readJSON<{ engine_status: string; last_heartbeat: string | null }>(
     path.join(wolfDir, "cron-state.json"),
@@ -125,9 +213,12 @@ export async function statusCommand(): Promise<void> {
   );
   console.log(`\nDaemon: ${cronState.engine_status}`);
   if (cronState.last_heartbeat) {
-    const elapsed = Date.now() - new Date(cronState.last_heartbeat).getTime();
-    const mins = Math.floor(elapsed / 60000);
-    console.log(`  Last heartbeat: ${mins} minutes ago`);
+    const last = new Date(cronState.last_heartbeat).getTime();
+    if (!Number.isNaN(last)) {
+      const elapsed = Date.now() - last;
+      const mins = Math.floor(elapsed / 60000);
+      console.log(`  Last heartbeat: ${mins} minutes ago`);
+    }
   }
 
   console.log("");

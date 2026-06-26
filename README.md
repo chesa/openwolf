@@ -136,12 +136,11 @@ Creates a `.wolf/` directory with the project brain files:
 | `anatomy.md` | Project file map with descriptions and token estimates |
 | `cerebrum.md` | Learned preferences, corrections, and Do-Not-Repeat list |
 | `memory.md` | Chronological action log with token estimates |
-| `buglog.json` | Bug fix memory, searchable, prevents re-discovery |
+| `buglog.ndjson` | Bug fix memory, searchable, prevents re-discovery |
 | `token-ledger.json` | Lifetime token tracking and session history |
 | `config.json` | Project configuration (ports, intervals, thresholds) |
 | `identity.md` | Project name and description |
-| `STATUS.md` | Project health and next-phase tracker |
-| `OPENWOLF.md` | Operating protocol for Claude Code sessions |
+| `OPENWOLF.md` | Framework-blind resume seam: on resume, check your execution layer's plan/status first (if present), then `cerebrum.md`, then recent `memory.md` |
 | `reframe-frameworks.md` | UI framework selection knowledge base |
 | `hooks/` | Six Claude Code lifecycle hooks (pure Node.js) |
 

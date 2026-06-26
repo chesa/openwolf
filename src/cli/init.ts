@@ -7,6 +7,10 @@ import { readJSON, writeJSON, safeCopyFile } from "../utils/fs-safe.js";
 import { ensureDir } from "../utils/paths.js";
 import { registerProject } from "./registry.js";
 import { detectWorktreeContext } from "../utils/worktree.js";
+import { makeHookSettings, isOpenWolfHook, replaceOpenWolfHooks } from "./hook-settings.js";
+import { findHookSourceDir, copyHookFiles, writeHooksPackageJson } from "./hook-copy.js";
+import { findTemplatesDir } from "./templates.js";
+import { migrateBugLog } from "./migrate-buglog.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,7 +18,7 @@ const __dirname = path.dirname(__filename);
 // Read version from package.json
 function getVersion(): string {
   try {
-    const pkgPath = path.resolve(__dirname, "../../../package.json");
+    const pkgPath = path.resolve(__dirname, "../../package.json");
     const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
     return pkg.version || "unknown";
   } catch (err) {
@@ -42,7 +46,6 @@ const CREATE_IF_MISSING = [
   "cerebrum.md",
   "memory.md",
   "anatomy.md",
-  "STATUS.md",
   "token-ledger.json",
   "buglog.ndjson",
   "cron-manifest.json",
@@ -60,12 +63,6 @@ const RUNTIME_CREATED_NO_TEMPLATE = new Set<string>([
   "suggestions.json",
 ]);
 
-import { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks } from "./hook-settings.js";
-import { findHookSourceDir, copyHookFiles, writeHooksPackageJson } from "./hook-copy.js";
-import { findTemplatesDir } from "./templates.js";
-import { migrateBugLog } from "./migrate-buglog.js";
-export { HOOK_SETTINGS, isOpenWolfHook, replaceOpenWolfHooks };
-
 // Template name → destination filename mapping.
 // Template files use plain names but some destinations need a different name
 // (e.g. wolf-gitignore → .gitignore).
@@ -73,16 +70,18 @@ const TEMPLATE_NAME_MAP: Record<string, string> = {
   "wolf-gitignore": ".gitignore",
 };
 
-function writeTemplateFile(templatesDir: string, wolfDir: string, file: string): void {
+function writeTemplateFile(templatesDir: string, wolfDir: string, file: string): boolean {
   const srcPath = path.join(templatesDir, file);
   const destName = TEMPLATE_NAME_MAP[file] ?? file;
   const destPath = path.join(wolfDir, destName);
   if (fs.existsSync(srcPath)) {
     const content = fs.readFileSync(srcPath, "utf-8");
     fs.writeFileSync(destPath, content, "utf-8");
+    return true;
   } else if (!RUNTIME_CREATED_NO_TEMPLATE.has(file)) {
     console.warn(`Template not found: ${file}`);
   }
+  return false;
 }
 
 /**
@@ -102,9 +101,11 @@ export function findMissingTemplates(templatesDir: string): string[] {
     // template as missing rather than silently producing a broken .wolf/.
     present = new Set();
   }
-  const required = [...ALWAYS_OVERWRITE, ...CREATE_IF_MISSING].filter(
-    (f) => !RUNTIME_CREATED_NO_TEMPLATE.has(f),
-  );
+  const required = [
+    ...ALWAYS_OVERWRITE,
+    ...CREATE_IF_MISSING,
+    "claude-rules-openwolf.md",
+  ].filter((f) => !RUNTIME_CREATED_NO_TEMPLATE.has(f));
   return required.filter((f) => !present.has(f));
 }
 
@@ -146,7 +147,7 @@ function writeSettings(projectRoot: string): void {
     }
   }
 
-  const merged = replaceOpenWolfHooks(existing, HOOK_SETTINGS);
+  const merged = replaceOpenWolfHooks(existing, makeHookSettings(projectRoot));
   writeJSON(settingsPath, merged);
 }
 
@@ -171,35 +172,65 @@ function writeIdentity(projectRoot: string, wolfDir: string): void {
   fs.writeFileSync(identityPath, identity, "utf-8");
 }
 
-/** @deprecated Replaced by .wolf/.gitignore template (D-04). Call is removed from initCommand(). */
-function writeGitIgnore(projectRoot: string): void {
-  const gitignorePath = path.join(projectRoot, ".gitignore");
-  let gitignore = "";
-  try {
-    gitignore = fs.readFileSync(gitignorePath, "utf-8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.warn(`  ⚠ Cannot read ${gitignorePath}: ${(err as Error).message}. Skipping .gitignore update.`);
-      return;
-    }
-  }
-
-  if (!gitignore.includes(".wolf/")) {
-    gitignore += "\n\n# OpenWolf\n.wolf/\n";
-    fs.writeFileSync(gitignorePath, gitignore, "utf-8");
-  }
-}
-
-function checkRootGitIgnore(projectRoot: string): void {
+export function checkRootGitIgnore(projectRoot: string): void {
   const gitignorePath = path.join(projectRoot, ".gitignore");
   try {
     const content = fs.readFileSync(gitignorePath, "utf-8");
-    if (content.includes(".wolf/")) {
-      console.log("");
-      console.log("  ℹ Your .gitignore contains '.wolf/' which blocks all wolf files.");
-      console.log("    To use the mixed commit strategy (recommended for teams), remove");
-      console.log("    the '.wolf/' line — the new .wolf/.gitignore handles per-file");
-      console.log("    exclusions.");
+    const lines = content.split("\n");
+
+    // D-09-09: warn on a blanket rule that ignores the entire .wolf/ directory.
+    // Match bare `.wolf`, `.wolf/`, anchored `/.wolf`, `/.wolf/`, `**/.wolf`,
+    // and `**/.wolf/` — including negated forms. Comments are skipped.
+    const isBlanketWolf = (line: string): boolean => {
+      const trimmed = line.trimStart().trimEnd();
+      if (trimmed.startsWith("#")) return false;
+      return /^!?\/?\.wolf(\/|\/\*|\/\*\*)?$|^!?\*\*\/\.wolf(\/|\/\*|\/\*\*)?$/.test(trimmed);
+    };
+
+    if (lines.some(isBlanketWolf)) {
+      console.warn("");
+      console.warn("  ℹ Your .gitignore contains a blanket '.wolf/' rule which blocks all wolf files.");
+      console.warn("    To use the mixed commit strategy (recommended for teams), remove");
+      console.warn("    the '.wolf/' line — the new .wolf/.gitignore handles per-file");
+      console.warn("    exclusions.");
+    }
+
+    // D-09-09: also warn when any .wolf/-prefixed path override exists (e.g.
+    // `.wolf/hooks/` or `.wolf/anatomy.md`). These are distinct from the blanket
+    // `.wolf/` rule above — they silently override the per-file .wolf/.gitignore
+    // template (observed in acme_translators where `.wolf/hooks/` masked the
+    // hook-ignore rule). Scan line-by-line; skip comment lines and the blanket
+    // forms handled above so the two advisories never overlap.
+    const hasPrefixedOverride = lines.some((line) => {
+      const trimmed = line.trimStart();
+      if (trimmed.startsWith("#")) return false;
+      if (isBlanketWolf(line)) return false;
+      // Match a rule that targets a path inside .wolf/ (not the directory itself).
+      return /^!?\/?\.wolf\/.+$|^!?\*\*\/\.wolf\/.+$/.test(trimmed);
+    });
+    if (hasPrefixedOverride) {
+      console.warn("");
+      console.warn("  ℹ Your root .gitignore contains a .wolf/-prefixed path rule.");
+      console.warn("    Root rules silently override .wolf/.gitignore (git precedence).");
+      console.warn("    Remove any .wolf/ path rules from your root .gitignore —");
+      console.warn("    .wolf/.gitignore is the single source of truth for .wolf/ tracking.");
+    }
+
+    // D-09-09: warn on generic dot-directory rules (e.g. ".*", "/.*/",
+    // "**/.*/") that silently ignore .wolf/ before the nested .wolf/.gitignore
+    // is consulted.
+    const isGenericDotDir = (line: string): boolean => {
+      const trimmed = line.trimStart();
+      if (trimmed.startsWith("#")) return false;
+      return /^!?\.\*\/?$|^!?\/\.\*\/?$|^!?\*\*\/\.\*\/?$/.test(trimmed);
+    };
+    if (lines.some(isGenericDotDir)) {
+      console.warn("");
+      console.warn("  ℹ Your root .gitignore contains a generic dot-directory rule.");
+      console.warn("    Patterns like '.*' or '**/.*/' are evaluated before");
+      console.warn("    .wolf/.gitignore and silently ignore the entire .wolf/ directory.");
+      console.warn("    Remove any '.*' or '**/.*/' rules from your root .gitignore —");
+      console.warn("    .wolf/.gitignore is the single source of truth for .wolf/ tracking.");
     }
   } catch {
     // No .gitignore or can't read — not an error
@@ -214,19 +245,44 @@ function writeClaudeRules(projectRoot: string, templatesDir: string): void {
   const srcPath = path.join(templatesDir, "claude-rules-openwolf.md");
   if (fs.existsSync(srcPath)) {
     safeCopyFile(srcPath, destPath);
+  } else {
+    console.warn(`  ⚠ Template not found: ${srcPath}. Claude rules were not installed.`);
   }
 
-  // Insert @.wolf/OPENWOLF.md reference at the top of CLAUDE.md if not present
+  // Insert @.wolf/OPENWOLF.md reference into CLAUDE.md if not present.
+  // If the existing file starts with YAML frontmatter, insert the marker
+  // after the closing --- block so frontmatter parsers remain valid.
   const claudeMdPath = path.join(projectRoot, "CLAUDE.md");
   const marker = "@.wolf/OPENWOLF.md";
   const fullSnippet = `# CLAUDE.md\n\n${marker}\n\nThis project uses OpenWolf for context management. Read and follow .wolf/OPENWOLF.md every session. Check .wolf/cerebrum.md before generating code. Check .wolf/anatomy.md before reading files.`;
-  if (fs.existsSync(claudeMdPath)) {
-    const content = fs.readFileSync(claudeMdPath, "utf-8");
-    if (!content.includes("OpenWolf") && !content.includes(marker)) {
-      fs.writeFileSync(claudeMdPath, marker + "\n\n" + content, "utf-8");
+  try {
+    if (fs.existsSync(claudeMdPath)) {
+      const content = fs.readFileSync(claudeMdPath, "utf-8");
+      if (!content.includes("OpenWolf") && !content.includes(marker)) {
+        const frontmatterEnd = /^---\s*(?:\r?\n|$)/m;
+        let insertion = 0;
+        if (content.startsWith("---\n") || content.startsWith("---\r\n")) {
+          const afterFirstLine = content.startsWith("---\r\n") ? 5 : 4;
+          const m = content.slice(afterFirstLine).match(frontmatterEnd);
+          if (m && m.index !== undefined) {
+            insertion = afterFirstLine + m.index + m[0].length;
+          }
+        }
+        fs.writeFileSync(
+          claudeMdPath,
+          content.slice(0, insertion) +
+            (insertion > 0 ? "\n" : "") +
+            marker +
+            "\n\n" +
+            content.slice(insertion),
+          "utf-8",
+        );
+      }
+    } else {
+      fs.writeFileSync(claudeMdPath, fullSnippet + "\n", "utf-8");
     }
-  } else {
-    fs.writeFileSync(claudeMdPath, fullSnippet + "\n", "utf-8");
+  } catch (err) {
+    console.warn(`  ⚠ Could not update ${claudeMdPath}: ${(err as Error).message}`);
   }
 }
 
@@ -271,23 +327,6 @@ function detectProjectDescription(projectRoot: string): string {
     }
   }
   return "";
-}
-
-function seedStatus(wolfDir: string, projectRoot: string): void {
-  const statusPath = path.join(wolfDir, "STATUS.md");
-  const projectName = detectProjectName(projectRoot);
-  let content: string;
-  try {
-    content = fs.readFileSync(statusPath, "utf-8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.warn(`  ⚠ Could not read STATUS.md: ${(err as Error).message}`);
-    }
-    return;
-  }
-  content = content.replace(/\{\{PROJECT_NAME\}\}/g, projectName);
-  content = content.replace(/\{\{DATE\}\}/g, new Date().toISOString().slice(0, 10));
-  fs.writeFileSync(statusPath, content, "utf-8");
 }
 
 function seedCerebrum(wolfDir: string, projectRoot: string): void {
@@ -402,24 +441,17 @@ export async function initCommand(): Promise<void> {
 
   // --- Template files ---
   let createdCount = 0;
-  let skippedCount = 0;
-  // Track which CREATE_IF_MISSING files were newly written so we can seed
-  // their placeholders even when isUpgrade is true.
-  const newlyCreated = new Set<string>();
 
   for (const file of ALWAYS_OVERWRITE) {
-    writeTemplateFile(actualTemplatesDir, wolfDir, file);
-    createdCount++;
+    if (writeTemplateFile(actualTemplatesDir, wolfDir, file)) createdCount++;
   }
 
   for (const file of CREATE_IF_MISSING) {
     const destPath = path.join(wolfDir, file);
-    if (fs.existsSync(destPath)) {
-      skippedCount++;
-    } else {
-      writeTemplateFile(actualTemplatesDir, wolfDir, file);
-      newlyCreated.add(file);
-      createdCount++;
+    if (!fs.existsSync(destPath)) {
+      if (writeTemplateFile(actualTemplatesDir, wolfDir, file)) {
+        createdCount++;
+      }
     }
   }
 
@@ -450,12 +482,6 @@ export async function initCommand(): Promise<void> {
   if (!isUpgrade) {
     writeIdentity(projectRoot, wolfDir);
     seedCerebrum(wolfDir, projectRoot);
-    seedStatus(wolfDir, projectRoot);
-  } else if (newlyCreated.has("STATUS.md")) {
-    // STATUS.md was just created for the first time during an upgrade
-    // (e.g. upgrading from a version that predated STATUS.md). Seed its
-    // {{PROJECT_NAME}}/{{DATE}} placeholders now, just as a fresh init does.
-    seedStatus(wolfDir, projectRoot);
   }
 
   // --- Check root .gitignore for .wolf/ entry ---
@@ -490,12 +516,18 @@ export async function initCommand(): Promise<void> {
   console.log("");
   // Indicate when metadata dir differs from default .wolf/ location
   const metadataDirDisplay = wolfDir !== projectWolfDir ? ` (OPENWOLF_METADATA_DIR: ${wolfDir})` : "";
+  const userDataNames = ["cerebrum.md", "memory.md", "anatomy.md", "buglog.ndjson", "token-ledger.json"];
+  const preservedCount = userDataNames.filter((f) => fs.existsSync(path.join(wolfDir, f))).length;
   if (isUpgrade) {
     console.log(`  ✓ OpenWolf upgraded to v${version}${metadataDirDisplay}`);
-    console.log(`  ✓ All .wolf data preserved (${skippedCount} files: cerebrum, memory, anatomy, buglog, ledger)`);
+    console.log(`  ✓ User data preserved (${preservedCount} files: cerebrum, memory, anatomy, buglog, ledger)`);
     console.log(`  ✓ Hook scripts updated`);
     console.log(`  ✓ ${createdCount} config files updated`);
-    console.log(`  ✓ Anatomy: ${fileCount} files tracked (unchanged)`);
+    if (fileCount > 0) {
+      console.log(`  ✓ Anatomy: ${fileCount} files tracked (unchanged)`);
+    } else {
+      console.log(`  ✓ Anatomy scan skipped on upgrade (existing anatomy.md preserved)`);
+    }
   } else {
     console.log(`  ✓ OpenWolf v${version} initialized${metadataDirDisplay}`);
     console.log(`  ✓ .wolf/ created with ${createdCount} files`);
@@ -508,3 +540,5 @@ export async function initCommand(): Promise<void> {
   console.log("  You're ready. Just use 'claude' as normal — OpenWolf is watching.");
   console.log("");
 }
+
+export { makeHookSettings, isOpenWolfHook, replaceOpenWolfHooks };

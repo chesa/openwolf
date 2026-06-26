@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getWolfDir, ensureWolfDir, getSessionDir, ensureSessionDir, getWorktreeContext, writeJSON, appendMarkdown, updateJSON, timestamp, timeShort, countBugEntries } from "./shared.js";
+import { selfHealAnatomy } from "./wolf-selfheal.js";
 
 async function main(): Promise<void> {
   ensureWolfDir();
@@ -34,7 +35,7 @@ async function main(): Promise<void> {
   }
   const sessionFile = path.join(sessionDir, "_session.json");
   const now = new Date();
-  const sessionId = `session-${now.toISOString().slice(0, 10)}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+  const sessionId = `session-${now.toISOString().slice(0, 10)}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}-${String(now.getMilliseconds()).padStart(3, "0")}`;
 
   // Create fresh session state
   writeJSON(sessionFile, {
@@ -60,6 +61,24 @@ async function main(): Promise<void> {
 |------|--------|---------|---------|--------|
 `;
   appendMarkdown(memoryPath, header);
+
+  // Surface optional execution_layer hint from config.json (D11-07)
+  // C2: hooks cannot import from src/utils/ — use raw fs.readFileSync + JSON.parse
+  try {
+    const configPath = path.join(wolfDir, "config.json");
+    const configText = fs.readFileSync(configPath, "utf-8");
+    const config = JSON.parse(configText) as {
+      openwolf?: { execution_layer?: string | null };
+    };
+    const hint = (config.openwolf?.execution_layer ?? "").trim();
+    if (hint) {
+      process.stderr.write(
+        `OpenWolf: execution layer = ${hint} — read its plan/status first.\n`
+      );
+    }
+  } catch {
+    // config.json missing or unparseable — silently skip (hint is optional)
+  }
 
   // Check cerebrum freshness — remind Claude to learn
   try {
@@ -98,6 +117,12 @@ async function main(): Promise<void> {
     process.stderr.write(`OpenWolf: buglog check failed (${err instanceof Error ? err.message : String(err)})\n`);
   }
 
+  // Self-heal anatomy.md when missing/stub (e.g. a fresh clone — anatomy is now
+  // a gitignored, regenerated artifact). Best-effort background rescan. Use the
+  // detected project root as cwd so OPENWOLF_METADATA_DIR does not mislead the
+  // scanner (WR-05).
+  selfHealAnatomy(wolfDir, wtCtx.mainRepoRoot);
+
   // Increment total_sessions in token-ledger
   initializeSessionLedger(sessionDir);
 
@@ -108,12 +133,17 @@ export function initializeSessionLedger(sessionDir: string): void {
   const ledgerPath = path.join(sessionDir, "token-ledger.json");
   updateJSON(ledgerPath, {
     version: 1,
+    created_at: new Date().toISOString(),
     lifetime: {
       total_sessions: 0, total_reads: 0, total_writes: 0,
       total_tokens_estimated: 0, anatomy_hits: 0, anatomy_misses: 0,
       repeated_reads_blocked: 0, estimated_savings_vs_bare_cli: 0,
     },
-  } as { version: number; lifetime: Record<string, number>; [k: string]: unknown },
+    sessions: [],
+    daemon_usage: [],
+    waste_flags: [],
+    optimization_report: { last_generated: null, patterns: [] },
+  } as { version: number; created_at: string; lifetime: Record<string, number>; [k: string]: unknown },
   (ledger) => { ledger.lifetime.total_sessions++; return ledger; });
 }
 

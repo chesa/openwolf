@@ -36,11 +36,12 @@ vi.mock("../../src/hooks/shared.js", async () => {
         }),
         appendMarkdown: vi.fn(),
         timeShort: vi.fn(() => "12:34"),
+        readMarkdown: vi.fn(() => ""),
     };
 });
 
 // Re-import after mock
-const { readJSON, writeJSON } = await import("../../src/hooks/shared.js");
+const { readJSON, writeJSON, readMarkdown } = await import("../../src/hooks/shared.js");
 
 interface FileRead {
     count: number;
@@ -264,6 +265,82 @@ describe("_session.json concurrent update safety", () => {
         expect(final.files_written.map((w: { file: string }) => w.file)).toContain("src/bar.ts");
         // Both stop increments must accumulate
         expect(final.stop_count).toBe(2);
+    });
+});
+
+describe("R7a capture stub guard cases", () => {
+    const sessionDir = mkdtempSync(path.join(tmpdir(), "ow-stop-r7a-"));
+    const wolfDir = path.join(sessionDir, "wolf");
+    const proposalPath = path.join(sessionDir, "proposed-learnings.md");
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mkdirSync(sessionDir, { recursive: true });
+        mkdirSync(wolfDir, { recursive: true });
+    });
+
+    afterEach(() => {
+        rmSync(sessionDir, { recursive: true, force: true });
+    });
+
+    const baseSession = (overrides: Partial<SessionData> = {}): SessionData => ({
+        session_id: "r7a-test",
+        started: "2026-06-25T00:00:00Z",
+        files_read: {},
+        files_written: [{ file: "/project/src/foo.ts", action: "edit", tokens: 50, at: "2026-06-25T00:00:00Z" }],
+        edit_counts: {},
+        anatomy_hits: 0,
+        anatomy_misses: 0,
+        repeated_reads_warned: 0,
+        cerebrum_warnings: 0,
+        stop_count: 0,
+        ...overrides,
+    });
+
+    it("stages a stub when code written and no proposed-learnings.md", () => {
+        vi.mocked(readMarkdown).mockReturnValue("");
+        finalizeSession(wolfDir, sessionDir, baseSession());
+        expect(existsSync(proposalPath)).toBe(true);
+        const content = readFileSync(proposalPath, "utf-8");
+        expect(content).toContain("### Staged Session Metadata");
+        // Must NOT use arrow-header grammar so parseProposals treats it as a stub.
+        expect(content).not.toMatch(/→\s*cerebrum/);
+    });
+
+    it("does NOT stage when model already wrote proposals", () => {
+        const existing = "## Proposed learning\n\nContent.\n";
+        writeFileSync(proposalPath, existing, "utf-8");
+        vi.mocked(readMarkdown).mockImplementation(() => readFileSync(proposalPath, "utf-8"));
+        finalizeSession(wolfDir, sessionDir, baseSession());
+        expect(readFileSync(proposalPath, "utf-8")).toBe(existing);
+    });
+
+    it("does NOT stage when only .wolf/ files were written", () => {
+        vi.mocked(readMarkdown).mockReturnValue("");
+        finalizeSession(wolfDir, sessionDir, baseSession({
+            files_written: [
+                { file: "/project/.wolf/cerebrum.md", action: "edit", tokens: 10, at: "2026-06-25T00:00:00Z" },
+                { file: "/project/scratch.tmp", action: "edit", tokens: 5, at: "2026-06-25T00:00:00Z" },
+            ],
+        }));
+        expect(existsSync(proposalPath)).toBe(false);
+    });
+
+    it("idempotent on re-fire", () => {
+        const existing = "### Staged Session Metadata\n\nExisting stub.\n";
+        writeFileSync(proposalPath, existing, "utf-8");
+        vi.mocked(readMarkdown).mockImplementation(() => readFileSync(proposalPath, "utf-8"));
+        finalizeSession(wolfDir, sessionDir, baseSession({ stop_count: 2 }));
+        expect(readFileSync(proposalPath, "utf-8")).toBe(existing);
+    });
+
+    it("stub is unparseable so collectAllEntries treats it as a stub, not a mergeable proposal", () => {
+        vi.mocked(readMarkdown).mockReturnValue("");
+        finalizeSession(wolfDir, sessionDir, baseSession());
+        const content = readFileSync(proposalPath, "utf-8");
+        // If it had an arrow header, parseProposals would return a cerebrum entry.
+        expect(content).not.toContain("→");
+        expect(content).toContain("### Staged Session Metadata");
     });
 });
 

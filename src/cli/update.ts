@@ -29,7 +29,14 @@ function getVersion(): string {
 }
 
 // Files that are safe to overwrite (protocol docs only — never user-edited config)
-const ALWAYS_OVERWRITE = ["OPENWOLF.md", "reframe-frameworks.md"];
+const ALWAYS_OVERWRITE = ["OPENWOLF.md", "reframe-frameworks.md", "wolf-gitignore"];
+
+// Template name → destination filename mapping.
+// Some packaged template names differ from their .wolf/ destination names
+// (e.g. wolf-gitignore → .gitignore).
+const TEMPLATE_NAME_MAP: Record<string, string> = {
+  "wolf-gitignore": ".gitignore",
+};
 
 // Files that contain user data — NEVER overwrite, only create if missing.
 //
@@ -52,9 +59,10 @@ const USER_DATA_FILES = [
 const BACKUP_FILES = [
   ...ALWAYS_OVERWRITE,
   ...USER_DATA_FILES,
+  ".gitignore",
 ];
 
-import { HOOK_SETTINGS, replaceOpenWolfHooks } from "./hook-settings.js";
+import { makeHookSettings, replaceOpenWolfHooks } from "./hook-settings.js";
 import { findHookSourceDir, copyHookFiles, writeHooksPackageJson } from "./hook-copy.js";
 import { findTemplatesDir } from "./templates.js";
 import { migrateBugLog } from "./migrate-buglog.js";
@@ -195,16 +203,17 @@ async function updateProject(
     const backupDir = createBackup(wolfDir, projectWolfDir);
     console.log(`    ✓ Backup: ${path.basename(backupDir)}`);
 
-    // 2. Update template files (OPENWOLF.md, reframe-frameworks.md)
+    // 2. Update template files (OPENWOLF.md, reframe-frameworks.md, .gitignore)
     const templatesDir = findTemplatesDir();
     for (const file of ALWAYS_OVERWRITE) {
       const srcPath = path.join(templatesDir, file);
-      const destPath = path.join(wolfDir, file);
+      const destName = TEMPLATE_NAME_MAP[file] ?? file;
+      const destPath = path.join(wolfDir, destName);
       if (fs.existsSync(srcPath)) {
         safeCopyFile(srcPath, destPath);
       }
     }
-    console.log(`    ✓ Templates updated (${ALWAYS_OVERWRITE.join(", ")})`);
+    console.log(`    ✓ Templates updated (${ALWAYS_OVERWRITE.map(f => TEMPLATE_NAME_MAP[f] ?? f).join(", ")})`);
 
     // Seed config.json if it doesn't exist yet (never overwrite — user data)
     const configDest = path.join(wolfDir, "config.json");
@@ -222,12 +231,13 @@ async function updateProject(
     const claudeDir = path.join(root, ".claude");
     ensureDir(claudeDir);
     const settingsPath = path.join(claudeDir, "settings.json");
+    const hookSettings = makeHookSettings(root);
     if (fs.existsSync(settingsPath)) {
       const existing = readJSON<Record<string, unknown>>(settingsPath, {});
-      const merged = replaceOpenWolfHooks(existing, HOOK_SETTINGS);
+      const merged = replaceOpenWolfHooks(existing, hookSettings);
       writeJSON(settingsPath, merged);
     } else {
-      writeJSON(settingsPath, { hooks: HOOK_SETTINGS });
+      writeJSON(settingsPath, { hooks: hookSettings });
     }
     console.log(`    ✓ Claude settings updated`);
 

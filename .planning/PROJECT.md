@@ -1,21 +1,23 @@
 # Project: CHESA Fork Team Toolkit
 
 ## What This Is
-The CHESA Fork Team Toolkit is a set of enhancements for the OpenWolf project (forked from `cytostack/openwolf`) designed to support team adoption, streamline fork management, and ensure concurrent-write safety.
+The CHESA Fork Team Toolkit is a set of enhancements for the OpenWolf project (forked from `cytostack/openwolf`) designed to support team adoption, streamline fork management, ensure concurrent-write safety, and keep shared context curated instead of rotting.
 
 ## Core Value
-Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and manageable to keep synced with upstream.
+Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, manageable to keep synced with upstream, and honest about the context it shares.
 
 ## Goals
 1.  **Simplify installation and team onboarding** for 4-5 developers.
 2.  **Enable fork divergence management** to easily stay synced with upstream.
 3.  **Improve team workflow** with concurrent write protection and flexible metadata storage.
+4.  **Curate shared context** so committed `.wolf/` artifacts are authored, owned, and current.
 
 ## Scope
 - Pillar 1: Fork Installation & Team Onboarding
 - Pillar 2: Fork Divergence Management
-- Pillar 3: .wolf/ Team Workflow Improvements
-- P2 Cleanup — hygiene items (clean script, .DS_Store removal)
+- Pillar 3: `.wolf/` Team Workflow Improvements
+- Pillar 4: Shared-Context Tracking & Curation
+- P2 Cleanup — hygiene items (clean script, `.DS_Store` removal)
 
 ## Requirements
 
@@ -26,23 +28,28 @@ Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and man
 - ✓ Fork divergence reporting (`scripts/sync-upstream.sh`) — v1.0
 - ✓ Fork management documentation in README.md — v1.0
 - ✓ Dynamic hook discovery replacing static HOOK_FILES — v1.0
-- ✓ Advisory per-file locking (`withFileLock`) for concurrent .wolf/ write safety — v1.0
-- ✓ OPENWOLF_METADATA_DIR env var support — v1.0
-- ✓ .wolf/.gitignore template with mixed commit strategy — v1.0
+- ✓ Advisory per-file locking (`withFileLock`) for concurrent `.wolf/` write safety — v1.0
+- ✓ `OPENWOLF_METADATA_DIR` env var support — v1.0
+- ✓ `.wolf/.gitignore` template with mixed commit strategy — v1.0
 - ✓ Documentation update (configuration.md, getting-started.md) — v1.0
 - ✓ `pnpm clean` script with explicit path guards — v1.0
 - ✓ `appendProposal()` per-session staging helper — v1.1
 - ✓ Hooks redirect cerebrum/anatomy writes to propose-mode — v1.1
-- ✓ OPENWOLF.md protocol updated for propose-mode — v1.1
+- ✓ `OPENWOLF.md` protocol updated for propose-mode — v1.1
 - ✓ `openwolf learnings` list + interactive merge CLI — v1.1
-- ✓ `openwolf learnings merge` with withFileLock-protected writes — v1.1
+- ✓ `openwolf learnings merge` with `withFileLock`-protected writes — v1.1
 - ✓ Post-merge archive to `merged-learnings.md` — v1.1
 - ✓ Concurrency accumulation test (multi-session merge, lock asserted) — v1.1
 - ✓ Integration enumeration test (edge cases: empty, missing staging files) — v1.1
+- ✓ P0 hygiene verification (R1/R2/R3/R5/Q1/Q2) grounded against acme replay — v1.2
+- ✓ `.wolf/.gitignore` template correction + untrack derived `buglog.json`/`suggestions.json`/`hooks/` (R4, Q4) — v1.2
+- ✓ Hook-side in-project exclusion matcher honoring `exclude_patterns` + root `.gitignore` with zero npm deps (R6) — v1.2
+- ✓ Framework-blind resume protocol: remove `STATUS.md`, rewrite `OPENWOLF.md` to tool-agnostic 3-step order with `execution_layer` config slot (R11) — v1.2
+- ✓ Framework-blind curation machinery: stop-hook capture, `openwolf learnings check`/`accept` primitives, `openwolf status` read-only curation + R9 freshness integrity (R7a, R7b, R9) — v1.2
 
 ### Active
 
-(None — start next milestone with `/gsd-new-milestone`)
+No active requirements. All planned milestones have shipped.
 
 ### Out of Scope
 
@@ -50,19 +57,24 @@ Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and man
 |---------|--------|
 | `memory.md` propose-mode | Per-dev append-only log; interleaving acceptable; file is gitignored |
 | Scanner-initiated `anatomy.md` rewrites | Authoritative single-process operation; no concurrency concern |
-| Dashboard learning panel | Deferred to v1.2 — ship CLI first (DASH-01, DASH-02) |
+| Dashboard learning panel | Deferred to a later rollout milestone (DASH-01, DASH-02) |
 | Real-time CRDT semantics | Human-merge (propose-mode) is the chosen model |
+| R10 provenance on cerebrum entries | Behavioral/org-design; defer to a later rollout milestone |
+| R12 named pantry-owner role + curation runbook | Behavioral/org-design; defer to a later rollout milestone |
 
 ## Status
 **v1.0 shipped** (2026-06-07) — 5 phases, 8 plans. Team toolkit ready.
 **v1.1 shipped** (2026-06-24) — 3 phases, 3 plans. Propose-mode + learnings CLI + concurrency tests.
+**v1.2 shipped** (2026-06-26) — 5 phases, 13 plans. Shared-context tracking & curation complete.
+
+All planned milestones shipped. The CHESA fork team toolkit is complete through v1.2.
 
 ## Context
 
 **Tech stack:** TypeScript (Node.js), pnpm, Bash (scripts), OpenWolf (forked from cytostack/openwolf)
-**Codebase:** ~19,300 LOC across .ts, .js, .json, .md files (excluding node_modules, dist, .wolf, .planning)
-**Git:** 330+ total commits; v1.1 added 18 commits, 21 files changed, +1,421 / −99 lines
-**Version:** 1.2.0-beta (release tag: `release/1.2.0-beta`)
+**Codebase:** ~19,300 LOC across `.ts`, `.js`, `.json`, `.md` files (excluding node_modules, dist, .wolf, .planning)
+**Git:** 330+ total commits; v1.2 added 21 commits, 25 files changed
+**Version:** 1.2.0 (release tag: `release/1.2.0`, milestone tag: `v1.2`)
 
 ## Key Decisions
 
@@ -80,6 +92,14 @@ Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and man
 | D-10: Accumulation test, not cross-process concurrency test | In-process JS cannot prove cross-process safety; withFileLock assertion guards the contract | ✓ Good |
 | D-11: Semver bump 1.0.5 → 1.1.0 for format-breaking change | NDJSON buglog + new CLI/API = minor, not patch | ✓ Good |
 | D-12: release/ tag prefix for npm installs | Distinguishes package releases from GSD milestone tags (v1.0, v1.1) | ✓ Good |
+| D-13: Commit model = authored-vs-derived (not shared-vs-per-dev) | Untrack anatomy.md + derived/noise; commit only what a named human can own, date, and validate | ✓ Good |
+| D-14: Remove STATUS.md; OpenWolf stays framework-blind | Status belongs to the execution layer (abandoned after 225 acme sessions); negative boundary + optional config.json execution_layer slot, no tool names hardcoded | ✓ Good |
+| D-15: R7 split — capture via stop hook, promotion at the Git boundary | Capture is continuous via the universal Claude Code `stop` primitive; promotion gated by a pull-based status count + opt-in exit-code check wired to pre-push/PR/CI — blind to both execution layer and VCS/CI host. Avoids the session-end lifecycle-modeling trap | ✓ Good |
+| D-16: Defer R10/R12 to a later rollout milestone | Provenance + pantry-owner role are behavioral/org-design; don't block core engine code on team rituals | ✓ Good |
+| D-17: Untrack compiled `hooks/` (Q4) | Derived build output; committing JS artifacts causes merge conflicts + path noise — rebuild on clone via self-heal / `openwolf update` | ✓ Good |
+| D-18: R6 — keep `ignore` dep CLI/daemon-only; zero-dep matcher in the hook | Honors C2 (no deps in hook build); full scan stays the authoritative backstop; accept the hook/scanner `.gitignore` engine split | ✓ Good |
+| D-19: R7b — `openwolf learnings check` subcommand (not a `--check` flag) | Keeps the top-level CLI namespace clean; scales with future `learnings list/prune` | ✓ Good |
+| D-20: R9 — `status` is read-only; baseline updates only via sanctioned curation | A read command must not mutate state; baseline = "last *sanctioned* content" (merge + explicit `learnings accept` + bootstrap-on-missing), not "last content a status run observed" | ✓ Good |
 
 ## Evolution
 
@@ -101,10 +121,14 @@ This document evolves at phase transitions and milestone boundaries.
 ## Reference
 - Specification (v1.0): `docs/superpowers/specs/2026-06-06-chesa-fork-team-toolkit-design.md`
 - Specification (v1.1): `docs/superpowers/specs/2026-06-23-shared-checkout-concurrency-design.md`
+- Specification (v1.2): `PRD-OpenWolf-Shared-Context-and-Curation.md` (repo root, untracked)
 - Archive: `.planning/milestones/v1.0-ROADMAP.md`
 - Archive: `.planning/milestones/v1.0-REQUIREMENTS.md`
 - Archive: `.planning/milestones/v1.1-ROADMAP.md`
 - Archive: `.planning/milestones/v1.1-REQUIREMENTS.md`
+- Archive: `.planning/milestones/v1.2-ROADMAP.md`
+- Archive: `.planning/milestones/v1.2-REQUIREMENTS.md`
+- Milestone audit: `.planning/milestones/v1.2-MILESTONE-AUDIT.md`
 
 ---
-*Last updated: 2026-06-24 after v1.1 milestone*
+*Last updated: 2026-06-26 — v1.2 milestone completed*

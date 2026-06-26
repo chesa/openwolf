@@ -6,18 +6,25 @@ import { initCommand } from "./init.js";
 import { statusCommand } from "./status.js";
 import { scanCommand } from "./scan.js";
 import { dashboardCommand } from "./dashboard.js";
+import { findProjectRoot } from "../scanner/project-root.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function getVersion(): string {
-  try {
-    const pkgPath = path.resolve(__dirname, "../../../package.json");
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-    return pkg.version || "unknown";
-  } catch {
-    return "unknown";
+  const candidates = [
+    path.resolve(findProjectRoot(), "package.json"),
+    path.resolve(__dirname, "../../../package.json"),
+  ];
+  for (const pkgPath of candidates) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+      if (pkg.version) return pkg.version;
+    } catch {
+      // fall through to next candidate
+    }
   }
+  return "unknown";
 }
 
 export function createProgram(): Command {
@@ -185,6 +192,24 @@ export function createProgram(): Command {
     .action(async () => {
       const { learningsMergeCommand } = await import("./learnings-cmd.js");
       await learningsMergeCommand();
+    });
+
+  learnings
+    .command("check")
+    .description("Exit non-zero if staged learnings await review")
+    .option("--json", "Emit structured JSON to stdout")
+    .option("--quiet", "Mute all output; return exit code only")
+    .action(async (opts: { json?: boolean; quiet?: boolean }) => {
+      const { learningsCheckCommand } = await import("./learnings-cmd.js");
+      process.exitCode = learningsCheckCommand(opts);
+    });
+
+  learnings
+    .command("accept")
+    .description("Re-baseline cerebrum.md freshness after a blessed hand-edit")
+    .action(async () => {
+      const { learningsAcceptCommand } = await import("./learnings-cmd.js");
+      learningsAcceptCommand();
     });
 
   return program;

@@ -27,5 +27,12 @@ export { estimateTokens, timestamp, timeShort, readStdin } from "./wolf-misc.js"
 
 export { appendBugEntry, readBugEntries, countBugEntries, newBugId, bugLogPath } from "./buglog-ndjson.js";
 
+export {
+    shouldExclude,
+    parseAndMatchGitignore,
+    DEFAULT_EXCLUDE_PATTERNS,
+    ALWAYS_EXCLUDE_FILES,
+} from "./wolf-ignore.js";
+
 export type { WorktreeContext } from "./wolf-paths.js";
 export type { BugEntry } from "./buglog-ndjson.js";
