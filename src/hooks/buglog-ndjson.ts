@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import { withFileLock } from "./wolf-lock.js";
 
 export interface BugEntry {
   id: string;
@@ -46,7 +47,9 @@ export function readBugEntries(wolfDir: string): BugEntry[] {
 export function appendBugEntry(wolfDir: string, entry: BugEntry): void {
   const p = bugLogPath(wolfDir);
   fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.appendFileSync(p, JSON.stringify(entry) + "\n", "utf-8");
+  withFileLock(p, () => {
+    fs.appendFileSync(p, JSON.stringify(entry) + "\n", "utf-8");
+  });
 }
 
 export function countBugEntries(wolfDir: string): number {
