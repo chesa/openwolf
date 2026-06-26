@@ -272,7 +272,7 @@ function summarizeEdit(oldStr: string, newStr: string, filename: string): string
       return "added error handling";
     }
     if (newClean.includes("?.") && !oldClean.includes("?.")) return "added optional chaining";
-    if (newClean.includes("?? ") && !oldClean.includes("?? ")) return "added nullish coalescing";
+    if (tokenizeOperators(newClean).includes("??") && !tokenizeOperators(oldClean).includes("??")) return "added nullish coalescing";
   }
 
   // --- Deleted code ---
@@ -441,7 +441,7 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string, filename:
 
   // --- Null/undefined safety ---
   if ((newClean.includes("?.") && !oldClean.includes("?.")) ||
-      (newClean.includes("?? ") && !oldClean.includes("?? ")) ||
+      (tokenizeOperators(newClean).includes("??") && !tokenizeOperators(oldClean).includes("??")) ||
       (/!==?\s*(null|undefined)/.test(newClean) && !/!==?\s*(null|undefined)/.test(oldClean))) {
     return {
       category: "null-safety",
@@ -556,7 +556,7 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string, filename:
   }
 
   // --- Async/await fix ---
-  if (newClean.includes("await ") && !oldClean.includes("await ")) {
+  if (tokenizeCode(newClean).includes("await") && !tokenizeCode(oldClean).includes("await")) {
     return {
       category: "async-fix",
       summary: `Missing await`,
@@ -565,7 +565,7 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string, filename:
       context: extractChangedLines(oldStr, newStr),
     };
   }
-  if (newClean.includes("async ") && !oldClean.includes("async ")) {
+  if (tokenizeCode(newClean).includes("async") && !tokenizeCode(oldClean).includes("async")) {
     return {
       category: "async-fix",
       summary: `Function not marked async`,
