@@ -618,16 +618,29 @@ function tokenizeCode(code: string): string[] {
 
 function findOperatorChange(oldStr: string, newStr: string): { old: string; new: string } | null {
   const operators = ["===", "!==", "==", "!=", ">=", "<=", ">>", "<<", "&&", "||", "??"];
+  const oldTokens = tokenizeOperators(oldStr);
+  const newTokens = tokenizeOperators(newStr);
   for (const op of operators) {
-    if (oldStr.includes(op) && !newStr.includes(op)) {
+    const oldCount = oldTokens.filter((t) => t === op).length;
+    const newCount = newTokens.filter((t) => t === op).length;
+    if (oldCount > newCount) {
       for (const op2 of operators) {
-        if (op2 !== op && newStr.includes(op2) && !oldStr.includes(op2)) {
-          return { old: op, new: op2 };
+        if (op2 !== op) {
+          const oldCount2 = oldTokens.filter((t) => t === op2).length;
+          const newCount2 = newTokens.filter((t) => t === op2).length;
+          if (newCount2 > oldCount2) return { old: op, new: op2 };
         }
       }
     }
   }
   return null;
+}
+
+function tokenizeOperators(code: string): string[] {
+  // Match multi-character operators as whole tokens so `===` does not get counted
+  // as a `==` substring and `!==` does not get counted as `!=`.
+  const re = /===|!==|==|!=|>=|<=|>>|<<|&&|\|\||\?\?/g;
+  return [...code.matchAll(re)].map((m) => m[0]);
 }
 
 function extractCSSProps(code: string): Map<string, string> {
