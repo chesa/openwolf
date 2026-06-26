@@ -131,12 +131,17 @@ export function initializeSessionLedger(sessionDir: string): void {
   const ledgerPath = path.join(sessionDir, "token-ledger.json");
   updateJSON(ledgerPath, {
     version: 1,
+    created_at: new Date().toISOString(),
     lifetime: {
       total_sessions: 0, total_reads: 0, total_writes: 0,
       total_tokens_estimated: 0, anatomy_hits: 0, anatomy_misses: 0,
       repeated_reads_blocked: 0, estimated_savings_vs_bare_cli: 0,
     },
-  } as { version: number; lifetime: Record<string, number>; [k: string]: unknown },
+    sessions: [],
+    daemon_usage: [],
+    waste_flags: [],
+    optimization_report: { last_generated: null, patterns: [] },
+  } as { version: number; created_at: string; lifetime: Record<string, number>; [k: string]: unknown },
   (ledger) => { ledger.lifetime.total_sessions++; return ledger; });
 }
 
