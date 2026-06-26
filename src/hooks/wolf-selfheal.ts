@@ -31,11 +31,11 @@ export function anatomyNeedsRescan(wolfDir: string): boolean {
  * the same failure class as the WOLF_ROOT bug). Best-effort: if the CLI isn't on
  * PATH we degrade silently (no worse than before self-heal existed).
  */
-export function selfHealAnatomy(wolfDir: string): void {
+export function selfHealAnatomy(wolfDir: string, projectRoot?: string): void {
   if (!anatomyNeedsRescan(wolfDir)) return;
   try {
     const child = spawn("openwolf", ["scan"], {
-      cwd: path.dirname(wolfDir),
+      cwd: projectRoot ?? path.dirname(wolfDir),
       detached: true,
       stdio: "ignore",
     });

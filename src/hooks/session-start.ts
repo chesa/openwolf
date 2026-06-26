@@ -118,8 +118,10 @@ async function main(): Promise<void> {
   }
 
   // Self-heal anatomy.md when missing/stub (e.g. a fresh clone — anatomy is now
-  // a gitignored, regenerated artifact). Best-effort background rescan.
-  selfHealAnatomy(wolfDir);
+  // a gitignored, regenerated artifact). Best-effort background rescan. Use the
+  // detected project root as cwd so OPENWOLF_METADATA_DIR does not mislead the
+  // scanner (WR-05).
+  selfHealAnatomy(wolfDir, wtCtx.mainRepoRoot);
 
   // Increment total_sessions in token-ledger
   initializeSessionLedger(sessionDir);
