@@ -487,9 +487,11 @@ export async function initCommand(): Promise<void> {
   console.log("");
   // Indicate when metadata dir differs from default .wolf/ location
   const metadataDirDisplay = wolfDir !== projectWolfDir ? ` (OPENWOLF_METADATA_DIR: ${wolfDir})` : "";
+  const userDataNames = ["cerebrum.md", "memory.md", "anatomy.md", "buglog.ndjson", "token-ledger.json"];
+  const preservedCount = userDataNames.filter((f) => fs.existsSync(path.join(wolfDir, f))).length;
   if (isUpgrade) {
     console.log(`  ✓ OpenWolf upgraded to v${version}${metadataDirDisplay}`);
-    console.log(`  ✓ All .wolf data preserved (${skippedCount} files: cerebrum, memory, anatomy, buglog, ledger)`);
+    console.log(`  ✓ User data preserved (${preservedCount} files: cerebrum, memory, anatomy, buglog, ledger)`);
     console.log(`  ✓ Hook scripts updated`);
     console.log(`  ✓ ${createdCount} config files updated`);
     console.log(`  ✓ Anatomy: ${fileCount} files tracked (unchanged)`);
