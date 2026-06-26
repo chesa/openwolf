@@ -245,6 +245,17 @@ async function main(): Promise<void> {
 
 // ─── Edit Summarizer ─────────────────────────────────────────────
 
+// Strip quoted strings and comments so substring heuristics do not fire on words
+// like "catch" or "await" that happen to appear inside literals or prose (IN-01).
+function stripStringsAndComments(code: string): string {
+  return code
+    .replace(/"([^"\\]|\\.)*"/g, '""')
+    .replace(/'([^'\\]|\\.)*'/g, "''")
+    .replace(/`([^`\\]|\\.)*`/g, "``")
+    .replace(/\/\/.*/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+}
+
 function summarizeEdit(oldStr: string, newStr: string, filename: string): string {
   const oldLines = oldStr.split("\n");
   const newLines = newStr.split("\n");
@@ -252,14 +263,16 @@ function summarizeEdit(oldStr: string, newStr: string, filename: string): string
   const newCount = newLines.length;
   const ext = path.extname(filename).toLowerCase();
   const proseExts = new Set([".md", ".txt", ".rst"]);
+  const oldClean = stripStringsAndComments(oldStr);
+  const newClean = stripStringsAndComments(newStr);
 
   // --- Structural fixes (code only) ---
   if (!proseExts.has(ext)) {
-    if (newStr.includes("try") && newStr.includes("catch") && !oldStr.includes("catch")) {
+    if (newClean.includes("try") && newClean.includes("catch") && !oldClean.includes("catch")) {
       return "added error handling";
     }
-    if (newStr.includes("?.") && !oldStr.includes("?.")) return "added optional chaining";
-    if (newStr.includes("?? ") && !oldStr.includes("?? ")) return "added nullish coalescing";
+    if (newClean.includes("?.") && !oldClean.includes("?.")) return "added optional chaining";
+    if (newClean.includes("?? ") && !oldClean.includes("?? ")) return "added nullish coalescing";
   }
 
   // --- Deleted code ---
@@ -408,9 +421,11 @@ interface FixDetection {
 function detectFixPattern(oldStr: string, newStr: string, ext: string, filename: string): FixDetection | null {
   const oldLines = oldStr.split("\n");
   const newLines = newStr.split("\n");
+  const oldClean = stripStringsAndComments(oldStr);
+  const newClean = stripStringsAndComments(newStr);
 
   // --- Error handling added ---
-  if (newStr.includes("catch") && !oldStr.includes("catch")) {
+  if (newClean.includes("catch") && !oldClean.includes("catch")) {
     const fn =
       newStr.match(/(?:function|def)\s+(\w+)/)?.[1] ??
       newStr.match(/async\s+(?:function|def)\s+(\w+)/)?.[1] ??
@@ -425,9 +440,9 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string, filename:
   }
 
   // --- Null/undefined safety ---
-  if ((newStr.includes("?.") && !oldStr.includes("?.")) ||
-      (newStr.includes("?? ") && !oldStr.includes("?? ")) ||
-      (/!==?\s*(null|undefined)/.test(newStr) && !/!==?\s*(null|undefined)/.test(oldStr))) {
+  if ((newClean.includes("?.") && !oldClean.includes("?.")) ||
+      (newClean.includes("?? ") && !oldClean.includes("?? ")) ||
+      (/!==?\s*(null|undefined)/.test(newClean) && !/!==?\s*(null|undefined)/.test(oldClean))) {
     return {
       category: "null-safety",
       summary: `Null/undefined access in ${filename}`,
@@ -538,7 +553,7 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string, filename:
   }
 
   // --- Async/await fix ---
-  if (newStr.includes("await ") && !oldStr.includes("await ")) {
+  if (newClean.includes("await ") && !oldClean.includes("await ")) {
     return {
       category: "async-fix",
       summary: `Missing await`,
@@ -547,7 +562,7 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string, filename:
       context: extractChangedLines(oldStr, newStr),
     };
   }
-  if (newStr.includes("async ") && !oldStr.includes("async ")) {
+  if (newClean.includes("async ") && !oldClean.includes("async ")) {
     return {
       category: "async-fix",
       summary: `Function not marked async`,
@@ -558,8 +573,8 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string, filename:
 
   // --- Type annotation/cast fix ---
   if (ext === ".ts" || ext === ".tsx") {
-    if ((newStr.includes(" as ") && !oldStr.includes(" as ")) ||
-        (newStr.includes(": ") && !oldStr.includes(": ") && oldLines.length <= 3)) {
+    if ((newClean.includes(" as ") && !oldClean.includes(" as ")) ||
+        (newClean.includes(": ") && !oldClean.includes(": ") && oldLines.length <= 3)) {
       return {
         category: "type-fix",
         summary: `Type error`,
