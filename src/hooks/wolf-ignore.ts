@@ -94,6 +94,16 @@ function matchesPattern(
 ): boolean {
     if (pattern.length === 0) return false;
 
+    // Leading slash -> root-anchored prefix/glob semantics.
+    if (pattern.startsWith("/")) {
+        const anchored = pattern.slice(1).replace(/\/+$/g, "");
+        if (anchored.includes("*")) return globToRegExp(anchored).test(relPath);
+        return relPath === anchored || relPath.startsWith(`${anchored}/`);
+    }
+
+    // Otherwise strip any trailing slash before applying normal logic.
+    pattern = pattern.replace(/\/+$/g, "");
+
     // Extension glob (backward compatible): "*.min.js"
     if (pattern.startsWith("*.") && !pattern.includes("/")) {
         return relPath.endsWith(pattern.slice(1));
