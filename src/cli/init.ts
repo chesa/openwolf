@@ -7,6 +7,10 @@ import { readJSON, writeJSON, safeCopyFile } from "../utils/fs-safe.js";
 import { ensureDir } from "../utils/paths.js";
 import { registerProject } from "./registry.js";
 import { detectWorktreeContext } from "../utils/worktree.js";
+import { makeHookSettings, isOpenWolfHook, replaceOpenWolfHooks } from "./hook-settings.js";
+import { findHookSourceDir, copyHookFiles, writeHooksPackageJson } from "./hook-copy.js";
+import { findTemplatesDir } from "./templates.js";
+import { migrateBugLog } from "./migrate-buglog.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,12 +62,6 @@ const RUNTIME_CREATED_NO_TEMPLATE = new Set<string>([
   "designqc-report.json",
   "suggestions.json",
 ]);
-
-import { makeHookSettings, isOpenWolfHook, replaceOpenWolfHooks } from "./hook-settings.js";
-import { findHookSourceDir, copyHookFiles, writeHooksPackageJson } from "./hook-copy.js";
-import { findTemplatesDir } from "./templates.js";
-import { migrateBugLog } from "./migrate-buglog.js";
-export { makeHookSettings, isOpenWolfHook, replaceOpenWolfHooks };
 
 // Template name → destination filename mapping.
 // Template files use plain names but some destinations need a different name
@@ -523,3 +521,5 @@ export async function initCommand(): Promise<void> {
   console.log("  You're ready. Just use 'claude' as normal — OpenWolf is watching.");
   console.log("");
 }
+
+export { makeHookSettings, isOpenWolfHook, replaceOpenWolfHooks };
