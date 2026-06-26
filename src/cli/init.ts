@@ -494,7 +494,11 @@ export async function initCommand(): Promise<void> {
     console.log(`  ✓ User data preserved (${preservedCount} files: cerebrum, memory, anatomy, buglog, ledger)`);
     console.log(`  ✓ Hook scripts updated`);
     console.log(`  ✓ ${createdCount} config files updated`);
-    console.log(`  ✓ Anatomy: ${fileCount} files tracked (unchanged)`);
+    if (fileCount > 0) {
+      console.log(`  ✓ Anatomy: ${fileCount} files tracked (unchanged)`);
+    } else {
+      console.log(`  ✓ Anatomy scan skipped on upgrade (existing anatomy.md preserved)`);
+    }
   } else {
     console.log(`  ✓ OpenWolf v${version} initialized${metadataDirDisplay}`);
     console.log(`  ✓ .wolf/ created with ${createdCount} files`);
