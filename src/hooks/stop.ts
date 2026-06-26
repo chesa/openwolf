@@ -216,7 +216,7 @@ function checkForMissingBugLogs(wolfDir: string, session: SessionData): void {
 
   // Check if buglog was written to this session
   const buglogWritten = session.files_written.some(w =>
-    w.file.includes("buglog")
+    path.basename(w.file) === "buglog.ndjson"
   );
 
   if (!buglogWritten) {
