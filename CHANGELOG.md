@@ -25,7 +25,17 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Conflicting `<name>` and `--all` is an error.** Passing both now exits
   with a clear message instead of silently ignoring `--all`.
 
+- **Ambiguous name match requires disambiguation.** When `<name>` matches
+  multiple projects, `openwolf update` lists the matches and suggests using
+  more of the path (e.g. `openwolf update bitbucket/meep`).
+
 ### Fixed
+
+- **Registry deduplicates symlink entries automatically.** `getRegisteredProjects`
+  now resolves each entry through `fs.realpathSync()` and keeps only the entry
+  with the newest timestamp when two entries resolve to the same canonical path.
+  Stale symlink duplicates (e.g. a `gsd-workspaces/` symlink alongside the real
+  repo) are removed on the next `--list`, `update`, or any registry read.
 
 - **`findPidOnPort` no longer prints confusing stderr on normal "no match".**
   `lsof` exits with code 1 when no process is found — this is now suppressed

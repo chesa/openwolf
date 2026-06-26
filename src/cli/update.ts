@@ -133,6 +133,15 @@ export async function updateCommand(options: { dryRun?: boolean; name?: string; 
       process.exitCode = 1;
       return;
     }
+    if (targets.length > 1) {
+      console.error(`"${options.name}" matches ${targets.length} projects. Be more specific:`);
+      for (const p of targets) {
+        console.error(`  - ${p.name} (${p.root})`);
+      }
+      console.error(`\nTip: use more of the path to disambiguate, e.g. openwolf update ${targets[0].root.split("/").slice(-2).join("/")}`);
+      process.exitCode = 1;
+      return;
+    }
   }
 
   console.log(`OpenWolf v${version} — updating ${targets.length} project(s)${options.dryRun ? " (dry run)" : ""}...\n`);

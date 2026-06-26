@@ -86,6 +86,9 @@ export function unregisterProject(projectRoot: string): void {
 
 /**
  * Get all registered projects, optionally filtering out ones that no longer exist.
+ * When validateExists is true, also deduplicates entries whose roots resolve to
+ * the same canonical path (e.g. a symlinked workspace entry alongside the real
+ * repo path). The entry with the newer last_updated timestamp wins.
  */
 export function getRegisteredProjects(validateExists: boolean = false): RegisteredProject[] {
   const registry = readRegistry();
@@ -103,13 +106,38 @@ export function getRegisteredProjects(validateExists: boolean = false): Register
     }
   }
 
-  // Clean up stale entries
-  if (removed.length > 0) {
-    registry.projects = valid;
+  // Deduplicate entries that resolve to the same canonical path.
+  const seen = new Map<string, RegisteredProject>();
+  const deduped: RegisteredProject[] = [];
+  for (const project of valid) {
+    let canonical: string;
+    try {
+      canonical = normalizePath(fs.realpathSync(project.root));
+    } catch {
+      canonical = normalizePath(project.root);
+    }
+    const existing = seen.get(canonical);
+    if (existing) {
+      // Keep the entry with the newer timestamp; drop the stale one.
+      if (project.last_updated > existing.last_updated) {
+        deduped.splice(deduped.indexOf(existing), 1);
+        deduped.push(project);
+        seen.set(canonical, project);
+      }
+      // else: drop this duplicate silently
+    } else {
+      seen.set(canonical, project);
+      deduped.push(project);
+    }
+  }
+
+  // Persist if anything was cleaned up
+  if (removed.length > 0 || deduped.length < valid.length) {
+    registry.projects = deduped;
     writeRegistry(registry);
   }
 
-  return valid;
+  return deduped;
 }
 
 function normalizePath(p: string): string {
