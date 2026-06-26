@@ -332,7 +332,7 @@ describe("status.ts", () => {
 
         await statusCommand();
         const lines = consoleSpy.log.mock.calls.map((c) => String(c[0] ?? ""));
-        expect(lines.some((l) => l.includes("✓ current"))).toBe(true);
+        expect(lines.some((l) => l.includes("✓ cerebrum.md: current"))).toBe(true);
         expect(lines.some((l) => l.includes("freshness theater"))).toBe(false);
 
         rmSync(dir, { recursive: true, force: true });
