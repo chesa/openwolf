@@ -16,7 +16,7 @@ import { autoDetectBugFix, recordAnatomyWrite } from "../../src/hooks/post-write
 import { normalizePath } from "../../src/hooks/shared.js";
 
 describe("buglog NDJSON appends (Task 8 — autoDetectBugFix path)", () => {
-  it("two concurrent-ish appends produce two NDJSON lines with distinct ids", () => {
+  it("two sequential appends produce two NDJSON lines with distinct ids", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "ow-post-write-"));
     try {
       // Simulate what autoDetectBugFix now does — two back-to-back appends
