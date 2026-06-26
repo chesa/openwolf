@@ -117,6 +117,14 @@ None - no external service configuration required.
 - Freshness sidecar schema (`version`, `content_sha256`, `last_updated_seen`, `captured_at`, `captured_by`) is established for Plan 04 verification.
 - No blockers.
 
+
+## Self-Check: PASSED
+
+- `12-02-SUMMARY.md` exists at `.planning/phases/12-framework-blind-curation-machinery/12-02-SUMMARY.md`.
+- Task commits found in git history: `9d2c700`, `4d80ff9`.
+- Summary commit found in git history: `c8394ce`.
+- No shared orchestrator artifacts (`STATE.md`, `ROADMAP.md`, `REQUIREMENTS.md`, `PROJECT.md`) were modified.
+
 ---
 
 *Phase: 12-framework-blind-curation-machinery*
