@@ -163,6 +163,9 @@ After this step, `git ls-files .wolf/` should list **only** the authored set:
 .wolf/cron-manifest.json
 ```
 
+`cerebrum-freshness.json` is intentionally ignored — it is a local integrity
+baseline that is only updated by sanctioned curation commands.
+
 ::: warning OpenWolf does not run this step for you
 Running `git rm --cached` against an external working tree carries
 blast-radius risk: a dirty index or uncommitted local modifications in your
