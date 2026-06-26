@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, updateJSON, appendMarkdown, timeShort } from "./shared.js";
+import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, updateJSON, appendMarkdown, timeShort, appendProposal, readMarkdown } from "./shared.js";
 
 interface FileRead {
   count: number;
@@ -68,6 +68,11 @@ export function finalizeSession(wolfDir: string, sessionDir: string, session: Se
 
   // Check if cerebrum was updated this session (it should be if there were edits)
   checkCerebrumFreshness(wolfDir, session);
+
+  // Stage a structural learning breadcrumb when code was written but the model
+  // authored no proposed-learnings.md this session. Purely a fixed literal stub;
+  // never synthesizes semantic content from file diffs (D12-01).
+  captureStubIfNeeded(wolfDir, sessionDir, session);
 
   // Build session entry for ledger
   const reads = Object.entries(session.files_read).map(([file, data]) => ({
@@ -246,6 +251,41 @@ function checkCerebrumFreshness(wolfDir: string, session: SessionData): void {
         `OpenWolf: could not check cerebrum.md freshness: ${err instanceof Error ? err.message : String(err)}\n`
       );
     }
+  }
+}
+
+/**
+ * Stage a fixed structural breadcrumb when the session mutated code but the
+ * model did not author any proposed learning. The stub is idempotent across
+ * multiple stop fires and never infers content from file changes.
+ */
+function captureStubIfNeeded(wolfDir: string, sessionDir: string, session: SessionData): void {
+  // (a) Only trigger for non-.wolf/, non-.tmp code writes (D12-02a).
+  const codeWrites = session.files_written.filter(
+    (w) => !w.file.includes("/.wolf/") && !w.file.endsWith(".tmp")
+  );
+  if (codeWrites.length === 0) return;
+
+  // (b) If the model already wrote proposed-learnings.md, do not overwrite
+  //     or duplicate its content (D12-02b).
+  const proposalPath = path.join(sessionDir, "proposed-learnings.md");
+  const existing = readMarkdown(proposalPath);
+  if (existing.trim().length > 0) return;
+
+  // (c) Idempotency on re-fire: if this is not the first stop and the stub
+  //     marker is already present, skip (D12-03).
+  const STUB_MARKER = "### Staged Session Metadata";
+  if (session.stop_count > 1 && existing.includes(STUB_MARKER)) return;
+
+  try {
+    appendProposal(
+      "cerebrum",
+      `${STUB_MARKER}\n\nSession ended with code changes but no explicit learning recorded. Review and add context if relevant.`
+    );
+  } catch (err) {
+    process.stderr.write(
+      `OpenWolf: could not stage learning breadcrumb: ${err instanceof Error ? err.message : String(err)}\n`
+    );
   }
 }
 

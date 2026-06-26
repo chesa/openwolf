@@ -36,11 +36,13 @@ vi.mock("../../src/hooks/shared.js", async () => {
         }),
         appendMarkdown: vi.fn(),
         timeShort: vi.fn(() => "12:34"),
+        readMarkdown: vi.fn(() => ""),
+        appendProposal: vi.fn(),
     };
 });
 
 // Re-import after mock
-const { readJSON, writeJSON } = await import("../../src/hooks/shared.js");
+const { readJSON, writeJSON, appendProposal, readMarkdown } = await import("../../src/hooks/shared.js");
 
 interface FileRead {
     count: number;
@@ -264,6 +266,68 @@ describe("_session.json concurrent update safety", () => {
         expect(final.files_written.map((w: { file: string }) => w.file)).toContain("src/bar.ts");
         // Both stop increments must accumulate
         expect(final.stop_count).toBe(2);
+    });
+});
+
+describe("R7a capture stub guard cases", () => {
+    const sessionDir = mkdtempSync(path.join(tmpdir(), "ow-stop-r7a-"));
+    const wolfDir = path.join(sessionDir, "wolf");
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mkdirSync(sessionDir, { recursive: true });
+        mkdirSync(wolfDir, { recursive: true });
+    });
+
+    afterEach(() => {
+        rmSync(sessionDir, { recursive: true, force: true });
+    });
+
+    const baseSession = (overrides: Partial<SessionData> = {}): SessionData => ({
+        session_id: "r7a-test",
+        started: "2026-06-25T00:00:00Z",
+        files_read: {},
+        files_written: [{ file: "/project/src/foo.ts", action: "edit", tokens: 50, at: "2026-06-25T00:00:00Z" }],
+        edit_counts: {},
+        anatomy_hits: 0,
+        anatomy_misses: 0,
+        repeated_reads_warned: 0,
+        cerebrum_warnings: 0,
+        stop_count: 0,
+        ...overrides,
+    });
+
+    it("stages a stub when code written and no proposed-learnings.md", () => {
+        vi.mocked(readMarkdown).mockReturnValue("");
+        finalizeSession(wolfDir, sessionDir, baseSession());
+        expect(appendProposal).toHaveBeenCalledTimes(1);
+        expect(appendProposal).toHaveBeenCalledWith(
+            "cerebrum",
+            expect.stringContaining("### Staged Session Metadata")
+        );
+    });
+
+    it("does NOT stage when model already wrote proposals", () => {
+        vi.mocked(readMarkdown).mockReturnValue("## Proposed learning\n\nContent.\n");
+        finalizeSession(wolfDir, sessionDir, baseSession());
+        expect(appendProposal).not.toHaveBeenCalled();
+    });
+
+    it("does NOT stage when only .wolf/ files were written", () => {
+        vi.mocked(readMarkdown).mockReturnValue("");
+        finalizeSession(wolfDir, sessionDir, baseSession({
+            files_written: [
+                { file: "/project/.wolf/cerebrum.md", action: "edit", tokens: 10, at: "2026-06-25T00:00:00Z" },
+                { file: "/project/scratch.tmp", action: "edit", tokens: 5, at: "2026-06-25T00:00:00Z" },
+            ],
+        }));
+        expect(appendProposal).not.toHaveBeenCalled();
+    });
+
+    it("idempotent on re-fire", () => {
+        vi.mocked(readMarkdown).mockReturnValue("### Staged Session Metadata\n\nExisting stub.\n");
+        finalizeSession(wolfDir, sessionDir, baseSession({ stop_count: 2 }));
+        expect(appendProposal).not.toHaveBeenCalled();
     });
 });
 
