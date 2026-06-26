@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, updateJSON, appendMarkdown, timeShort, appendProposal, readMarkdown } from "./shared.js";
+import { getWolfDir, ensureWolfDir, getSessionDir, readJSON, updateJSON, appendMarkdown, timeShort, readMarkdown } from "./shared.js";
 
 interface FileRead {
   count: number;
@@ -278,10 +278,13 @@ function captureStubIfNeeded(wolfDir: string, sessionDir: string, session: Sessi
   if (session.stop_count > 1 && existing.includes(STUB_MARKER)) return;
 
   try {
-    appendProposal(
-      "cerebrum",
-      `${STUB_MARKER}\n\nSession ended with code changes but no explicit learning recorded. Review and add context if relevant.`
-    );
+    // Write the stub as raw content (no arrow header). This keeps it countable
+    // by collectAllEntries() (which synthesizes isStub:true for unparseable
+    // content) while ensuring it can never be merged into cerebrum.md by
+    // learningsMergeCommand, which filters out isStub entries (R7a → R7b).
+    const stub = `${STUB_MARKER}\n\nSession ended with code changes but no explicit learning recorded. Review and add context if relevant.\n`;
+    fs.mkdirSync(path.dirname(proposalPath), { recursive: true });
+    fs.writeFileSync(proposalPath, stub, "utf-8");
   } catch (err) {
     process.stderr.write(
       `OpenWolf: could not stage learning breadcrumb: ${err instanceof Error ? err.message : String(err)}\n`

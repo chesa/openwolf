@@ -37,12 +37,11 @@ vi.mock("../../src/hooks/shared.js", async () => {
         appendMarkdown: vi.fn(),
         timeShort: vi.fn(() => "12:34"),
         readMarkdown: vi.fn(() => ""),
-        appendProposal: vi.fn(),
     };
 });
 
 // Re-import after mock
-const { readJSON, writeJSON, appendProposal, readMarkdown } = await import("../../src/hooks/shared.js");
+const { readJSON, writeJSON, readMarkdown } = await import("../../src/hooks/shared.js");
 
 interface FileRead {
     count: number;
@@ -272,6 +271,7 @@ describe("_session.json concurrent update safety", () => {
 describe("R7a capture stub guard cases", () => {
     const sessionDir = mkdtempSync(path.join(tmpdir(), "ow-stop-r7a-"));
     const wolfDir = path.join(sessionDir, "wolf");
+    const proposalPath = path.join(sessionDir, "proposed-learnings.md");
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -300,17 +300,19 @@ describe("R7a capture stub guard cases", () => {
     it("stages a stub when code written and no proposed-learnings.md", () => {
         vi.mocked(readMarkdown).mockReturnValue("");
         finalizeSession(wolfDir, sessionDir, baseSession());
-        expect(appendProposal).toHaveBeenCalledTimes(1);
-        expect(appendProposal).toHaveBeenCalledWith(
-            "cerebrum",
-            expect.stringContaining("### Staged Session Metadata")
-        );
+        expect(existsSync(proposalPath)).toBe(true);
+        const content = readFileSync(proposalPath, "utf-8");
+        expect(content).toContain("### Staged Session Metadata");
+        // Must NOT use arrow-header grammar so parseProposals treats it as a stub.
+        expect(content).not.toMatch(/→\s*cerebrum/);
     });
 
     it("does NOT stage when model already wrote proposals", () => {
-        vi.mocked(readMarkdown).mockReturnValue("## Proposed learning\n\nContent.\n");
+        const existing = "## Proposed learning\n\nContent.\n";
+        writeFileSync(proposalPath, existing, "utf-8");
+        vi.mocked(readMarkdown).mockImplementation(() => readFileSync(proposalPath, "utf-8"));
         finalizeSession(wolfDir, sessionDir, baseSession());
-        expect(appendProposal).not.toHaveBeenCalled();
+        expect(readFileSync(proposalPath, "utf-8")).toBe(existing);
     });
 
     it("does NOT stage when only .wolf/ files were written", () => {
@@ -321,13 +323,24 @@ describe("R7a capture stub guard cases", () => {
                 { file: "/project/scratch.tmp", action: "edit", tokens: 5, at: "2026-06-25T00:00:00Z" },
             ],
         }));
-        expect(appendProposal).not.toHaveBeenCalled();
+        expect(existsSync(proposalPath)).toBe(false);
     });
 
     it("idempotent on re-fire", () => {
-        vi.mocked(readMarkdown).mockReturnValue("### Staged Session Metadata\n\nExisting stub.\n");
+        const existing = "### Staged Session Metadata\n\nExisting stub.\n";
+        writeFileSync(proposalPath, existing, "utf-8");
+        vi.mocked(readMarkdown).mockImplementation(() => readFileSync(proposalPath, "utf-8"));
         finalizeSession(wolfDir, sessionDir, baseSession({ stop_count: 2 }));
-        expect(appendProposal).not.toHaveBeenCalled();
+        expect(readFileSync(proposalPath, "utf-8")).toBe(existing);
+    });
+
+    it("stub is unparseable so collectAllEntries treats it as a stub, not a mergeable proposal", () => {
+        vi.mocked(readMarkdown).mockReturnValue("");
+        finalizeSession(wolfDir, sessionDir, baseSession());
+        const content = readFileSync(proposalPath, "utf-8");
+        // If it had an arrow header, parseProposals would return a cerebrum entry.
+        expect(content).not.toContain("→");
+        expect(content).toContain("### Staged Session Metadata");
     });
 });
 

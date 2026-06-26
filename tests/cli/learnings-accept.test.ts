@@ -109,4 +109,19 @@ describe("learnings-cmd - R9 baseline writers", () => {
 
     expect(fs.existsSync(path.join(tmpDir, "cerebrum.md"))).toBe(false);
   });
+
+  it("does not merge the exact R7a stop-hook stub into cerebrum.md", async () => {
+    const sessionsDir = path.join(tmpDir, "sessions", "r7a-stub");
+    mkdirSync(sessionsDir, { recursive: true });
+    writeFileSync(
+      path.join(sessionsDir, "proposed-learnings.md"),
+      "### Staged Session Metadata\n\nSession ended with code changes but no explicit learning recorded. Review and add context if relevant.\n",
+      "utf-8",
+    );
+
+    const { learningsMergeCommand } = await import("../../src/cli/learnings-cmd.js");
+    await learningsMergeCommand();
+
+    expect(fs.existsSync(path.join(tmpDir, "cerebrum.md"))).toBe(false);
+  });
 });
