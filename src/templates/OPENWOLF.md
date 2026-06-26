@@ -161,4 +161,4 @@ Before ending or when asked to wrap up:
 
 1. **Update your execution layer's plan or status file** (if applicable) — record what was completed and what comes next so the following session can resume in one read.
 2. Write a session summary to `.wolf/memory.md`.
-3. Review the session: did you learn anything? Did the user correct you? Did you fix a bug? If yes, update `.wolf/cerebrum.md` and/or `.wolf/buglog.ndjson`.
+3. Review the session: did you learn anything? Did the user correct you? Did you fix a bug? If yes, stage the learning to `.wolf/sessions/<worktreeId>/proposed-learnings.md` (or `.wolf/proposed-learnings.md` in single-repo mode) for later merge into `cerebrum.md`, and/or append to `.wolf/buglog.ndjson`.
