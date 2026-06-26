@@ -53,14 +53,14 @@
   3. R3's out-of-project `../` guard and R5's exclude semantics are confirmed to still hold — the foundation Phase 10 (R6) extends.
   4. Nothing is re-implemented; the phase produces evidence, not code changes.
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans complete
 **Wave 1**
 
 - [x] 08-01-PLAN.md — Lock R3/R5 with acme-grounded regression tests; confirm R2/Q1/Q2 suites green; capture field-data audit
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 08-02-PLAN.md — Author 08-VERIFICATION.md commit↔behavior record (PASS/FAIL + evidence for all six P0 behaviors)
+- [x] 08-02-PLAN.md — Author 08-VERIFICATION.md commit↔behavior record (PASS/FAIL + evidence for all six P0 behaviors)
 
 ### Phase 9: Tracking Hygiene — One Authoritative Ignore List
 
@@ -129,7 +129,7 @@
 | 5. Propose-Mode Infrastructure | v1.1 | 1/1 | Complete | 2026-06-23 |
 | 6. Learnings Review CLI | v1.1 | 1/1 | Complete | 2026-06-24 |
 | 7. Concurrency & Integration Tests | v1.1 | 1/1 | Complete | 2026-06-24 |
-| 8. Verify Landed P0 Hygiene | v1.2 | 1/2 | In Progress|  |
+| 8. Verify Landed P0 Hygiene | v1.2 | 2/2 | Complete   | 2026-06-26 |
 | 9. Tracking Hygiene — One Authoritative Ignore List | v1.2 | 0/? | Not started | - |
 | 10. Hook-Side In-Project Exclusion | v1.2 | 0/? | Not started | - |
 | 11. Framework-Blind Resume Protocol | v1.2 | 0/? | Not started | - |

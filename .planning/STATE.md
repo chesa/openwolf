@@ -4,17 +4,17 @@ milestone: v1.2
 milestone_name: Shared-Context Tracking & Curation
 current_phase: 8
 current_phase_name: verify-landed-p0-hygiene
-status: executing
+status: verifying
 stopped_at: Phase 12 context gathered
-last_updated: "2026-06-25T23:56:23.288Z"
+last_updated: "2026-06-26T00:00:30.162Z"
 last_activity: 2026-06-25
 last_activity_desc: Phase 8 execution started
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 0
+  completed_plans: 2
+  percent: 20
 ---
 
 # Project State: CHESA Fork Team Toolkit
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-25)
 
 Phase: 8 (verify-landed-p0-hygiene) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-25 — Phase 8 execution started
 
 Progress: [          ] 0/5 phases (v1.2)
@@ -52,6 +52,7 @@ Progress: [          ] 0/5 phases (v1.2)
 
 *Updated after each plan completion*
 | Phase 08 P01 | 3m | 3 tasks | 3 files |
+| Phase 08 P02 | 157s | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,8 @@ Recent decisions affecting current work:
 - D-19: R7b — `openwolf learnings check` subcommand (not a `--check` flag) — Phase 12.
 - D-20: R9 — `status` is read-only; baseline updates only via sanctioned curation — Phase 12.
 - [Phase ?]: Regression tests grounded in acme field inputs serve as dual-purpose evidence+safety net for Phase 10 (R6)
+- [Phase ?]: R1 field note classified as PASS per VER-D3 — acme predates cac925a fix
+- [Phase ?]: All six P0 behaviors PASS on develop-preview — commit↔behavior map established (VER-01 deliverable complete)
 
 ### Build-Order Dependency Edges (honor when planning)
 
@@ -97,7 +100,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-25T23:56:19.567Z
+Last session: 2026-06-26T00:00:12.731Z
 Stopped at: Phase 12 context gathered
 Resume file: .planning/phases/12-framework-blind-curation-machinery/12-CONTEXT.md
 
