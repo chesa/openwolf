@@ -45,3 +45,12 @@
 - `pnpm clean` dev script with explicit path guards and `.DS_Store` cleanup
 
 ---
+
+## v1.2 — Shared-Context Tracking & Curation
+
+- **Shipped:** 2026-06-26
+- **Software version:** 1.3.0-beta
+- **Phases:** 8-12
+- **Plans:** 13
+- **Open debug sessions acknowledged:** 3 (see STATE.md Deferred Items)
+- **Archive:** [.planning/milestones/v1.2-ROADMAP.md](.planning/milestones/v1.2-ROADMAP.md)
