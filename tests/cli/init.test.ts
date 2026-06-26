@@ -541,7 +541,7 @@ describe("checkRootGitIgnore advisory (D-09-09)", () => {
       writeFileSync(path.join(dir, ".gitignore"), ".wolf\n");
       checkRootGitIgnore(dir);
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining(".wolf/-prefixed path rule")
+        expect.stringContaining("blanket '.wolf/' rule")
       );
     } finally {
       warnSpy.mockRestore();
@@ -556,7 +556,7 @@ describe("checkRootGitIgnore advisory (D-09-09)", () => {
       writeFileSync(path.join(dir, ".gitignore"), " /.wolf/\n");
       checkRootGitIgnore(dir);
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining(".wolf/-prefixed path rule")
+        expect.stringContaining("blanket '.wolf/' rule")
       );
     } finally {
       warnSpy.mockRestore();
