@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import {
   getWolfDir, ensureWolfDir, getSessionDir, updateJSON, readMarkdown, parseAnatomy, serializeAnatomy,
   extractDescription, estimateTokens, appendMarkdown, timeShort, timestamp, readStdin, normalizePath, isWolfFile,
-  appendBugEntry, newBugId,
+  appendBugEntry, newBugId, withFileLock,
   shouldExclude, parseAndMatchGitignore, DEFAULT_EXCLUDE_PATTERNS,
 } from "./shared.js";
 
@@ -66,62 +66,68 @@ export function recordAnatomyWrite(
   }
 
   const anatomyPath = path.join(wolfDir, "anatomy.md");
-  let anatomyContent: string;
-  try {
-    anatomyContent = fs.readFileSync(anatomyPath, "utf-8");
-  } catch {
-    anatomyContent = "# anatomy.md\n\n> Auto-maintained by OpenWolf.";
-  }
 
-  const sections = parseAnatomy(anatomyContent);
-  const dir = path.dirname(relPathLocal);
-  const fileName = path.basename(relPathLocal);
-  const sectionKey = dir === "." ? "./" : dir + "/";
-
-  let fileContent = "";
-  try {
-    fileContent = fs.readFileSync(absolutePath, "utf-8");
-  } catch {
-    fileContent = contentFallback;
-  }
-
-  const desc = extractDescription(absolutePath).slice(0, 100);
-  const ext = path.extname(absolutePath).toLowerCase();
-  const codeExts = new Set([".ts", ".js", ".tsx", ".jsx", ".py", ".json", ".yaml", ".yml", ".css"]);
-  const proseExts = new Set([".md", ".txt", ".rst"]);
-  const type = codeExts.has(ext) ? "code" : proseExts.has(ext) ? "prose" : "mixed";
-  const tokens = estimateTokens(fileContent, type as "code" | "prose" | "mixed");
-
-  if (!sections.has(sectionKey)) sections.set(sectionKey, []);
-  const entries = sections.get(sectionKey)!;
-  const idx = entries.findIndex((e) => e.file === fileName);
-  if (idx !== -1) {
-    entries[idx] = { file: fileName, description: desc, tokens };
-  } else {
-    entries.push({ file: fileName, description: desc, tokens });
-  }
-
-  let fileCount = 0;
-  for (const [, list] of sections) fileCount += list.length;
-
-  const serialized = serializeAnatomy(sections, {
-    lastScanned: new Date().toISOString(),
-    fileCount,
-    hits: 0,
-    misses: 0,
-  });
-
-  const tmp = anatomyPath + "." + crypto.randomBytes(4).toString("hex") + ".tmp";
-  try {
-    fs.writeFileSync(tmp, serialized, "utf-8");
-    fs.renameSync(tmp, anatomyPath);
-  } catch {
-    try { fs.writeFileSync(anatomyPath, serialized, "utf-8"); }
-    catch (fallbackErr) {
-      process.stderr.write(`OpenWolf post-write: failed to write anatomy.md (${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)})\n`);
+  // Protect the read-modify-write of anatomy.md with a file lock so concurrent
+  // post-write events (or processes) do not read the same version and overwrite
+  // each other's entries.
+  withFileLock(anatomyPath, () => {
+    let anatomyContent: string;
+    try {
+      anatomyContent = fs.readFileSync(anatomyPath, "utf-8");
+    } catch {
+      anatomyContent = "# anatomy.md\n\n> Auto-maintained by OpenWolf.";
     }
-    try { fs.unlinkSync(tmp); } catch {}
-  }
+
+    const sections = parseAnatomy(anatomyContent);
+    const dir = path.dirname(relPathLocal);
+    const fileName = path.basename(relPathLocal);
+    const sectionKey = dir === "." ? "./" : dir + "/";
+
+    let fileContent = "";
+    try {
+      fileContent = fs.readFileSync(absolutePath, "utf-8");
+    } catch {
+      fileContent = contentFallback;
+    }
+
+    const desc = extractDescription(absolutePath).slice(0, 100);
+    const ext = path.extname(absolutePath).toLowerCase();
+    const codeExts = new Set([".ts", ".js", ".tsx", ".jsx", ".py", ".json", ".yaml", ".yml", ".css"]);
+    const proseExts = new Set([".md", ".txt", ".rst"]);
+    const type = codeExts.has(ext) ? "code" : proseExts.has(ext) ? "prose" : "mixed";
+    const tokens = estimateTokens(fileContent, type as "code" | "prose" | "mixed");
+
+    if (!sections.has(sectionKey)) sections.set(sectionKey, []);
+    const entries = sections.get(sectionKey)!;
+    const idx = entries.findIndex((e) => e.file === fileName);
+    if (idx !== -1) {
+      entries[idx] = { file: fileName, description: desc, tokens };
+    } else {
+      entries.push({ file: fileName, description: desc, tokens });
+    }
+
+    let fileCount = 0;
+    for (const [, list] of sections) fileCount += list.length;
+
+    const serialized = serializeAnatomy(sections, {
+      lastScanned: new Date().toISOString(),
+      fileCount,
+      hits: 0,
+      misses: 0,
+    });
+
+    const tmp = anatomyPath + "." + crypto.randomBytes(4).toString("hex") + ".tmp";
+    try {
+      fs.writeFileSync(tmp, serialized, "utf-8");
+      fs.renameSync(tmp, anatomyPath);
+    } catch {
+      try { fs.writeFileSync(anatomyPath, serialized, "utf-8"); }
+      catch (fallbackErr) {
+        process.stderr.write(`OpenWolf post-write: failed to write anatomy.md (${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)})\n`);
+      }
+      try { fs.unlinkSync(tmp); } catch {}
+    }
+  });
 }
 
 
