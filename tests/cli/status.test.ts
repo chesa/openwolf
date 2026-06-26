@@ -1,13 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 
-// Mock console so we can assert output
-const consoleSpy = {
-    log: vi.spyOn(console, "log").mockImplementation(() => {}),
-};
+let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 
 vi.mock("../../src/scanner/project-root.js", () => ({ findProjectRoot: vi.fn() }));
 vi.mock("../../src/utils/worktree.js", () => ({ detectWorktreeContext: vi.fn() }));
@@ -37,7 +34,11 @@ function makeCerebrumBody(lastUpdated: string, extra = ""): string {
 describe("status.ts", () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        consoleSpy.log.mockClear();
+        consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        consoleLogSpy.mockRestore();
     });
 
     it("does not crash when ledger is missing total_tokens_estimated", async () => {
@@ -58,7 +59,7 @@ describe("status.ts", () => {
         });
 
         await statusCommand();
-        const tokensLine = consoleSpy.log.mock.calls.find(
+        const tokensLine = consoleLogSpy.mock.calls.find(
             (c) => c[0] && c[0].includes("Tokens tracked")
         );
         expect(tokensLine).toBeDefined();
@@ -85,13 +86,13 @@ describe("status.ts", () => {
         });
 
         await statusCommand();
-        const readsLine = consoleSpy.log.mock.calls.find(
+        const readsLine = consoleLogSpy.mock.calls.find(
             (c) => c[0] && c[0].includes("Total reads")
         );
         expect(readsLine).toBeDefined();
         expect(readsLine![0]).toContain("0");
 
-        const writesLine = consoleSpy.log.mock.calls.find(
+        const writesLine = consoleLogSpy.mock.calls.find(
             (c) => c[0] && c[0].includes("Total writes")
         );
         expect(writesLine).toBeDefined();
@@ -114,7 +115,7 @@ describe("status.ts", () => {
         });
 
         await statusCommand();
-        const lines = consoleSpy.log.mock.calls.map((c) => String(c[0] ?? ""));
+        const lines = consoleLogSpy.mock.calls.map((c) => String(c[0] ?? ""));
 
         // neither is flagged as a hard missing-file error
         expect(lines.some((l) => l.includes("✗ Missing: .wolf/cron-state.json"))).toBe(false);
@@ -148,7 +149,7 @@ describe("status.ts", () => {
         });
 
         await statusCommand();
-        const lines = consoleSpy.log.mock.calls.map((c) => String(c[0] ?? ""));
+        const lines = consoleLogSpy.mock.calls.map((c) => String(c[0] ?? ""));
         expect(lines.some((l) => l.includes("Execution layer: gsd"))).toBe(true);
 
         rmSync(dir, { recursive: true, force: true });
@@ -172,7 +173,7 @@ describe("status.ts", () => {
         });
 
         await statusCommand();
-        const lines = consoleSpy.log.mock.calls.map((c) => String(c[0] ?? ""));
+        const lines = consoleLogSpy.mock.calls.map((c) => String(c[0] ?? ""));
         expect(lines.some((l) => l.includes("Execution layer"))).toBe(false);
 
         rmSync(dir, { recursive: true, force: true });
@@ -199,7 +200,7 @@ describe("status.ts", () => {
         vi.mocked(getWolfDir).mockReturnValue(wolfDir);
 
         await statusCommand();
-        const lines = consoleSpy.log.mock.calls.map((c) => String(c[0] ?? ""));
+        const lines = consoleLogSpy.mock.calls.map((c) => String(c[0] ?? ""));
         expect(lines.some((l) => l.includes("1 learnings awaiting review"))).toBe(true);
 
         rmSync(dir, { recursive: true, force: true });
@@ -220,7 +221,7 @@ describe("status.ts", () => {
         vi.mocked(getWolfDir).mockReturnValue(wolfDir);
 
         await statusCommand();
-        const lines = consoleSpy.log.mock.calls.map((c) => String(c[0] ?? ""));
+        const lines = consoleLogSpy.mock.calls.map((c) => String(c[0] ?? ""));
         expect(lines.some((l) => l.includes("✓ No pending learnings"))).toBe(true);
 
         rmSync(dir, { recursive: true, force: true });
@@ -243,7 +244,7 @@ describe("status.ts", () => {
         vi.mocked(getWolfDir).mockReturnValue(wolfDir);
 
         await statusCommand();
-        const lines = consoleSpy.log.mock.calls.map((c) => String(c[0] ?? ""));
+        const lines = consoleLogSpy.mock.calls.map((c) => String(c[0] ?? ""));
         expect(lines.some((l) => l.includes("baseline captured (no prior history)"))).toBe(true);
         expect(lines.some((l) => l.includes("freshness theater"))).toBe(false);
 
@@ -293,7 +294,7 @@ describe("status.ts", () => {
         vi.mocked(getWolfDir).mockReturnValue(wolfDir);
 
         await statusCommand();
-        const lines = consoleSpy.log.mock.calls.map((c) => String(c[0] ?? ""));
+        const lines = consoleLogSpy.mock.calls.map((c) => String(c[0] ?? ""));
         expect(lines.some((l) => l.includes('✗') && l.includes("freshness theater"))).toBe(true);
         expect(lines.some((l) => l.includes("baseline captured"))).toBe(false);
 
@@ -331,7 +332,7 @@ describe("status.ts", () => {
         vi.mocked(getWolfDir).mockReturnValue(wolfDir);
 
         await statusCommand();
-        const lines = consoleSpy.log.mock.calls.map((c) => String(c[0] ?? ""));
+        const lines = consoleLogSpy.mock.calls.map((c) => String(c[0] ?? ""));
         expect(lines.some((l) => l.includes("✓ cerebrum.md: current"))).toBe(true);
         expect(lines.some((l) => l.includes("freshness theater"))).toBe(false);
 
