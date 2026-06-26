@@ -62,10 +62,9 @@ function releaseLock(lockPath: string): void {
 export function withFileLock<T>(filePath: string, fn: () => T): T {
   const lockPath = filePath + ".lock";
   if (!acquireLock(lockPath)) {
-    process.stderr.write(
-      `OpenWolf: could not acquire lock for ${path.basename(filePath)} after ${MAX_RETRIES} attempts, proceeding unlocked\n`,
+    throw new Error(
+      `OpenWolf: could not acquire lock for ${path.basename(filePath)} after ${MAX_RETRIES} attempts`,
     );
-    return fn();
   }
   try {
     return fn();
