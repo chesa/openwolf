@@ -350,6 +350,7 @@ const CODE_FILE_EXTENSIONS = new Set([
 // Exported for unit testing (tests/hooks/post-write.test.ts).
 export function autoDetectBugFix(wolfDir: string, absolutePath: string, projectRoot: string, oldStr: string, newStr: string): void {
   const relFile = normalizePath(path.relative(projectRoot, absolutePath));
+  if (relFile.startsWith("../")) return;
   const basename = path.basename(absolutePath);
   const ext = path.extname(basename).toLowerCase();
 
