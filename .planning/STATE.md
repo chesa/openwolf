@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Shared-Context Tracking & Curation
-current_phase: 11
-current_phase_name: framework-blind-resume-protocol
-status: verifying
-stopped_at: Phase 12 context gathered
-last_updated: "2026-06-26T03:02:19.483Z"
-last_activity: 2026-06-26
-last_activity_desc: Phase 11 execution started
+current_phase: 12
+current_phase_name: framework-blind-curation-machinery
+status: planning
+stopped_at: Phase 11 complete — verification passed (12/12)
+last_updated: "2026-06-25T22:05:00.000Z"
+last_activity: 2026-06-25
+last_activity_desc: Phase 11 complete — VERIFICATION PASSED 12/12
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 12
+  completed_plans: 12
   percent: 80
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-25)
 
 **Core value:** Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and manageable to keep synced with upstream.
-**Current focus:** Phase 11 — framework-blind-resume-protocol
+**Current focus:** Phase 12 — framework-blind-curation-machinery
 
 ## Current Position
 
-Phase: 11 (framework-blind-resume-protocol) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-06-26 — Phase 11 execution started
+Phase: 12 (framework-blind-curation-machinery) — NOT STARTED
+Plan: 0 of TBD
+Status: Phase 11 COMPLETE — ready to plan Phase 12
+Last activity: 2026-06-25 — Phase 11 VERIFICATION PASSED 12/12
 
 Progress: [          ] 0/5 phases (v1.2)
 
