@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { tmpdir } from "node:os";
@@ -36,22 +36,16 @@ describe("withFileLock", () => {
         expect(fs.existsSync(testFile + ".lock")).toBe(false);
     });
 
-    it("proceeds unlocked after exhausting retries (5 attempts)", async () => {
+    it("throws after exhausting retries (5 attempts)", async () => {
         const { withFileLock } = await import("../../src/hooks/wolf-lock.js");
         const testFile = path.join(tmpDir, "contended.json");
         const lockPath = testFile + ".lock";
 
         fs.writeFileSync(lockPath, process.pid + "\n" + Date.now(), "utf-8");
 
-        const warnSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-
-        const result = withFileLock(testFile, () => "unlocked");
-        expect(result).toBe("unlocked");
-        expect(warnSpy).toHaveBeenCalledWith(
-            expect.stringContaining("could not acquire lock")
+        expect(() => withFileLock(testFile, () => "unlocked")).toThrow(
+            /could not acquire lock for contended\.json/,
         );
-
-        warnSpy.mockRestore();
     });
 
     it("removes stale lock older than 10 seconds", async () => {
@@ -108,27 +102,19 @@ describe("withFileLock", () => {
         expect(bExecuted).toBe(true);
     });
 
-    it("warns to stderr when it gives up and proceeds unlocked", async () => {
+    it("throws with target file name after exhausting retries", async () => {
         const { withFileLock } = await import("../../src/hooks/wolf-lock.js");
         const dir = fs.mkdtempSync(path.join(tmpdir(), "ow-lock-"));
         const target = path.join(dir, "f.json");
         const held = target + ".lock";
         // Hold a FRESH lock (embedded timestamp = now) so it never looks stale.
         fs.writeFileSync(held, `${process.pid}\n${Date.now()}`, { flag: "wx" });
-        const errs: string[] = [];
-        const orig = process.stderr.write.bind(process.stderr);
-        (process.stderr as any).write = (s: string) => { errs.push(String(s)); return true; };
-        let ran = false;
         try {
-            withFileLock(target, () => { ran = true; });
+            expect(() => withFileLock(target, () => "ran")).toThrow(
+                /could not acquire lock for f\.json after 5 attempts/,
+            );
         } finally {
-            (process.stderr as any).write = orig;
             fs.rmSync(dir, { recursive: true, force: true });
         }
-        expect(ran).toBe(true);                       // proceeds unlocked rather than hanging
-        const combined = errs.join("");
-        expect(combined).toMatch(/could not acquire lock/);
-        expect(combined).toContain("after 5 attempts");
-        expect(combined).toContain("f.json");
     });
 });
