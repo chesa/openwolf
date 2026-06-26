@@ -212,7 +212,9 @@ export function checkRootGitIgnore(projectRoot: string): void {
         if (trimmed.startsWith("#")) return false; // skip comment lines
         // Match lines starting with `.wolf/` followed by at least one more char
         // (distinguishes the bare `.wolf/` blanket from specific path rules).
-        return /^\.wolf\/.+/.test(trimmed);
+        // Include negated rules (`!.wolf/...`) because root re-includes override
+        // the nested .wolf/.gitignore template.
+        return /^!?\.wolf\/.+/.test(trimmed);
       });
     if (hasPrefixedOverride) {
       console.log("");
