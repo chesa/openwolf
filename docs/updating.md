@@ -149,7 +149,7 @@ git rm --cached --ignore-unmatch .wolf/buglog.json .wolf/anatomy.md \
   .wolf/cerebrum-freshness.json
 
 # Commit the index update so teammates get the clean state on next pull.
-git commit -m "chore: untrack .wolf derived files (hooks/, buglog.json, suggestions.json, cerebrum-freshness.json)"
+git commit -m "chore: untrack .wolf derived and per-dev files (hooks/, anatomy.md, memory.md, token-ledger.json, cron-state.json, designqc-report.json, suggestions.json, cerebrum-freshness.json, buglog.json, backups/, sessions/, designqc-captures/)"
 ```
 
 After this step, `git ls-files .wolf/` should list **only** the authored set:
