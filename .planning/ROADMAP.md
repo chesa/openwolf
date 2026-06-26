@@ -73,10 +73,10 @@
   2. `git ls-files .wolf/` matches the documented authored set exactly — derived build output is gone from version control.
   3. The template documents the rule "the consumer root `.gitignore` must not re-list `.wolf/` paths," and clone-time rebuild of untracked `hooks/` is guaranteed via the R2 self-heal pattern and/or documented `openwolf update` discipline.
 
-**Plans**: 2 plans
+**Plans**: 1/2 plans executed
 **Wave 1** *(parallel — no file overlap)*
 
-- [ ] 09-01-PLAN.md — Rewrite `wolf-gitignore` (authored-vs-derived; untrack `hooks/`/`buglog.json`, reserve `cerebrum-freshness.json`) + extend `checkRootGitIgnore` advisory + lock with Vitest assertions
+- [x] 09-01-PLAN.md — Rewrite `wolf-gitignore` (authored-vs-derived; untrack `hooks/`/`buglog.json`, reserve `cerebrum-freshness.json`) + extend `checkRootGitIgnore` advisory + lock with Vitest assertions
 - [ ] 09-02-PLAN.md — Document the human-runnable `git rm --cached` migration + consumer root-`.gitignore` rule + CLI-side clone-time `hooks/` rebuild in `docs/updating.md`
 
 ### Phase 10: Hook-Side In-Project Exclusion
@@ -134,7 +134,7 @@
 | 6. Learnings Review CLI | v1.1 | 1/1 | Complete | 2026-06-24 |
 | 7. Concurrency & Integration Tests | v1.1 | 1/1 | Complete | 2026-06-24 |
 | 8. Verify Landed P0 Hygiene | v1.2 | 2/2 | Complete   | 2026-06-26 |
-| 9. Tracking Hygiene — One Authoritative Ignore List | v1.2 | 0/2 | Planned | - |
+| 9. Tracking Hygiene — One Authoritative Ignore List | v1.2 | 1/2 | In Progress|  |
 | 10. Hook-Side In-Project Exclusion | v1.2 | 0/? | Not started | - |
 | 11. Framework-Blind Resume Protocol | v1.2 | 0/? | Not started | - |
 | 12. Framework-Blind Curation Machinery | v1.2 | 0/? | Not started | - |

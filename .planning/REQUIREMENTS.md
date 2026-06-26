@@ -18,7 +18,7 @@
 
 ### Tracking Hygiene
 
-- [ ] **R4**: Correct the `.wolf/.gitignore` template — remove the false "hooks/ are committed" claim; untrack `buglog.json`, `suggestions.json`, `hooks/`; document the rule "the consumer root `.gitignore` must not re-list `.wolf/` paths." Establishes the **one authoritative ignore list**.
+- [x] **R4**: Correct the `.wolf/.gitignore` template — remove the false "hooks/ are committed" claim; untrack `buglog.json`, `suggestions.json`, `hooks/`; document the rule "the consumer root `.gitignore` must not re-list `.wolf/` paths." Establishes the **one authoritative ignore list**.
   *Accept:* `git ls-files .wolf/` matches the documented set exactly.
   *Decided (Q4 → D-17):* **untrack** compiled `hooks/` (derived build output; committing JS artifacts causes merge conflicts + path noise). Must then guarantee rebuild-on-clone — extend the R2 self-heal pattern and/or document the `openwolf update` discipline.
 
