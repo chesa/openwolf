@@ -504,6 +504,26 @@ describe("checkRootGitIgnore advisory (D-09-09)", () => {
     }
   });
 
+  it("does NOT fire the blanket advisory for .wolf/hooks/ only (D-09-09)", () => {
+    const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "wolf-advisory-")));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      writeFileSync(path.join(dir, ".gitignore"), ".wolf/hooks/\n");
+      checkRootGitIgnore(dir);
+      const prefixedCalls = warnSpy.mock.calls.filter((args) =>
+        typeof args[0] === "string" && args[0].includes(".wolf/-prefixed path rule")
+      );
+      const blanketCalls = warnSpy.mock.calls.filter((args) =>
+        typeof args[0] === "string" && args[0].includes("blanket '.wolf/' rule")
+      );
+      expect(prefixedCalls).toHaveLength(1);
+      expect(blanketCalls).toHaveLength(0);
+    } finally {
+      warnSpy.mockRestore();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("warns nothing when root .gitignore has no .wolf references", () => {
     const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "wolf-advisory-")));
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
