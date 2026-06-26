@@ -240,13 +240,17 @@ function writeClaudeRules(projectRoot: string, templatesDir: string): void {
   const claudeMdPath = path.join(projectRoot, "CLAUDE.md");
   const marker = "@.wolf/OPENWOLF.md";
   const fullSnippet = `# CLAUDE.md\n\n${marker}\n\nThis project uses OpenWolf for context management. Read and follow .wolf/OPENWOLF.md every session. Check .wolf/cerebrum.md before generating code. Check .wolf/anatomy.md before reading files.`;
-  if (fs.existsSync(claudeMdPath)) {
-    const content = fs.readFileSync(claudeMdPath, "utf-8");
-    if (!content.includes("OpenWolf") && !content.includes(marker)) {
-      fs.writeFileSync(claudeMdPath, marker + "\n\n" + content, "utf-8");
+  try {
+    if (fs.existsSync(claudeMdPath)) {
+      const content = fs.readFileSync(claudeMdPath, "utf-8");
+      if (!content.includes("OpenWolf") && !content.includes(marker)) {
+        fs.writeFileSync(claudeMdPath, marker + "\n\n" + content, "utf-8");
+      }
+    } else {
+      fs.writeFileSync(claudeMdPath, fullSnippet + "\n", "utf-8");
     }
-  } else {
-    fs.writeFileSync(claudeMdPath, fullSnippet + "\n", "utf-8");
+  } catch (err) {
+    console.warn(`  ⚠ Could not update ${claudeMdPath}: ${(err as Error).message}`);
   }
 }
 
