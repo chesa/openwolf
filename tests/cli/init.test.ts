@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import * as fs from "node:fs";
+import { fileURLToPath } from "node:url";
 import { findProjectRoot } from "../../src/scanner/project-root.js";
 import { detectWorktreeContext } from "../../src/utils/worktree.js";
 import type { WorktreeId } from "../../src/hooks/worktree-helper.js";
@@ -397,5 +398,61 @@ describe("initCommand worktree guard", () => {
 
     errorSpy.mockRestore();
     exitSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// wolf-gitignore template content — D-09-01 through D-09-06
+// Reads the real template file and asserts its corrected authored-vs-derived
+// structure. These assertions MUST fail (RED) before Task 2 rewrites the
+// template, proving they test real behavior.
+// ---------------------------------------------------------------------------
+describe("wolf-gitignore template content (D-09-01 through D-09-06)", () => {
+  // Resolve the real template from src/templates/ relative to this test file.
+  // ESM: use fileURLToPath(import.meta.url) — mirrors init.ts line 11 pattern.
+  // (new URL(...).pathname breaks on Windows; fileURLToPath handles all platforms.)
+  const templatePath = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../src/templates/wolf-gitignore"
+  );
+
+  // Read once at describe scope; wrap in try/catch so a missing file surfaces
+  // as assertion failures, not a thrown import error.
+  let content: string;
+  try {
+    content = fs.readFileSync(templatePath, "utf-8");
+  } catch {
+    content = "";
+  }
+
+  // D-09-02: compiled hooks/ is derived build output — must be an active rule
+  it("has an active ignore rule for hooks/ (D-09-02)", () => {
+    expect(content).toMatch(/^hooks\/$/m);
+  });
+
+  // D-09-02: the corrected template must NOT mention hooks/ inside a comment line
+  // (the old false claim listed it as "ARE committed")
+  it("does NOT list hooks/ in a comment line (D-09-02)", () => {
+    expect(content).not.toMatch(/^#.*hooks\//m);
+  });
+
+  // D-09-03: legacy buglog.json must be an active ignore rule
+  it("has an active ignore rule for buglog.json (D-09-03)", () => {
+    expect(content).toMatch(/^buglog\.json$/m);
+  });
+
+  // D-09-03: buglog.ndjson is authored/committed — must NOT be an active rule
+  it("does NOT have an active ignore rule for buglog.ndjson (D-09-03)", () => {
+    expect(content).not.toMatch(/^buglog\.ndjson$/m);
+  });
+
+  // D-09-06: cerebrum-freshness.json line reserved for Phase 12 (R9)
+  it("has an active ignore rule for cerebrum-freshness.json (D-09-06)", () => {
+    expect(content).toMatch(/^cerebrum-freshness\.json$/m);
+  });
+
+  // D-09-05: STATUS.md was falsely listed as "ARE committed" — must be removed
+  it("does NOT mention STATUS.md anywhere in the template (D-09-05)", () => {
+    expect(content).not.toMatch(/STATUS\.md/);
   });
 });
