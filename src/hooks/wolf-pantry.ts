@@ -88,6 +88,15 @@ export function parseProposals(sessionDir: string, sessionId: string): ProposalE
     });
   }
 
+  // Preserve the old diagnostic: if the file has headings but no valid proposal
+  // entries, something is malformed. We avoid re-splitting on every `##` so that
+  // legitimate markdown headings inside an entry's body are not misclassified.
+  if (entries.length === 0 && raw.trim() && /^##\s+/m.test(raw)) {
+    process.stderr.write(
+      `OpenWolf: unparseable proposal entry in session ${sessionId}, skipping\n`,
+    );
+  }
+
   return entries;
 }
 
