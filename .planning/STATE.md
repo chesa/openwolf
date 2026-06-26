@@ -4,17 +4,17 @@ milestone: v1.2
 milestone_name: Shared-Context Tracking & Curation
 current_phase: 09
 current_phase_name: tracking-hygiene-one-authoritative-ignore-list
-status: executing
+status: verifying
 stopped_at: Phase 8 verification complete
-last_updated: "2026-06-26T00:27:17.355Z"
+last_updated: "2026-06-26T00:31:19.041Z"
 last_activity: 2026-06-26
 last_activity_desc: Phase 09 execution started
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
-  percent: 20
+  completed_plans: 4
+  percent: 40
 ---
 
 # Project State: CHESA Fork Team Toolkit
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-25)
 
 Phase: 09 (tracking-hygiene-one-authoritative-ignore-list) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-26 — Phase 09 execution started
 
 Progress: [          ] 0/5 phases (v1.2)
@@ -54,6 +54,7 @@ Progress: [          ] 0/5 phases (v1.2)
 | Phase 08 P01 | 3m | 3 tasks | 3 files |
 | Phase 08 P02 | 157s | 1 tasks | 1 files |
 | Phase 09 P01 | 279 | 3 tasks | 3 files |
+| Phase 09 P02 | 115 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Regression tests grounded in acme field inputs serve as dual-purpose evidence+safety net for Phase 10 (R6)
 - [Phase ?]: R1 field note classified as PASS per VER-D3 — acme predates cac925a fix
 - [Phase ?]: All six P0 behaviors PASS on develop-preview — commit↔behavior map established (VER-01 deliverable complete)
+- [Phase ?]: D-09-08: document human-runnable git rm --cached migration — not CLI-automated due to blast-radius risk
+- [Phase ?]: D-09-09: consumer root .gitignore must not re-list .wolf/ paths — silently overrides per-file template (acme_translators regression vector)
+- [Phase ?]: D-09-07: clone-time hooks/ rebuild is CLI-side via openwolf init/update — hook-side self-heal cannot bootstrap hooks (chicken-and-egg)
 
 ### Build-Order Dependency Edges (honor when planning)
 
@@ -101,7 +105,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-26T00:27:17.349Z
+Last session: 2026-06-26T00:31:19.034Z
 Stopped at: Phase 12 context gathered
 Resume file: .planning/phases/12-framework-blind-curation-machinery/12-CONTEXT.md
 
