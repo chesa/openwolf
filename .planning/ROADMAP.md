@@ -113,7 +113,7 @@
   3. `grep -rIiE 'gsd|superpowers|gstack|\.planning' src/templates src/hooks src/cli` returns **zero** (C1).
   4. The test suite is green and the change carries a ≥ minor version bump (protocol change).
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 
 **Wave 1** *(parallel — no file overlap)*
 
@@ -122,7 +122,7 @@
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 11-03-PLAN.md — Surface `execution_layer` in `openwolf status` + session-start (TDD); rewrite current guides; banner historical artifacts; create CHANGELOG entry
+- [x] 11-03-PLAN.md — Surface `execution_layer` in `openwolf status` + session-start (TDD); rewrite current guides; banner historical artifacts; create CHANGELOG entry
 
 ### Phase 12: Framework-Blind Curation Machinery
 
@@ -153,5 +153,5 @@
 | 8. Verify Landed P0 Hygiene | v1.2 | 2/2 | Complete   | 2026-06-26 |
 | 9. Tracking Hygiene — One Authoritative Ignore List | v1.2 | 2/2 | Complete    | 2026-06-26 |
 | 10. Hook-Side In-Project Exclusion | v1.2 | 2/2 | Complete    | 2026-06-26 |
-| 11. Framework-Blind Resume Protocol | v1.2 | 2/3 | In Progress|  |
+| 11. Framework-Blind Resume Protocol | v1.2 | 3/3 | Complete   | 2026-06-26 |
 | 12. Framework-Blind Curation Machinery | v1.2 | 0/? | Not started | - |
