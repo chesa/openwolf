@@ -504,13 +504,16 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string, filename:
   }
 
   // --- Logic fix (condition changed) ---
-  const oldCond = oldClean.match(/if\s*\(([^)]+)\)/)?.[1];
-  const newCond = newClean.match(/if\s*\(([^)]+)\)/)?.[1];
-  if (oldCond && newCond && oldCond !== newCond && oldLines.length <= 5) {
+  const oldConds = [...oldClean.matchAll(/if\s*\(([^)]+)\)/g)].map(m => m[1]);
+  const newConds = [...newClean.matchAll(/if\s*\(([^)]+)\)/g)].map(m => m[1]);
+  const changedCondIdx = newConds.findIndex((cond, i) => oldConds[i] !== cond);
+  if (changedCondIdx !== -1 && oldLines.length <= 5) {
+    const oldCond = oldConds[changedCondIdx];
+    const newCond = newConds[changedCondIdx];
     return {
       category: "logic-fix",
       summary: `Wrong condition in logic`,
-      rootCause: `Condition was: if (${oldCond.slice(0, 50)})`,
+      rootCause: `Condition was: if (${(oldCond || "?").slice(0, 50)})`,
       fix: `Changed to: if (${newCond.slice(0, 50)})`,
     };
   }
@@ -544,13 +547,16 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string, filename:
   }
 
   // --- Return value fix ---
-  const oldReturn = oldStr.match(/return\s+(.+)/)?.[1]?.trim();
-  const newReturn = newStr.match(/return\s+(.+)/)?.[1]?.trim();
-  if (oldReturn && newReturn && oldReturn !== newReturn && oldLines.length <= 5) {
+  const oldReturns = [...oldStr.matchAll(/return\s+(.+)/g)].map(m => m[1].trim());
+  const newReturns = [...newStr.matchAll(/return\s+(.+)/g)].map(m => m[1].trim());
+  const changedReturnIdx = newReturns.findIndex((r, i) => oldReturns[i] !== r);
+  if (changedReturnIdx !== -1 && oldLines.length <= 5) {
+    const oldReturn = oldReturns[changedReturnIdx];
+    const newReturn = newReturns[changedReturnIdx];
     return {
       category: "return-value",
       summary: `Wrong return value`,
-      rootCause: `Was returning: ${oldReturn.slice(0, 50)}`,
+      rootCause: `Was returning: ${(oldReturn || "?").slice(0, 50)}`,
       fix: `Now returns: ${newReturn.slice(0, 50)}`,
     };
   }
