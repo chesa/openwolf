@@ -272,11 +272,7 @@ function captureStubIfNeeded(wolfDir: string, sessionDir: string, session: Sessi
   const existing = readMarkdown(proposalPath);
   if (existing.trim().length > 0) return;
 
-  // (c) Idempotency on re-fire: if this is not the first stop and the stub
-  //     marker is already present, skip (D12-03).
   const STUB_MARKER = "### Staged Session Metadata";
-  if (session.stop_count > 1 && existing.includes(STUB_MARKER)) return;
-
   try {
     // Write the stub as raw content (no arrow header). This keeps it countable
     // by collectAllEntries() (which synthesizes isStub:true for unparseable
