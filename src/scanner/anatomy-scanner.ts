@@ -190,6 +190,12 @@ export function buildAnatomy(wolfDir: string, projectRoot: string): { content: s
     },
   });
 
+  const rawPatterns = config.openwolf?.anatomy?.exclude_patterns;
+  const excludePatterns =
+    Array.isArray(rawPatterns) && rawPatterns.every((p) => typeof p === "string")
+      ? rawPatterns
+      : DEFAULT_EXCLUDE_PATTERNS;
+
   const ig = loadGitignoreMatcher(
     projectRoot,
     config.openwolf?.anatomy?.respect_gitignore ?? false
@@ -199,7 +205,7 @@ export function buildAnatomy(wolfDir: string, projectRoot: string): { content: s
   walkDir(
     projectRoot,
     projectRoot,
-    config.openwolf?.anatomy?.exclude_patterns ?? DEFAULT_EXCLUDE_PATTERNS,
+    excludePatterns,
     config.openwolf?.anatomy?.max_files ?? DEFAULT_MAX_FILES,
     entries,
     ig
