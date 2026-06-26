@@ -10,6 +10,10 @@ import { CODE_EXTENSIONS, PROSE_EXTENSIONS } from "../utils/extensions.js";
 // (src/hooks compiles standalone with no node_modules), or this require would
 // fail at runtime — the same failure class as the WOLF_ROOT MODULE_NOT_FOUND bug.
 import ignore, { type Ignore } from "ignore";
+import {
+  shouldExclude,
+  DEFAULT_EXCLUDE_PATTERNS,
+} from "../hooks/wolf-ignore.js";
 
 interface WolfConfig {
   version?: number;
@@ -28,12 +32,6 @@ interface WolfConfig {
 }
 
 const DEFAULT_MAX_FILES = 500;
-const DEFAULT_EXCLUDE_PATTERNS = [
-  "node_modules", ".git", "dist", "build", ".wolf",
-  ".next", ".nuxt", "coverage", "__pycache__", ".cache",
-  "target", ".vscode", ".idea", ".turbo", ".vercel",
-  ".netlify", ".output", "*.min.js", "*.min.css",
-];
 
 const BINARY_EXTENSIONS = new Set([
   ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".svg",
@@ -53,100 +51,6 @@ function estimateTokens(text: string, filePath: string): number {
   if (CODE_EXTENSIONS.has(ext)) ratio = 3.5;
   if (PROSE_EXTENSIONS.has(ext)) ratio = 4.0;
   return Math.ceil(text.length / ratio);
-}
-
-// Files that should never appear in anatomy (secrets, env files)
-const ALWAYS_EXCLUDE_FILES = new Set([".env", ".env.local", ".env.production", ".env.staging", ".env.development"]);
-
-// Translate a glob pattern into an anchored RegExp.
-//   `*`  matches any run of characters within a single path segment (no "/")
-//   `**` matches any run of characters across segments (including "/")
-// Every other regex metacharacter is escaped so the rest of the pattern
-// matches literally.
-function globToRegExp(glob: string): RegExp {
-  let re = "";
-  for (let i = 0; i < glob.length; i++) {
-    const c = glob[i];
-    if (c === "*") {
-      if (glob[i + 1] === "*") {
-        re += ".*"; // ** spans path segments
-        i++; // consume the second "*"
-      } else {
-        re += "[^/]*"; // * stays within one segment
-      }
-    } else if ("\\^$.|?+()[]{}".includes(c)) {
-      re += "\\" + c;
-    } else {
-      re += c;
-    }
-  }
-  return new RegExp(`^${re}$`);
-}
-
-// Decide whether one exclude pattern matches a project-relative path. All
-// patterns are anchored at the project root. Supported forms:
-//   "node_modules"        bare name   -> matches that segment at ANY depth
-//   "*.min.js"            ext glob    -> matches any path ending in ".min.js"
-//   "docs/superpowers"    path prefix -> matches that dir AND everything under it
-//   "docs/superpowers/*"  path glob   -> matches direct children
-//   ".claude/**/cache"    path glob   -> "**" spans segments
-//   "tmp*"                name glob   -> matches any single segment by glob
-//
-// Prior behavior only handled bare names (via parts.includes) and a leading
-// "*.ext" glob, so any pattern containing "/" silently matched nothing — e.g.
-// ".claude/worktrees" and "docs/superpowers/*" were never actually excluded.
-function matchesPattern(
-  relPath: string,
-  parts: string[],
-  pattern: string
-): boolean {
-  if (pattern.length === 0) return false;
-
-  // Extension glob (backward compatible): "*.min.js"
-  if (pattern.startsWith("*.") && !pattern.includes("/")) {
-    return relPath.endsWith(pattern.slice(1));
-  }
-
-  const hasSlash = pattern.includes("/");
-  const hasGlob = pattern.includes("*");
-
-  // Bare segment name (backward compatible): match at any depth.
-  if (!hasSlash && !hasGlob) {
-    return parts.includes(pattern);
-  }
-
-  if (hasSlash) {
-    // Path pattern without a glob -> directory-prefix semantics: the named
-    // path itself and everything beneath it.
-    if (!hasGlob) {
-      return relPath === pattern || relPath.startsWith(`${pattern}/`);
-    }
-    // Path pattern with a glob -> match against the full relative path.
-    return globToRegExp(pattern).test(relPath);
-  }
-
-  // Single-segment glob (e.g. "tmp*") -> match any one path segment.
-  const segRe = globToRegExp(pattern);
-  return parts.some((p) => segRe.test(p));
-}
-
-// Exported for unit testing (tests/scanner/anatomy-scanner.test.ts).
-export function shouldExclude(
-  relPath: string,
-  excludePatterns: string[]
-): boolean {
-  const parts = relPath.split("/");
-  const basename = parts[parts.length - 1];
-
-  // Always exclude sensitive files regardless of config
-  if (ALWAYS_EXCLUDE_FILES.has(basename)) return true;
-  // Also exclude .env.* variants not in the set (e.g., .env.backup)
-  if (basename.startsWith(".env.") || basename === ".env") return true;
-
-  for (const pattern of excludePatterns) {
-    if (matchesPattern(relPath, parts, pattern)) return true;
-  }
-  return false;
 }
 
 // Load the project-root .gitignore into an `ignore` matcher when the opt-in

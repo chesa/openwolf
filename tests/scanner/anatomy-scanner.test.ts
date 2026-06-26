@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { shouldExclude, buildAnatomy } from "../../src/scanner/anatomy-scanner.js";
+import { shouldExclude } from "../../src/hooks/wolf-ignore.js";
+import { buildAnatomy } from "../../src/scanner/anatomy-scanner.js";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
