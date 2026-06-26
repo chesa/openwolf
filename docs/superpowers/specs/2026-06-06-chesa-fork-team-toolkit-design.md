@@ -1,3 +1,5 @@
+> **NOTE:** Historical design artifact (v1.2-beta era). The `STATUS.md` protocol described below is deprecated and replaced by the framework-blind resume seam in `OPENWOLF.md`.
+
 # CHESA Fork Team Toolkit — Design Spec
 
 > Date: 2026-06-06

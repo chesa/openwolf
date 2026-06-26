@@ -62,7 +62,7 @@ A typical OpenWolf interaction flows as follows:
 5. **Pre-Write**: Before Claude Code writes a file, the `pre-write` hook checks the `cerebrum.md` Do-Not-Repeat section for patterns that should be avoided. It also searches `buglog.ndjson` for similar past bugs when the edit looks like a fix.
 6. **Post-Read**: After Claude Code reads a file, the `post-read` hook updates the token estimate in the session file for that file.
 7. **Post-Write**: After Claude Code writes a file, the `post-write` hook updates `anatomy.md` with a fresh description and token count, appends a structured entry to `memory.md`, tracks edit counts in the session file, and auto-detects bug-fix patterns to log to `buglog.ndjson`.
-8. **Session Stop**: The `stop` hook finalizes the session, checks for files edited multiple times without a corresponding buglog entry, verifies cerebrum and STATUS.md freshness, and writes session totals to `token-ledger.json`.
+8. **Session Stop**: The `stop` hook finalizes the session, checks for files edited multiple times without a corresponding buglog entry, verifies cerebrum freshness, and writes session totals to `token-ledger.json`. Resume order is framework-blind: on the next session start, check your execution layer's own plan/status (if present), then `cerebrum.md`, then recent `memory.md`.
 9. **Dashboard**: The user opens `openwolf dashboard`, which launches a browser connected to the local Express daemon. The dashboard fetches project state, health metrics, and file data via authenticated HTTP and WebSocket APIs.
 
 ## Key Abstractions

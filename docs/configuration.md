@@ -177,6 +177,36 @@ Controls the DesignQC screenshot capture system.
 ]
 ```
 
+### `execution_layer`
+
+OpenWolf is execution-layer-agnostic: it does not own your project's plan, roadmap, or
+intent files. The optional `execution_layer` key lets you record which tool your team
+uses so OpenWolf can surface a reminder at session start.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `execution_layer` | `null` | Name of the execution layer in use (e.g. `"gsd"`, `"superpowers"`, `"gstack"`). When set to a non-empty string, `openwolf status` prints `Execution layer: <value>` and the session-start hook writes `OpenWolf: execution layer = <value> — read its plan/status first.` to stderr. When `null` or absent, both outputs are suppressed. |
+| `execution_layer_note` | *(explanatory string)* | Human-readable hint about what the key does. This key is informational only — OpenWolf does not read it at runtime. |
+
+**Resume order (framework-blind):** OpenWolf does not mandate a specific status file.
+When resuming a session, follow this generic order regardless of execution layer:
+
+1. Check your execution layer's own plan or status file first (if present).
+2. Read `.wolf/cerebrum.md` for project conventions and do-not-repeat items.
+3. Scan recent `.wolf/memory.md` entries for session context.
+
+**Example `.wolf/config.json` snippet:**
+
+```json
+{
+  "version": 1,
+  "openwolf": {
+    "execution_layer": "gsd",
+    "execution_layer_note": "Optional: set to your execution layer name so OpenWolf can surface a resume hint. null = generic resume order."
+  }
+}
+```
+
 ## Required vs optional settings
 
 No settings are strictly required. OpenWolf seeds `.wolf/config.json` with defaults on `openwolf init`, and every subsystem falls back to hard-coded defaults if the file or a specific key is missing. The application starts successfully even when `.wolf/config.json` does not exist.
@@ -217,7 +247,6 @@ sessions/
 #   config.json       — project configuration
 #   buglog.ndjson     — known bugs and fixes
 #   identity.md       — project identity
-#   STATUS.md         — project status
 #   hooks/            — compiled hook scripts
 #   reframe-frameworks.md
 #   cron-manifest.json  — cron config (cron-state.json is per-dev, above)
