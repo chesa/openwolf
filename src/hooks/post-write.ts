@@ -317,11 +317,11 @@ function summarizeEdit(oldStr: string, newStr: string, filename: string): string
 
   // --- CSS/style changes ---
   if (ext === ".css" || ext === ".scss" || ext === ".vue" || ext === ".tsx" || ext === ".jsx") {
-    const oldProps = (oldStr.match(/[\w-]+\s*:/g) || []).map(p => p.replace(/\s*:/, ""));
-    const newProps = (newStr.match(/[\w-]+\s*:/g) || []).map(p => p.replace(/\s*:/, ""));
-    const changed = newProps.filter(p => !oldProps.includes(p));
+    const oldProps = extractCSSProps(oldStr);
+    const newProps = extractCSSProps(newStr);
+    const changed = [...newProps.entries()].filter(([k, v]) => oldProps.get(k) !== v && oldProps.has(k));
     if (changed.length > 0 && changed.length <= 3) {
-      return `CSS: ${changed.join(", ")}`;
+      return `CSS: ${changed.map(([k, v]) => `${k}: ${oldProps.get(k)} → ${v}`).join("; ")}`;
     }
   }
 
