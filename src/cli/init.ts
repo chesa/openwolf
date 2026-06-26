@@ -193,11 +193,11 @@ export function checkRootGitIgnore(projectRoot: string): void {
       .some((line) => {
         const trimmed = line.trimStart();
         if (trimmed.startsWith("#")) return false; // skip comment lines
-        // Match lines starting with `.wolf/` followed by at least one more char
-        // (distinguishes the bare `.wolf/` blanket from specific path rules).
-        // Include negated rules (`!.wolf/...`) because root re-includes override
-        // the nested .wolf/.gitignore template.
-        return /^!?\.wolf\/.+/.test(trimmed);
+        // Match any rule that targets the .wolf directory itself or a .wolf/
+        // prefixed path. This catches bare `.wolf` (no trailing slash), `.wolf/`,
+        // anchored root forms (`/.wolf`, `/.wolf/`), `**/.wolf`, and prefixed
+        // rules like `.wolf/hooks/` — including negated re-includes.
+        return /^!?(?:\/?\.wolf)(?:\/.*)?$|^!?\*\*\/\.wolf(?:\/|$)/.test(trimmed);
       });
     if (hasPrefixedOverride) {
       console.log("");

@@ -530,4 +530,49 @@ describe("checkRootGitIgnore advisory (D-09-09)", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("warns on bare .wolf rule without trailing slash (D-09-09)", () => {
+    const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "wolf-advisory-")));
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      writeFileSync(path.join(dir, ".gitignore"), ".wolf\n");
+      checkRootGitIgnore(dir);
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining(".wolf/-prefixed path rule")
+      );
+    } finally {
+      logSpy.mockRestore();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("warns on anchored root /.wolf/ rule (D-09-09)", () => {
+    const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "wolf-advisory-")));
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      writeFileSync(path.join(dir, ".gitignore"), " /.wolf/\n");
+      checkRootGitIgnore(dir);
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining(".wolf/-prefixed path rule")
+      );
+    } finally {
+      logSpy.mockRestore();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("warns on negated re-include rule !.wolf/hooks/ (D-09-09)", () => {
+    const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "wolf-advisory-")));
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      writeFileSync(path.join(dir, ".gitignore"), "!.wolf/hooks/\n");
+      checkRootGitIgnore(dir);
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining(".wolf/-prefixed path rule")
+      );
+    } finally {
+      logSpy.mockRestore();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
