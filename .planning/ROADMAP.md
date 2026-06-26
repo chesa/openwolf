@@ -136,7 +136,7 @@
   3. A date-only `> Last updated:` bump on `cerebrum.md` is flagged in `openwolf status` while a real content change is not, via a `node:crypto` SHA-256 body hash in the gitignored `.wolf/cerebrum-freshness.json` sidecar; `status` stays read-only and baseline updates only on sanctioned curation (`learnings merge` + `learnings accept` + bootstrap-on-missing) (D-20).
   4. `grep -rIiE 'bitbucket|github|pipelines|pre-push' src/` returns zero and `grep -rIiE 'gsd|superpowers|gstack|\.planning' src/templates src/hooks src/cli` returns zero (C1) — host wiring lives only in docs.
 
-**Plans**: 1/4 plans executed
+**Plans**: 3/4 plans executed
 
 **Wave 1**
 
@@ -144,8 +144,8 @@
 
 **Wave 2** *(parallel — no file overlap; both depend on 12-01)*
 
-- [ ] 12-02-PLAN.md — R7b gate: `openwolf learnings check` (0/1/2, --json/--quiet) + `learnings accept` + R9 baseline write in `learnings merge`; register subcommands (TDD)
-- [ ] 12-03-PLAN.md — R7a: `captureStubIfNeeded` structural breadcrumb in the `stop` hook `finalizeSession` (D12-01..04); `build:hooks` → `openwolf update` so it is live (TDD)
+- [x] 12-02-PLAN.md — R7b gate: `openwolf learnings check` (0/1/2, --json/--quiet) + `learnings accept` + R9 baseline write in `learnings merge`; register subcommands (TDD)
+- [x] 12-03-PLAN.md — R7a: `captureStubIfNeeded` structural breadcrumb in the `stop` hook `finalizeSession` (D12-01..04); `build:hooks` → `openwolf update` so it is live (TDD)
 
 **Wave 3** *(blocked on Waves 1-2)*
 
@@ -167,4 +167,4 @@
 | 9. Tracking Hygiene — One Authoritative Ignore List | v1.2 | 2/2 | Complete    | 2026-06-26 |
 | 10. Hook-Side In-Project Exclusion | v1.2 | 2/2 | Complete    | 2026-06-26 |
 | 11. Framework-Blind Resume Protocol | v1.2 | 3/3 | Complete   | 2026-06-26 |
-| 12. Framework-Blind Curation Machinery | v1.2 | 1/4 | In Progress|  |
+| 12. Framework-Blind Curation Machinery | v1.2 | 3/4 | In Progress|  |
