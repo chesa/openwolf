@@ -73,7 +73,7 @@ A typical OpenWolf interaction flows as follows:
 | `createProgram` | Function | Builds the Commander CLI with all subcommands | `src/cli/index.ts` |
 | `CronEngine` | Class | Schedules and executes cron tasks, handles retries and dead-letter queue | `src/daemon/cron-engine.ts` |
 | `WolfClient` | Class | Dashboard WebSocket client for real-time updates | `src/dashboard/app/lib/wolf-client.ts` |
-| `scanProject` | Function | Walks the project tree and writes `anatomy.md`; `respect_gitignore` defaults to `true` (opt-out via `openwolf.anatomy.respect_gitignore` in wolf.json) | `src/scanner/anatomy-scanner.ts` |
+| `scanProject` | Function | Walks the project tree and writes `anatomy.md`; `respect_gitignore` defaults to `true` (opt-out via `openwolf.anatomy.respect_gitignore` in `.wolf/config.json`) | `src/scanner/anatomy-scanner.ts` |
 | `buildAnatomy` | Function | Builds anatomy content and file count without writing to disk | `src/scanner/anatomy-scanner.ts` |
 | `finalizeSession` | Function | Finalizes session state, performs checks, and writes totals to `token-ledger.json` | `src/hooks/stop.ts` |
 | `logBug` | Function | Appends a structured bug entry to `.wolf/buglog.ndjson` | `src/buglog/bug-tracker.ts` |

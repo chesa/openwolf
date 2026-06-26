@@ -16,7 +16,7 @@ OpenWolf gives Claude Code a persistent memory: a project map so it reads less, 
 
 Requires **Node.js 20 or later**.
 
-This is the **CHESA fork** of OpenWolf — it adds git worktree support, team
+This is the **CHESA fork** of OpenWolf -- it adds git worktree support, team
 workflow improvements, and fixes for concurrent sessions that are not yet in the
 upstream release. Install it directly from the fork:
 
@@ -32,7 +32,7 @@ npm accepts a branch name, tag name, or commit SHA after the `#`. Use `#develop`
 to track the latest; use a `#release/X.Y.Z-beta` tag to pin to a known-good
 version. Available tags: `git ls-remote --tags https://github.com/chesa/openwolf`.
 
-The `--install-links` flag is required — without it, npm 11 creates a symlink to
+The `--install-links` flag is required -- without it, npm 11 creates a symlink to
 a temp directory that gets deleted after install. The `dist/` build artifact is
 not committed, so the install builds from source automatically via a `prepare`
 step (this needs `git` and Node 20+; the build runs on first install).
@@ -43,7 +43,7 @@ Verify the installation:
 openwolf --version   # → 1.3.x-beta   (the -beta suffix marks the fork build)
 ```
 
-**Upgrade** — same command; afterward run `openwolf update <name>` in each initialized
+**Upgrade** -- same command; afterward run `openwolf update <name>` in each initialized
 project to sync hooks (use `openwolf update --all` to sync every registered project at once):
 
 ```bash
@@ -86,7 +86,7 @@ The CHESA fork tracks upstream [`cytostack/openwolf`](https://github.com/cytosta
 bash scripts/sync-upstream.sh
 ```
 
-This shows commits ahead/behind upstream and recommends actions. It is read-only — no merging or rebasing.
+This shows commits ahead/behind upstream and recommends actions. It is read-only -- no merging or rebasing.
 
 ### Sync with upstream
 

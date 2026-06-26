@@ -49,7 +49,7 @@ source on first install (requires `git` and Node 20+).
 
    You should see the installed version printed (e.g., `1.3.3-beta`).
 
-3. (Optional) If you plan to use **Design QC**, install the optional dependency:
+2. (Optional) If you plan to use **Design QC**, install the optional dependency:
 
    ```bash
    npm install -g puppeteer-core
@@ -142,7 +142,7 @@ OpenWolf hooks run as separate Node.js processes. When multiple hooks execute co
 - Lock files contain the PID and timestamp of the holder (reliable on network filesystems)
 - If another process holds the lock, the writer retries 5 times with 80ms base delay plus random jitter (0–70ms)
 - If the lock is stale (older than 10 seconds — matching the hook timeout), it is automatically removed
-- After all retries are exhausted, the write proceeds **without a lock** and a warning is printed to stderr (preferring hook responsiveness over strict write serialization)
+- After all retries are exhausted, the lock acquisition fails and an error is thrown — the hook exits with a warning to stderr rather than writing without a lock
 
 The locking is transparent — hooks continue to call `writeJSON()` through the `shared.ts` facade without any code changes. Only the write path is affected; reads are lock-free and never block.
 

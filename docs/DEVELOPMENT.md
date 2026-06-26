@@ -55,6 +55,7 @@ directory is included in your `PATH`:
 
 | Command | Description |
 |---------|-------------|
+| `pnpm prebuild` | Clean `dist/` directory before building (runs automatically before `build`) |
 | `pnpm build` | Full build: TypeScript CLI + hooks bundle + React dashboard + templates copy |
 | `pnpm build:hooks` | Compile hooks only (`tsconfig.hooks.json` -> `dist/hooks/`) |
 | `pnpm build:dashboard` | Build Vite React dashboard only (`dist/dashboard/`) |
