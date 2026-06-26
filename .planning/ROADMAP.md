@@ -113,11 +113,11 @@
   3. `grep -rIiE 'gsd|superpowers|gstack|\.planning' src/templates src/hooks src/cli` returns **zero** (C1).
   4. The test suite is green and the change carries a ≥ minor version bump (protocol change).
 
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 
 **Wave 1** *(parallel — no file overlap)*
 
-- [ ] 11-01-PLAN.md — Delete STATUS.md template; rewrite OPENWOLF.md/claude-rules-openwolf.md to the framework-blind resume seam; add config.json `execution_layer` slot; strip `seedStatus()` from init.ts; invert init test
+- [x] 11-01-PLAN.md — Delete STATUS.md template; rewrite OPENWOLF.md/claude-rules-openwolf.md to the framework-blind resume seam; add config.json `execution_layer` slot; strip `seedStatus()` from init.ts; invert init test
 - [ ] 11-02-PLAN.md — Delete `checkStatusFreshness()` from stop.ts; make wolf-ignore.ts JSDoc C1-clean; rebuild + copy the hook bundle (C1/C2 gates)
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -153,5 +153,5 @@
 | 8. Verify Landed P0 Hygiene | v1.2 | 2/2 | Complete   | 2026-06-26 |
 | 9. Tracking Hygiene — One Authoritative Ignore List | v1.2 | 2/2 | Complete    | 2026-06-26 |
 | 10. Hook-Side In-Project Exclusion | v1.2 | 2/2 | Complete    | 2026-06-26 |
-| 11. Framework-Blind Resume Protocol | v1.2 | 0/3 | Not started | - |
+| 11. Framework-Blind Resume Protocol | v1.2 | 1/3 | In Progress|  |
 | 12. Framework-Blind Curation Machinery | v1.2 | 0/? | Not started | - |

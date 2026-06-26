@@ -30,7 +30,7 @@
 
 ### Protocol — framework-blind (≥ minor bump)
 
-- [ ] **R11**: Remove `STATUS.md` from OpenWolf; replace with the framework-blind resume seam. `OPENWOLF.md` asserts the negative boundary (OpenWolf does not own status/roadmap/intent) + a generic resume order (execution-layer plan/status if present → `cerebrum.md` → recent `memory.md`), naming no tool; OpenWolf reads an optional `config.json → openwolf.execution_layer` hint if a repo sets one. Touch-points: `src/templates/{STATUS.md (delete),OPENWOLF.md,claude-rules-openwolf.md,wolf-gitignore}`, `src/cli/init.ts`, `src/hooks/stop.ts` (both the "/clear" nudge and the "STATUS.md missing — create it" nudge), `tests/cli/init.test.ts`, docs (`README.md`, `docs/ARCHITECTURE.md`, `docs/configuration.md`, and the missed `docs/superpowers/*`).
+- [x] **R11**: Remove `STATUS.md` from OpenWolf; replace with the framework-blind resume seam. `OPENWOLF.md` asserts the negative boundary (OpenWolf does not own status/roadmap/intent) + a generic resume order (execution-layer plan/status if present → `cerebrum.md` → recent `memory.md`), naming no tool; OpenWolf reads an optional `config.json → openwolf.execution_layer` hint if a repo sets one. Touch-points: `src/templates/{STATUS.md (delete),OPENWOLF.md,claude-rules-openwolf.md,wolf-gitignore}`, `src/cli/init.ts`, `src/hooks/stop.ts` (both the "/clear" nudge and the "STATUS.md missing — create it" nudge), `tests/cli/init.test.ts`, docs (`README.md`, `docs/ARCHITECTURE.md`, `docs/configuration.md`, and the missed `docs/superpowers/*`).
   *Accept:* `openwolf init` seeds no STATUS.md; `grep -rIiE 'gsd|superpowers|gstack|\.planning' src/templates src/hooks src/cli` returns **zero** (C1); suite green; ≥ minor version bump.
 
 ### Curation Machinery — framework-blind
