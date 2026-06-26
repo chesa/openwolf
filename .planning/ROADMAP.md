@@ -91,7 +91,7 @@
   3. `tsc --noEmit -p tsconfig.hooks.json` is clean — the hook bundle imports no `node_modules` package (C2); the scanner keeps its `ignore` dep as the authoritative full-scan backstop (D-18).
   4. The `build:hooks` → `openwolf update` copy step is exercised so the new hook behavior is live in `.wolf/hooks/`, not inert in `dist/hooks/`.
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans complete
 
 **Wave 1**
 
@@ -99,7 +99,7 @@
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 10-02-PLAN.md — Wire `exclude_patterns` + `.gitignore` gates into `recordAnatomyWrite` after the R3 guard; E6/gitignore integration tests; exercise `build:hooks` → `openwolf update`
+- [x] 10-02-PLAN.md — Wire `exclude_patterns` + `.gitignore` gates into `recordAnatomyWrite` after the R3 guard; E6/gitignore integration tests; exercise `build:hooks` → `openwolf update`
 
 ### Phase 11: Framework-Blind Resume Protocol
 
@@ -143,6 +143,6 @@
 | 7. Concurrency & Integration Tests | v1.1 | 1/1 | Complete | 2026-06-24 |
 | 8. Verify Landed P0 Hygiene | v1.2 | 2/2 | Complete   | 2026-06-26 |
 | 9. Tracking Hygiene — One Authoritative Ignore List | v1.2 | 2/2 | Complete    | 2026-06-26 |
-| 10. Hook-Side In-Project Exclusion | v1.2 | 1/2 | In Progress|  |
+| 10. Hook-Side In-Project Exclusion | v1.2 | 2/2 | Complete   | 2026-06-26 |
 | 11. Framework-Blind Resume Protocol | v1.2 | 0/? | Not started | - |
 | 12. Framework-Blind Curation Machinery | v1.2 | 0/? | Not started | - |
