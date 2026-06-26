@@ -136,11 +136,11 @@
   3. A date-only `> Last updated:` bump on `cerebrum.md` is flagged in `openwolf status` while a real content change is not, via a `node:crypto` SHA-256 body hash in the gitignored `.wolf/cerebrum-freshness.json` sidecar; `status` stays read-only and baseline updates only on sanctioned curation (`learnings merge` + `learnings accept` + bootstrap-on-missing) (D-20).
   4. `grep -rIiE 'bitbucket|github|pipelines|pre-push' src/` returns zero and `grep -rIiE 'gsd|superpowers|gstack|\.planning' src/templates src/hooks src/cli` returns zero (C1) — host wiring lives only in docs.
 
-**Plans**: 4 plans
+**Plans**: 1/4 plans executed
 
 **Wave 1**
 
-- [ ] 12-01-PLAN.md — Create dep-free `src/hooks/wolf-pantry.ts`: relocate `collectAllEntries`/`parseProposals`/`ProposalEntry` with presence-based stub detection (D12-05b) + add the R9 `normalizeCerebrumBody`/`hashCerebrumBody` engine (TDD)
+- [x] 12-01-PLAN.md — Create dep-free `src/hooks/wolf-pantry.ts`: relocate `collectAllEntries`/`parseProposals`/`ProposalEntry` with presence-based stub detection (D12-05b) + add the R9 `normalizeCerebrumBody`/`hashCerebrumBody` engine (TDD)
 
 **Wave 2** *(parallel — no file overlap; both depend on 12-01)*
 
@@ -167,4 +167,4 @@
 | 9. Tracking Hygiene — One Authoritative Ignore List | v1.2 | 2/2 | Complete    | 2026-06-26 |
 | 10. Hook-Side In-Project Exclusion | v1.2 | 2/2 | Complete    | 2026-06-26 |
 | 11. Framework-Blind Resume Protocol | v1.2 | 3/3 | Complete   | 2026-06-26 |
-| 12. Framework-Blind Curation Machinery | v1.2 | 0/4 | Not started | - |
+| 12. Framework-Blind Curation Machinery | v1.2 | 1/4 | In Progress|  |
