@@ -35,7 +35,7 @@ async function main(): Promise<void> {
   }
   const sessionFile = path.join(sessionDir, "_session.json");
   const now = new Date();
-  const sessionId = `session-${now.toISOString().slice(0, 10)}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+  const sessionId = `session-${now.toISOString().slice(0, 10)}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}-${String(now.getMilliseconds()).padStart(3, "0")}`;
 
   // Create fresh session state
   writeJSON(sessionFile, {
