@@ -8,14 +8,40 @@
  * with two distinct ids (no lost entry, no duplicate id).
  */
 import { describe, it, expect } from "vitest";
-import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync, readFileSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { spawn, execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, readFileSync, mkdirSync, writeFileSync, existsSync, statSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { appendBugEntry, newBugId, readBugEntries } from "../../src/hooks/buglog-ndjson.js";
 import { autoDetectBugFix, recordAnatomyWrite } from "../../src/hooks/post-write.js";
 import { normalizePath, shouldExclude } from "../../src/hooks/shared.js";
+
+/**
+ * Ensure dist/hooks is no older than src/hooks before spawning a worker that
+ * imports compiled hook artifacts. This prevents the concurrent test from
+ * exercising stale code after source edits (WR-05).
+ */
+function ensureHooksBuilt(): void {
+  const distPath = path.resolve("dist/hooks/post-write.js");
+  const hooksDir = path.resolve("src/hooks");
+  let distMtime = 0;
+  try {
+    distMtime = statSync(distPath).mtimeMs;
+  } catch {
+    // dist missing -> needs build
+  }
+  const srcFiles = readdirSync(hooksDir).filter((f) => f.endsWith(".ts"));
+  const srcMtime = Math.max(
+    ...srcFiles.map((f) => statSync(path.join(hooksDir, f)).mtimeMs),
+  );
+  if (srcMtime > distMtime) {
+    execFileSync("npx", ["tsc", "-p", "tsconfig.hooks.json"], {
+      cwd: process.cwd(),
+      stdio: "ignore",
+    });
+  }
+}
 
 describe("buglog NDJSON appends (Task 8 — autoDetectBugFix path)", () => {
   it("two sequential appends produce two NDJSON lines with distinct ids", () => {
@@ -101,6 +127,8 @@ describe("buglog NDJSON appends (Task 8 — autoDetectBugFix path)", () => {
   });
 
   it("two concurrent autoDetectBugFix calls append distinct NDJSON lines", async () => {
+    ensureHooksBuilt();
+
     const dir = mkdtempSync(path.join(tmpdir(), "ow-concurrent-"));
     const file = path.join(dir, "src", "foo.ts");
     mkdirSync(path.dirname(file), { recursive: true });
