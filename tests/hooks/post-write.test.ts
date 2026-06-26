@@ -255,3 +255,165 @@ describe("autoDetectBugFix — acme prose field replay (R5)", () => {
     }
   });
 });
+
+// ─── In-project exclusion gates: R6 (E6 regression + gitignore gate) ─────────
+//
+// PRD evidence E6: acme anatomy.md leaked .claude/plans scratch entries that
+// were IN-PROJECT (relative path does NOT start with "../") so the R3 guard
+// could not catch them.  R6 adds two opt-in gates inside recordAnatomyWrite:
+//   Gate 1 — shouldExclude vs exclude_patterns (E6 regression — ROADMAP SC2)
+//   Gate 2 — parseAndMatchGitignore vs root .gitignore (opt-in via respect_gitignore)
+//
+describe("recordAnatomyWrite — in-project exclusion (R6)", () => {
+  it("E6 regression: does NOT record a path under an excluded dir", () => {
+    // Configure .wolf/config.json to exclude ".claude/plans".
+    // A file written inside that dir must NOT appear in anatomy.md.
+    const projectRoot = mkdtempSync(path.join(tmpdir(), "ow-r6-e6-"));
+    try {
+      const wolfDir = path.join(projectRoot, ".wolf");
+      mkdirSync(wolfDir, { recursive: true });
+
+      // Write config with exclude_patterns that covers the leaking dir
+      writeFileSync(
+        path.join(wolfDir, "config.json"),
+        JSON.stringify({
+          openwolf: {
+            anatomy: {
+              exclude_patterns: [".claude/plans", "node_modules", ".wolf"],
+            },
+          },
+        }),
+        "utf-8",
+      );
+
+      // Mimic the acme E6 shape: an in-project scratch file under .claude/plans
+      const leakFile = path.join(
+        projectRoot,
+        ".claude",
+        "plans",
+        "tmp.pwYfhCNiar",
+        "note.md",
+      );
+      mkdirSync(path.dirname(leakFile), { recursive: true });
+      writeFileSync(leakFile, "# scratch\n", "utf-8");
+
+      recordAnatomyWrite(wolfDir, leakFile, projectRoot, "# scratch\n");
+
+      // Gate 1 must have fired — no anatomy.md created (or it must not contain note.md)
+      if (existsSync(path.join(wolfDir, "anatomy.md"))) {
+        const anatomy = readFileSync(path.join(wolfDir, "anatomy.md"), "utf-8");
+        expect(anatomy).not.toContain("note.md");
+        expect(anatomy).not.toContain(".claude/plans");
+      }
+      // (anatomy.md may simply not exist — that also satisfies the assertion)
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("respect_gitignore true + matching .gitignore entry: path NOT recorded", () => {
+    // Configure .wolf/config.json with respect_gitignore: true.
+    // Root .gitignore lists "scratch/".
+    // A file under scratch/ must NOT appear in anatomy.md.
+    const projectRoot = mkdtempSync(path.join(tmpdir(), "ow-r6-gi-"));
+    try {
+      const wolfDir = path.join(projectRoot, ".wolf");
+      mkdirSync(wolfDir, { recursive: true });
+
+      writeFileSync(
+        path.join(wolfDir, "config.json"),
+        JSON.stringify({
+          openwolf: { anatomy: { respect_gitignore: true } },
+        }),
+        "utf-8",
+      );
+
+      // Root .gitignore that excludes scratch/
+      writeFileSync(
+        path.join(projectRoot, ".gitignore"),
+        "# generated\nscratch/\n",
+        "utf-8",
+      );
+
+      const scratchFile = path.join(projectRoot, "scratch", "x.ts");
+      mkdirSync(path.dirname(scratchFile), { recursive: true });
+      writeFileSync(scratchFile, "export const x = 1;\n", "utf-8");
+
+      recordAnatomyWrite(wolfDir, scratchFile, projectRoot, "");
+
+      // Gate 2 must have fired — anatomy.md must not contain the gitignored file
+      if (existsSync(path.join(wolfDir, "anatomy.md"))) {
+        const anatomy = readFileSync(path.join(wolfDir, "anatomy.md"), "utf-8");
+        expect(anatomy).not.toContain("x.ts");
+        expect(anatomy).not.toContain("scratch/");
+      }
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("respect_gitignore absent (default false): gitignored path IS recorded (D10-08)", () => {
+    // Without respect_gitignore:true in config, the root .gitignore is NOT consulted.
+    // The same path-name that was blocked above MUST be recorded here — proving
+    // the gate is strictly opt-in (R6-D4/D10-08).
+    const projectRoot = mkdtempSync(path.join(tmpdir(), "ow-r6-gi-default-"));
+    try {
+      const wolfDir = path.join(projectRoot, ".wolf");
+      mkdirSync(wolfDir, { recursive: true });
+
+      // Config with NO respect_gitignore key — defaults to false
+      writeFileSync(
+        path.join(wolfDir, "config.json"),
+        JSON.stringify({ openwolf: { anatomy: {} } }),
+        "utf-8",
+      );
+
+      // Root .gitignore still lists scratch/
+      writeFileSync(
+        path.join(projectRoot, ".gitignore"),
+        "scratch/\n",
+        "utf-8",
+      );
+
+      const scratchFile = path.join(projectRoot, "scratch", "x.ts");
+      mkdirSync(path.dirname(scratchFile), { recursive: true });
+      writeFileSync(scratchFile, "export const x = 1;\n", "utf-8");
+
+      recordAnatomyWrite(wolfDir, scratchFile, projectRoot, "");
+
+      // Gate 2 is off — anatomy.md MUST have been created and must contain x.ts
+      expect(existsSync(path.join(wolfDir, "anatomy.md"))).toBe(true);
+      const anatomy = readFileSync(path.join(wolfDir, "anatomy.md"), "utf-8");
+      expect(anatomy).toContain("x.ts");
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("no config.json: default exclude_patterns fire — node_modules/ NOT recorded", () => {
+    // When .wolf/config.json is absent, the hook falls back to DEFAULT_EXCLUDE_PATTERNS.
+    // DEFAULT_EXCLUDE_PATTERNS includes "node_modules" — so a file under node_modules/
+    // must NOT be recorded (Gate 1 fires on the default, T-10-03 fallback).
+    const projectRoot = mkdtempSync(path.join(tmpdir(), "ow-r6-noconfig-"));
+    try {
+      const wolfDir = path.join(projectRoot, ".wolf");
+      mkdirSync(wolfDir, { recursive: true });
+      // Deliberately do NOT write .wolf/config.json
+
+      const nmFile = path.join(projectRoot, "node_modules", "some-pkg", "index.js");
+      mkdirSync(path.dirname(nmFile), { recursive: true });
+      writeFileSync(nmFile, "module.exports = {};\n", "utf-8");
+
+      recordAnatomyWrite(wolfDir, nmFile, projectRoot, "");
+
+      // DEFAULT_EXCLUDE_PATTERNS covers node_modules — anatomy.md should not contain it
+      if (existsSync(path.join(wolfDir, "anatomy.md"))) {
+        const anatomy = readFileSync(path.join(wolfDir, "anatomy.md"), "utf-8");
+        expect(anatomy).not.toContain("index.js");
+        expect(anatomy).not.toContain("node_modules");
+      }
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+    }
+  });
+});
