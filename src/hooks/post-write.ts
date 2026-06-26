@@ -453,9 +453,9 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string, filename:
   }
 
   // --- Guard clause / early return added ---
-  if (/if\s*\([^)]*\)\s*(return|throw|continue|break)/.test(newStr) &&
-      !/if\s*\([^)]*\)\s*(return|throw|continue|break)/.test(oldStr)) {
-    const condition = newStr.match(/if\s*\(([^)]+)\)/)?.[1]?.trim().slice(0, 60) || "condition";
+  if (/if\s*\([^)]*\)\s*(return|throw|continue|break)/.test(newClean) &&
+      !/if\s*\([^)]*\)\s*(return|throw|continue|break)/.test(oldClean)) {
+    const condition = newClean.match(/if\s*\(([^)]+)\)/)?.[1]?.trim().slice(0, 60) || "condition";
     return {
       category: "guard-clause",
       summary: `Missing guard clause`,
@@ -504,8 +504,8 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string, filename:
   }
 
   // --- Logic fix (condition changed) ---
-  const oldCond = oldStr.match(/if\s*\(([^)]+)\)/)?.[1];
-  const newCond = newStr.match(/if\s*\(([^)]+)\)/)?.[1];
+  const oldCond = oldClean.match(/if\s*\(([^)]+)\)/)?.[1];
+  const newCond = newClean.match(/if\s*\(([^)]+)\)/)?.[1];
   if (oldCond && newCond && oldCond !== newCond && oldLines.length <= 5) {
     return {
       category: "logic-fix",
