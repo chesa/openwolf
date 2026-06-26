@@ -430,10 +430,12 @@ describe("wolf-gitignore template content (D-09-01 through D-09-06)", () => {
     expect(content).toMatch(/^hooks\/$/m);
   });
 
-  // D-09-02: the corrected template must NOT mention hooks/ inside a comment line
-  // (the old false claim listed it as "ARE committed")
-  it("does NOT list hooks/ in a comment line (D-09-02)", () => {
-    expect(content).not.toMatch(/^#.*hooks\//m);
+  // D-09-02: the corrected template must NOT list bare `hooks/` in a comment
+  // (the old false "ARE committed" comment had `#   hooks/  — compiled scripts`)
+  // Uses /^#\s+hooks\// to match `# hooks/` or `#   hooks/` but NOT `.wolf/hooks/`
+  // mentions in prose comments (those are valid advisory examples, not false claims).
+  it("does NOT list bare hooks/ in a comment line (D-09-02)", () => {
+    expect(content).not.toMatch(/^#\s+hooks\//m);
   });
 
   // D-09-03: legacy buglog.json must be an active ignore rule
