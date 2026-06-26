@@ -237,11 +237,13 @@ suggestions.json
 backups/
 sessions/
 
+# Derived / regenerated locally
+anatomy.md
+
 # Transient lock files from concurrent-write protection
 *.lock
 
 # Shared knowledge files are NOT listed here, so they ARE committed:
-#   anatomy.md        — project file map
 #   cerebrum.md       — learned conventions and do-not-repeat list
 #   OPENWOLF.md       — operating protocol
 #   config.json       — project configuration
