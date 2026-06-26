@@ -15,7 +15,7 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { appendBugEntry, newBugId, readBugEntries } from "../../src/hooks/buglog-ndjson.js";
 import { autoDetectBugFix, recordAnatomyWrite } from "../../src/hooks/post-write.js";
-import { normalizePath } from "../../src/hooks/shared.js";
+import { normalizePath, shouldExclude } from "../../src/hooks/shared.js";
 
 describe("buglog NDJSON appends (Task 8 — autoDetectBugFix path)", () => {
   it("two sequential appends produce two NDJSON lines with distinct ids", () => {
@@ -135,6 +135,23 @@ describe("buglog NDJSON appends (Task 8 — autoDetectBugFix path)", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("acme fixture config exclude patterns", () => {
+  it("fixture config excludes the acme leak paths", () => {
+    const cfg = JSON.parse(
+      readFileSync("tests/fixtures/acme-snapshot-verify/config.json", "utf-8"),
+    );
+    const patterns: string[] = cfg.openwolf.anatomy.exclude_patterns;
+    expect(patterns).toContain("docs/superpowers");
+    expect(patterns).toContain(".claude/plans/tmp.pwYfhCNiar");
+    expect(
+      shouldExclude("docs/superpowers/plans/SUPERPOWERS_OVERVIEW.md", patterns),
+    ).toBe(true);
+    expect(
+      shouldExclude(".claude/plans/tmp.pwYfhCNiar/draft/tmp.zIDPKm5EAB", patterns),
+    ).toBe(true);
   });
 });
 
