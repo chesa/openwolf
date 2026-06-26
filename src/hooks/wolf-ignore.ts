@@ -193,15 +193,18 @@ type GitignoreEntry =
  */
 function parseGitignoreLine(raw: string): GitignoreEntry {
     let line = raw.trim();
-    // Unescape escaped gitignore tokens so they are not mistaken for comments,
-    // negation, or literal backslashes (R6-D5 / D10-04).
-    line = line.replace(/\\([#! ])/g, "$1");
-
-    // Blank or comment → skip.
-    if (!line || line.startsWith("#")) return { kind: "skip" };
+    // Decide comment/negation BEFORE unescaping so that escaped `\#` and `\!`
+    // are treated as literal filename patterns, not as comments or negation
+    // (gitignore semantics; R6-D5 / D10-04 / WR-03).
+    if (!line) return { kind: "skip" };
+    if (line.startsWith("#") && !line.startsWith("\\#")) return { kind: "skip" };
     // Negation → fail-closed: treat as skip (over-exclusion acceptable, not a
     // leak — D10-05 / R6-D5). The scanner's `ignore` package is the backstop.
-    if (line.startsWith("!")) return { kind: "skip" };
+    if (line.startsWith("!") && !line.startsWith("\\!")) return { kind: "skip" };
+
+    // Unescape escaped gitignore tokens so the pattern matches the literal
+    // characters (e.g. `foo\#bar` matches `foo#bar`).
+    line = line.replace(/\\([#! ])/g, "$1");
 
     // Strip trailing slash (directory hint → bare-name/prefix semantics).
     const stripped = line.endsWith("/") ? line.slice(0, -1) : line;
