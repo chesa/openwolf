@@ -171,7 +171,16 @@ async function main(): Promise<void> {
   const oldStr = input.tool_input?.old_string ?? "";
   const newStr = input.tool_input?.new_string ?? "";
 
-  // 1. Update anatomy.md (recordAnatomyWrite skips out-of-project paths).
+  // Out-of-project paths (scratchpad, /tmp, sibling repos) are not part of THIS
+  // project's map. Skip anatomy, memory, and session tracking for them so the
+  // local filesystem layout does not leak into shared .wolf/ artifacts (R3/R6).
+  const relPathLocal = normalizePath(path.relative(projectRoot, absolutePath));
+  if (relPathLocal.startsWith("../") || path.isAbsolute(relPathLocal)) {
+    process.exit(0);
+    return;
+  }
+
+  // 1. Update anatomy.md (recordAnatomyWrite also guards out-of-project paths).
   try {
     recordAnatomyWrite(wolfDir, absolutePath, projectRoot, input.tool_input?.content ?? "");
   } catch (err) {
@@ -181,7 +190,6 @@ async function main(): Promise<void> {
   // 2. Append richer entry to memory.md
   try {
     const action = toolName === "Write" ? "Created" : toolName === "MultiEdit" ? "Multi-edited" : "Edited";
-    const relFile = normalizePath(path.relative(projectRoot, absolutePath));
     const fileContent = input.tool_input?.content ?? "";
     const ext = path.extname(absolutePath).toLowerCase();
     const type = CODE_EXTS.has(ext) ? "code" : PROSE_EXTS.has(ext) ? "prose" : "mixed";
@@ -194,25 +202,23 @@ async function main(): Promise<void> {
 
     const memoryPath = path.join(wolfDir, "memory.md");
     const outcome = changeDesc || "—";
-    appendMarkdown(memoryPath, `| ${timeShort()} | ${action} ${relFile} | ${outcome} | ~${writeTokens} |\n`);
+    appendMarkdown(memoryPath, `| ${timeShort()} | ${action} ${relPathLocal} | ${outcome} | ~${writeTokens} |\n`);
   } catch (err) {
     process.stderr.write(`OpenWolf post-write: memory append failed (${err instanceof Error ? err.message : String(err)})\n`);
   }
 
   // 3. Record in session tracker + track edit counts
   try {
-    const relFile = normalizePath(filePath);
     const action = toolName === "Write" ? "create" : "edit";
     const fileContent = input.tool_input?.content ?? "";
     const writeTokens = estimateTokens(fileContent || newStr, "code");
-    const editKey = normalizePath(path.relative(projectRoot, absolutePath));
 
     let editKeyCount = 0;
     updateJSON<SessionData>(sessionFile, { files_written: [], edit_counts: {} } as SessionData, (session) => {
       if (!session.edit_counts) session.edit_counts = {};
-      session.files_written.push({ file: relFile, action, tokens: writeTokens, at: timestamp() });
-      session.edit_counts[editKey] = (session.edit_counts[editKey] || 0) + 1;
-      editKeyCount = session.edit_counts[editKey];
+      session.files_written.push({ file: relPathLocal, action, tokens: writeTokens, at: timestamp() });
+      session.edit_counts[relPathLocal] = (session.edit_counts[relPathLocal] || 0) + 1;
+      editKeyCount = session.edit_counts[relPathLocal];
       return session;
     });
 
