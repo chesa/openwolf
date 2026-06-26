@@ -260,10 +260,17 @@ function checkCerebrumFreshness(wolfDir: string, session: SessionData): void {
  * multiple stop fires and never infers content from file changes.
  */
 function captureStubIfNeeded(wolfDir: string, sessionDir: string, session: SessionData): void {
-  // (a) Only trigger for non-.wolf/, non-.tmp code writes (D12-02a).
-  const codeWrites = session.files_written.filter(
-    (w) => !w.file.includes("/.wolf/") && !w.file.endsWith(".tmp")
-  );
+  // (a) Only trigger for non-.wolf/, non-scratch code writes (D12-02a).
+  // Normalize the path and compare .wolf as a whole segment so paths like
+  // "/project/sub.wolf/file.ts" are not mistakenly excluded on any platform.
+  const SCRATCH_EXTENSIONS = new Set([".tmp"]);
+  const codeWrites = session.files_written.filter((w) => {
+    const normalized = path.normalize(w.file);
+    const segments = normalized.split(path.sep);
+    const isWolfFile = segments.some((seg) => seg === ".wolf");
+    const ext = path.extname(normalized).toLowerCase();
+    return !isWolfFile && !SCRATCH_EXTENSIONS.has(ext);
+  });
   if (codeWrites.length === 0) return;
 
   // (b) If the model already wrote proposed-learnings.md, do not overwrite
