@@ -141,7 +141,10 @@ async function main(): Promise<void> {
   const wolfDir = getWolfDir();
   const sessionDir = getSessionDir();
   const sessionFile = path.join(sessionDir, "_session.json");
-  const projectRoot = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+  // Prefer WOLF_ROOT set by the shell wrapper in .claude/settings.json.
+  const projectRoot = process.env.WOLF_ROOT ??
+    process.env.CLAUDE_PROJECT_DIR ??
+    process.cwd();
 
   const raw = await readStdin();
   let input: { tool_name?: string; tool_input?: { file_path?: string; path?: string; content?: string; old_string?: string; new_string?: string } };

@@ -27,31 +27,27 @@ describe("makeHookSettings validation", () => {
     expect(() => makeHookSettings("")).toThrow(/non-empty/);
   });
 
-  it("throws when projectRoot is relative (re-introduces the MODULE_NOT_FOUND bug)", () => {
-    expect(() => makeHookSettings("meep")).toThrow(/absolute/);
-    expect(() => makeHookSettings("./meep")).toThrow(/absolute/);
+  it("accepts a relative projectRoot without throwing (no longer baked in)", () => {
+    expect(() => makeHookSettings("meep")).not.toThrow();
+    expect(() => makeHookSettings("./meep")).not.toThrow();
   });
 
   it("throws when projectRoot contains a single quote", () => {
     expect(() => makeHookSettings("/Users/brian/it's-bad")).toThrow(/single-quote/);
+    expect(() => makeHookSettings("meep's")).toThrow(/single-quote/);
   });
 
   it("accepts a normal absolute path without throwing", () => {
     expect(() => makeHookSettings("/Users/bfs/bitbucket/meep")).not.toThrow();
   });
 
-  it("safely embeds a path containing a double quote (no JS syntax break)", () => {
-    // A double-quote in the path must not break the `const base = "..."` literal.
+  it("safely handles a path containing a double quote (no JS syntax break)", () => {
+    // The generated command is now portable and does not embed projectRoot, so
+    // exotic paths in the validation argument must not break command generation.
     const weird = path.join(tmpdir(), 'ow-dq"x');
-    const wolfRootShell = makeHookSettings(weird).SessionStart[0].hooks[0].command
-      .split(" && node ")[0];
-    // The dir does not exist → git fails → catch → console.log(base). If the
-    // generated JS were malformed, node would error and WOLF_ROOT would be empty.
-    const out = execFileSync("bash", ["-c", `${wolfRootShell} && printf '%s' "$WOLF_ROOT"`], {
-      cwd: tmpdir(),
-      encoding: "utf-8",
-    });
-    expect(out).toBe(weird);
+    const cmd = makeHookSettings(weird).SessionStart[0].hooks[0].command;
+    expect(cmd).not.toContain(weird);
+    expect(cmd).toContain('node "$WOLF_ROOT/.wolf/hooks/session-start.js"');
   });
 });
 
@@ -61,27 +57,23 @@ describe("makeHookSettings validation", () => {
 describe("makeHookSettings generated commands", () => {
   const SAMPLE_ROOT = "/Users/bfs/bitbucket/meep";
 
-  it("bakes the absolute project root into the generated command", () => {
+  it("does NOT bake the project root into the generated command", () => {
     const settings = makeHookSettings(SAMPLE_ROOT);
     const cmd = settings.SessionStart[0].hooks[0].command;
-    // The baked root must appear literally in the command string.
-    expect(cmd).toContain(SAMPLE_ROOT);
-    // CLAUDE_PROJECT_DIR must NOT appear in the generated command —
-    // that is the runtime env var whose relative value caused the bug.
-    expect(cmd).not.toContain("CLAUDE_PROJECT_DIR");
-    // process.cwd() must not be called at hook runtime either.
-    expect(cmd).not.toContain("process.cwd()");
+    // No machine-specific absolute path should be committed into settings.json.
+    expect(cmd).not.toContain(SAMPLE_ROOT);
+    // The portable command resolves the root at runtime.
+    expect(cmd).toContain("CLAUDE_PROJECT_DIR");
+    expect(cmd).toContain("process.cwd()");
   });
 
   it("retains worktree support via git rev-parse --git-common-dir", () => {
     const settings = makeHookSettings(SAMPLE_ROOT);
     const cmd = settings.SessionStart[0].hooks[0].command;
-    // Worktree-aware: git still runs to resolve main repo root for
-    // linked worktrees. The fix only removes the *runtime* env var
-    // dependency — git cwd is now the baked-in absolute root.
+    // Worktree-aware: git runs from the runtime-detected base to resolve the
+    // main repo root for linked worktrees.
     expect(cmd).toContain("git rev-parse --git-common-dir");
     expect(cmd).toContain("cwd: base");
-    expect(cmd).toContain(`const base = "${SAMPLE_ROOT}"`);
   });
 
   it("renders hook commands that invoke node with WOLF_ROOT", () => {
@@ -97,12 +89,12 @@ describe("makeHookSettings generated commands", () => {
     }
   });
 
-  it("different projectRoots produce different commands", () => {
+  it("different projectRoots produce identical portable commands", () => {
     const cmdA = makeHookSettings("/a/b/c").SessionStart[0].hooks[0].command;
     const cmdB = makeHookSettings("/x/y/z").SessionStart[0].hooks[0].command;
-    expect(cmdA).not.toBe(cmdB);
-    expect(cmdA).toContain("/a/b/c");
-    expect(cmdB).toContain("/x/y/z");
+    expect(cmdA).toBe(cmdB);
+    expect(cmdA).not.toContain("/a/b/c");
+    expect(cmdB).not.toContain("/x/y/z");
   });
 });
 
@@ -151,11 +143,9 @@ describe("generated WOLF_ROOT shell snippet", () => {
         ["-c", `${wolfRootShell} && echo "$WOLF_ROOT"`],
         {
           // Hook CWD is deliberately set to an unrelated directory —
-          // this proves the baked-in path, not process CWD, drives resolution.
+          // this proves CLAUDE_PROJECT_DIR, not process CWD, drives resolution.
           cwd: tmpdir(),
-          // CLAUDE_PROJECT_DIR is intentionally NOT set —
-          // the fix must not rely on it at all.
-          env: ENV_WITHOUT_CPD,
+          env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
           encoding: "utf-8",
         }
       ).trim();
@@ -182,16 +172,16 @@ describe("generated WOLF_ROOT shell snippet", () => {
       const git = (args: string[], cwd: string) =>
         execFileSync("git", args, { cwd, env: gitEnv, encoding: "utf-8" });
 
-      // Run the baked-in shell snippet with an explicit process cwd
+      // Run the portable shell snippet with an explicit process cwd
       // (simulating the hook's actual execution environment).
-      const wolfRoot = (bakedRoot: string, runFrom: string) => {
-        const settings = makeHookSettings(bakedRoot);
+      const wolfRoot = (cpd: string | undefined, runFrom: string) => {
+        const settings = makeHookSettings("/ignored-by-portable-command");
         const wolfRootShell = settings.SessionStart[0].hooks[0].command
           .split(" && node ")[0];
+        const env = cpd ? { ...process.env, CLAUDE_PROJECT_DIR: cpd } : ENV_WITHOUT_CPD;
         return execFileSync("bash", ["-c", `${wolfRootShell} && echo "$WOLF_ROOT"`], {
           cwd: runFrom,
-          // No CLAUDE_PROJECT_DIR — the fix must not rely on it.
-          env: ENV_WITHOUT_CPD,
+          env,
           encoding: "utf-8",
         }).trim();
       };
@@ -205,7 +195,8 @@ describe("generated WOLF_ROOT shell snippet", () => {
         git(["commit", "--allow-empty", "-m", "init", "-q"], main);
         git(["worktree", "add", "-q", wt], main);
 
-        // Main checkout resolves to itself, from any process cwd.
+        // Main checkout resolves to itself via absolute CLAUDE_PROJECT_DIR,
+        // from any process cwd.
         expect(wolfRoot(main, main)).toBe(main);
         expect(wolfRoot(main, elsewhere)).toBe(main);
 
@@ -223,19 +214,12 @@ describe("generated WOLF_ROOT shell snippet", () => {
   );
 
   it.skipIf(!HAS_GIT)(
-    "reproduce-gone check: relative CLAUDE_PROJECT_DIR cannot misroute the hook",
+    "absolute CLAUDE_PROJECT_DIR drives resolution even from an unrelated cwd",
     () => {
-      // This test directly demonstrates the fix for the bug reported in
-      // debug session openwolf-hook-module-missing.
-      //
-      // Bug scenario: Claude Code sets CLAUDE_PROJECT_DIR="meep" (a bare relative
-      // name). The OLD runtime shim used `process.env.CLAUDE_PROJECT_DIR || cwd()`
-      // as base, which resolved "meep" against ~/.claude/hooks/ → wrong path.
-      //
-      // With the fix: the base is the BAKED-IN absolute path. CLAUDE_PROJECT_DIR
-      // is never read at runtime, so a relative value is irrelevant.
+      // The portable command must not rely on process.cwd() when an absolute
+      // CLAUDE_PROJECT_DIR is available.
       const dir = realpathSync(
-        mkdtempSync(path.join(tmpdir(), "openwolf-repro-gone-"))
+        mkdtempSync(path.join(tmpdir(), "openwolf-portable-cpd-"))
       );
       try {
         execFileSync("git", ["init", "-q"], { cwd: dir });
@@ -249,29 +233,65 @@ describe("generated WOLF_ROOT shell snippet", () => {
           },
         });
 
-        const settings = makeHookSettings(dir);
+        const settings = makeHookSettings("/ignored-in-portable-command");
         const wolfRootShell = settings.SessionStart[0].hooks[0].command
           .split(" && node ")[0];
 
-        // Simulate the exact failing condition:
-        // - process cwd is ~/.claude/hooks/ (not the project)
-        // - CLAUDE_PROJECT_DIR is "meep" (relative, the bug trigger)
-        const hooksCwd = path.join(process.env.HOME ?? "/tmp", ".claude", "hooks");
+        // Simulate a hook fired from an unrelated cwd, but with an absolute
+        // CLAUDE_PROJECT_DIR pointing at the real project.
+        const elsewhere = realpathSync(mkdtempSync(path.join(tmpdir(), "openwolf-elsewhere-")));
         const out = execFileSync(
           "bash",
           ["-c", `${wolfRootShell} && echo "$WOLF_ROOT"`],
           {
-            cwd: hooksCwd,
-            env: { ...process.env, CLAUDE_PROJECT_DIR: "meep" },
+            cwd: elsewhere,
+            env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
             encoding: "utf-8",
           }
         ).trim();
 
-        // With the fix, WOLF_ROOT is the baked-in absolute project root —
-        // NOT ~/.claude/hooks/meep or any other relative-anchored path.
         expect(out).toBe(dir);
-        expect(out).not.toContain("/.claude/hooks/");
-        expect(out).not.toContain("meep");
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.skipIf(!HAS_GIT)(
+    "falls back to process.cwd() when CLAUDE_PROJECT_DIR is relative or missing",
+    () => {
+      // When CLAUDE_PROJECT_DIR is not absolute, the portable command falls
+      // back to process.cwd(). This test documents the fallback behavior.
+      const dir = realpathSync(
+        mkdtempSync(path.join(tmpdir(), "openwolf-portable-cwd-"))
+      );
+      try {
+        execFileSync("git", ["init", "-q"], { cwd: dir });
+        execFileSync("git", ["-c", "commit.gpgsign=false", "commit",
+          "--allow-empty", "-m", "init", "-q"], {
+          cwd: dir,
+          env: {
+            ...process.env,
+            GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t",
+            GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t",
+          },
+        });
+
+        const settings = makeHookSettings("/ignored-in-portable-command");
+        const wolfRootShell = settings.SessionStart[0].hooks[0].command
+          .split(" && node ")[0];
+
+        const out = execFileSync(
+          "bash",
+          ["-c", `${wolfRootShell} && echo "$WOLF_ROOT"`],
+          {
+            cwd: dir,
+            env: { ...process.env, CLAUDE_PROJECT_DIR: "relative-meep" },
+            encoding: "utf-8",
+          }
+        ).trim();
+
+        expect(out).toBe(dir);
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }

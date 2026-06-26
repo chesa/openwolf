@@ -42,8 +42,11 @@ export function isWolfFile(filePath: string): boolean {
   const wolfDir = getWolfDir();
   const normalizedFile = normalizePath(filePath);
   const normalizedWolfDir = normalizePath(wolfDir);
+  // Prefer WOLF_ROOT set by the shell wrapper in .claude/settings.json.
   const projectDir = normalizePath(
-    process.env.CLAUDE_PROJECT_DIR ?? process.cwd()
+    process.env.WOLF_ROOT ??
+    process.env.CLAUDE_PROJECT_DIR ??
+    process.cwd()
   );
 
   const relToProject = normalizedFile.startsWith(projectDir)

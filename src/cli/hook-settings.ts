@@ -11,46 +11,39 @@
 import * as path from "node:path";
 
 // ---------------------------------------------------------------------------
-// makeWolfRootShell — bake the project root at generation time
+// makeWolfRootShell — resolve WOLF_ROOT at hook runtime
 // ---------------------------------------------------------------------------
 //
-// Strategy: embed the KNOWN-ABSOLUTE project root directly into the generated
-// shell snippet so that runtime CLAUDE_PROJECT_DIR is never consulted.
+// Strategy: generate a portable shell snippet that resolves the project root
+// when the hook fires, rather than baking a machine-specific absolute path into
+// the committed `.claude/settings.json`. This lets teammates clone the repo to
+// any directory and share the same settings.json.
 //
-// This eliminates the MODULE_NOT_FOUND bug where Claude Code supplied a bare
-// relative project name (e.g. "meep") as CLAUDE_PROJECT_DIR, causing
-// path.resolve() to anchor against the hook process CWD
-// (~/.claude/hooks/) rather than the project directory.
+// Resolution order:
+// 1. `process.env.CLAUDE_PROJECT_DIR` if it is an absolute path.
+// 2. `process.cwd()` as a fallback.
+// 3. Run `git rev-parse --git-common-dir` from that base to resolve linked
+//    worktrees to the main repo root (worktree-shared `.wolf/`).
+// 4. Fall back to the base itself if git is unavailable or the base is not a
+//    git repository.
 //
-// Worktree support is preserved: git rev-parse --git-common-dir still runs,
-// but it now runs with cwd set to the BAKED-IN absolute root (not a runtime-
-// detected value), so linked worktrees correctly resolve to the main repo
-// root — independent of both CLAUDE_PROJECT_DIR and process CWD.
-//
-// `--git-common-dir` returns ".git" (relative) for a main checkout and an
-// absolute path for a linked worktree; path.resolve(bakedRoot, gitDir, "..")
-// yields the main repo root in both cases.
-//
-// Falls back to the baked root on any failure (non-git dir, missing git).
-//
-// Single-quote safety: the baked path is embedded inside a node -e string
-// wrapped in shell single quotes. A path containing ' would break the shell
-// parser. Callers MUST validate the path via validateProjectRoot() before
-// calling this function (makeHookSettings() does this automatically).
-function makeWolfRootShell(projectRoot: string): string {
-  // projectRoot is validated (no single quotes) before this is called, keeping
-  // it safe inside the shell single-quoted node -e string. JSON.stringify then
-  // produces a properly escaped JS string literal, so an embedded double-quote
-  // or backslash in the path cannot break out of `const base = ...`.
-  const baseLiteral = JSON.stringify(projectRoot);
+// The previous fix (PR #25) baked the absolute project root to avoid the
+// MODULE_NOT_FOUND bug where a relative `CLAUDE_PROJECT_DIR` (e.g. "meep")
+// resolved against the wrong cwd. That fix was correct but not portable.
+// This version restores portability by resolving at runtime while still
+// guarding against relative env values: a relative `CLAUDE_PROJECT_DIR` is
+// ignored and `process.cwd()` is used instead.
+function makeWolfRootShell(): string {
   return (
     `WOLF_ROOT=$(node -e 'const path = require("path"); ` +
     `const { execSync } = require("child_process"); ` +
-    `const base = ${baseLiteral}; ` +
+    `const cpd = process.env.CLAUDE_PROJECT_DIR; ` +
+    `let base = cpd && path.isAbsolute(cpd) ? cpd : process.cwd(); ` +
     `try { const gitDir = execSync("git rev-parse --git-common-dir", ` +
     `{ cwd: base, stdio: "pipe" }).toString().trim(); ` +
-    `console.log(path.resolve(base, gitDir, "..")); } ` +
-    `catch (e) { console.log(base); }')`
+    `base = path.resolve(base, gitDir, ".."); } ` +
+    `catch (e) { /* not a git repo or git missing — keep base */ } ` +
+    `console.log(base);')`
   );
 }
 
@@ -58,23 +51,14 @@ function makeWolfRootShell(projectRoot: string): string {
 // validateProjectRoot — fail fast at generation time
 // ---------------------------------------------------------------------------
 //
-// A project root containing a single-quote (') would break the shell-quoted
-// node -e string produced by makeWolfRootShell. It must also be ABSOLUTE: the
-// whole point of baking the root in is that WOLF_ROOT resolves the same no
-// matter the hook's runtime cwd — a relative root would re-introduce the exact
-// MODULE_NOT_FOUND bug this fix closes (path.resolve anchoring it against
-// ~/.claude/hooks/). Validate both before embedding.
+// projectRoot is no longer baked into the hook command, but callers still
+// supply it to identify which project is being configured. Reject empty
+// roots and single-quote characters (which would break any future shell
+// embedding or logging).
 function validateProjectRoot(projectRoot: string): void {
   if (!projectRoot || projectRoot.trim().length === 0) {
     throw new Error(
       `OpenWolf: projectRoot must be a non-empty string (got ${JSON.stringify(projectRoot)})`
-    );
-  }
-  if (!path.isAbsolute(projectRoot)) {
-    throw new Error(
-      `OpenWolf: projectRoot must be an absolute path so the generated hook ` +
-      `command resolves independently of the hook's runtime cwd. ` +
-      `Path: ${projectRoot}`
     );
   }
   if (projectRoot.includes("'")) {
@@ -87,19 +71,20 @@ function validateProjectRoot(projectRoot: string): void {
 }
 
 // ---------------------------------------------------------------------------
-// makeHookSettings — factory that bakes projectRoot at generation time
+// makeHookSettings — factory that produces portable hook commands
 // ---------------------------------------------------------------------------
 //
-// Returns the Claude Code hook configuration with absolute paths baked in.
-// Call this from `openwolf init` and `openwolf update` — never use a
-// static HOOK_SETTINGS constant, which would rely on runtime env vars.
+// Returns the Claude Code hook configuration with runtime-resolved WOLF_ROOT.
+// Call this from `openwolf init` and `openwolf update` — never use a static
+// HOOK_SETTINGS constant, which would stale-date as soon as the project is
+// cloned to a different path.
 //
-// @param projectRoot - Absolute path to the project root directory.
-//   Must not contain single-quote characters (validated here, throws if violated).
+// @param projectRoot - Path to the project root directory (used for
+//   validation/logging only; not embedded in the generated command).
 export function makeHookSettings(projectRoot: string) {
   validateProjectRoot(projectRoot);
 
-  const wolfRootShell = makeWolfRootShell(projectRoot);
+  const wolfRootShell = makeWolfRootShell();
 
   const hookCmd = (script: string): string =>
     `${wolfRootShell} && node "$WOLF_ROOT/.wolf/hooks/${script}"`;

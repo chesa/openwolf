@@ -7,6 +7,21 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.3.2-beta] — Portable hook commands
+
+### Fixed
+
+- **`.claude/settings.json` no longer contains machine-specific absolute paths.**
+  Hook commands now resolve `WOLF_ROOT` at runtime from `CLAUDE_PROJECT_DIR`
+  (when absolute) or `process.cwd()`, then use `git rev-parse --git-common-dir`
+  to support linked worktrees. Teammates can clone the repo to any directory
+  and share the same committed `.claude/settings.json`.
+
+- **Hook scripts prefer `WOLF_ROOT` when set.** `session-start`, `post-write`,
+  and internal path helpers now use the `WOLF_ROOT` environment variable set by
+  the shell wrapper, falling back to `CLAUDE_PROJECT_DIR` and `process.cwd()`
+  only when absent.
+
 ## [1.3.1-beta] — Canonicalize project roots before baking into settings
 
 ### Fixed

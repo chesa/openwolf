@@ -58,7 +58,7 @@ describe("openwolf update — symlinked registry entries", () => {
     vi.clearAllMocks();
   });
 
-  it("writes .claude/settings.json with the canonical path, not the symlink", async () => {
+  it("writes .claude/settings.json with a portable command, not a symlinked or canonical absolute path", async () => {
     const realPath = realpathSync(projectDir);
 
     // Seed the registry with the symlink path, simulating a stale entry
@@ -74,9 +74,12 @@ describe("openwolf update — symlinked registry entries", () => {
     const settings = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
     const cmd = settings.hooks.SessionStart[0].hooks[0].command as string;
 
-    // The baked path must be the canonical (real) project root, never the
-    // symlinked path that exists only on this machine / workspace layout.
-    expect(cmd).toContain(realPath);
+    // The command must be portable: no machine-specific absolute path,
+    // whether canonical or symlinked, should be baked into the committed file.
+    expect(cmd).not.toContain(realPath);
     expect(cmd).not.toContain(symlinkDir);
+    // It resolves WOLF_ROOT at runtime from CLAUDE_PROJECT_DIR / cwd + git.
+    expect(cmd).toContain("CLAUDE_PROJECT_DIR");
+    expect(cmd).toContain("git rev-parse --git-common-dir");
   });
 });

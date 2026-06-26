@@ -25,7 +25,7 @@ upstream release. Install it directly from the fork:
 npm install -g --install-links "chesa/openwolf#develop"
 
 # Pinned to a stable release tag
-npm install -g --install-links "chesa/openwolf#release/1.3.1-beta"
+npm install -g --install-links "chesa/openwolf#release/1.3.2-beta"
 ```
 
 npm accepts a branch name, tag name, or commit SHA after the `#`. Use `#develop`
@@ -49,7 +49,7 @@ project to sync hooks:
 ```bash
 npm install -g --install-links "chesa/openwolf#develop"
 # or pin to a specific release:
-npm install -g --install-links "chesa/openwolf#release/1.3.1-beta"
+npm install -g --install-links "chesa/openwolf#release/1.3.2-beta"
 ```
 
 **Alternative: clone and build locally** (handy for contributors, or if the

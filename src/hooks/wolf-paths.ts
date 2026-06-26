@@ -11,7 +11,13 @@ let _cachedWorktreeCtx: WorktreeContext | null = null;
 
 function detectWorktreeContext(): WorktreeContext {
   if (_cachedWorktreeCtx) return _cachedWorktreeCtx;
-  const dir = path.resolve(process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
+  // Prefer WOLF_ROOT set by the shell wrapper in .claude/settings.json; fall
+  // back to CLAUDE_PROJECT_DIR or process.cwd() for non-OpenWolf-invoked runs.
+  const dir = path.resolve(
+    process.env.WOLF_ROOT ??
+    process.env.CLAUDE_PROJECT_DIR ??
+    process.cwd()
+  );
   try {
     _cachedWorktreeCtx = detectWorktreeContextRaw(dir);
     return _cachedWorktreeCtx;
