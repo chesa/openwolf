@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { appendBugEntry, newBugId, readBugEntries } from "../../src/hooks/buglog-ndjson.js";
 import { autoDetectBugFix, recordAnatomyWrite } from "../../src/hooks/post-write.js";
+import { normalizePath } from "../../src/hooks/shared.js";
 
 describe("buglog NDJSON appends (Task 8 — autoDetectBugFix path)", () => {
   it("two concurrent-ish appends produce two NDJSON lines with distinct ids", () => {
@@ -170,7 +171,7 @@ describe("recordAnatomyWrite — acme field replay (R3)", () => {
       );
 
       // Confirm the relative path does start with "../" (the condition R3 guards on)
-      const rel = path.relative(projectRoot, outsideAbs);
+      const rel = normalizePath(path.relative(projectRoot, outsideAbs));
       expect(rel.startsWith("../")).toBe(true);
 
       // Call the hook function — must silently skip and produce NO anatomy.md
