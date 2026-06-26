@@ -41,22 +41,24 @@ export interface ProposalEntry {
 // `## Subsection` and also tolerates an entry at the very start of the file (no
 // leading newline required) (WR-07).
 const ENTRY_REGEX =
-  /(?:^|\n)##\s+(.+?)\s*→\s*(cerebrum|anatomy)\s*\n\n([\s\S]*?)(?=\n##\s+[^\n]+\s*→\s*(?:cerebrum|anatomy)|$)/gi;
+  /(?:^|\n)##\s+(.+?)\s*→\s*(cerebrum|anatomy)\s*\n(?:\s*\n)*\s*([\s\S]*?)(?=\n##\s+[^\n]+\s*→\s*(?:cerebrum|anatomy)|$)/gi;
 
 /**
- * ENOENT-safe file read. Non-ENOENT errors are logged to stderr and swallowed
- * so that callers can decide whether to treat the file as empty.
+ * ENOENT-safe file read. ENOENT returns an empty string silently; other errors
+ * are logged to stderr and rethrown so callers can decide whether to treat the
+ * session as unreadable.
  */
 function readStaging(filePath: string): string {
   try {
     return fs.readFileSync(filePath, "utf-8");
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-      process.stderr.write(
-        `OpenWolf: failed to read ${filePath}: ${err instanceof Error ? err.message : String(err)}\n`,
-      );
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      return "";
     }
-    return "";
+    process.stderr.write(
+      `OpenWolf: failed to read ${filePath}: ${err instanceof Error ? err.message : String(err)}\n`,
+    );
+    throw err;
   }
 }
 
@@ -67,6 +69,10 @@ function readStaging(filePath: string): string {
 export function parseProposals(sessionDir: string, sessionId: string): ProposalEntry[] {
   const stagingPath = path.join(sessionDir, "proposed-learnings.md");
   const raw = readStaging(stagingPath);
+  return parseRawProposals(raw, sessionId);
+}
+
+function parseRawProposals(raw: string, sessionId: string): ProposalEntry[] {
   if (!raw) return [];
 
   const entries: ProposalEntry[] = [];
@@ -112,26 +118,26 @@ export function collectAllEntries(): ProposalEntry[] {
   for (const dirent of dirs) {
     if (!dirent.isDirectory()) continue;
     const sessionDir = path.join(sessionsDir, dirent.name);
+    const stagingPath = path.join(sessionDir, "proposed-learnings.md");
 
     try {
-      const parsed = parseProposals(sessionDir, dirent.name);
-
-      let raw = "";
-      try {
-        raw = fs.readFileSync(path.join(sessionDir, "proposed-learnings.md"), "utf-8");
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-          raw = "";
-        } else {
-          throw err;
-        }
-      }
+      // Read once and reuse the raw text for both parsing and stub detection (IN-001).
+      const raw = readStaging(stagingPath);
+      const parsed = parseRawProposals(raw, dirent.name);
 
       const trimmedRaw = raw.trim();
       if (trimmedRaw && parsed.length === 0) {
+        // Use the staging file's mtime as a stable timestamp instead of a
+        // newly generated one (IN-006).
+        let stubTimestamp: string;
+        try {
+          stubTimestamp = fs.statSync(stagingPath).mtime.toISOString();
+        } catch {
+          stubTimestamp = "stub";
+        }
         entries.push({
           sessionId: dirent.name,
-          timestamp: new Date().toISOString(),
+          timestamp: stubTimestamp,
           target: "cerebrum",
           content: "(staged stub — review and replace with explicit learning)",
           raw: trimmedRaw,
