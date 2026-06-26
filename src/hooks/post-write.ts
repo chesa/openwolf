@@ -15,6 +15,12 @@ interface SessionData {
   [key: string]: unknown;
 }
 
+// Token-classification extension sets reused by anatomy and memory paths.
+const CODE_EXTS = new Set([
+  ".ts", ".js", ".tsx", ".jsx", ".py", ".json", ".yaml", ".yml", ".css",
+]);
+const PROSE_EXTS = new Set([".md", ".txt", ".rst"]);
+
 // ─── Anatomy Update ──────────────────────────────────────────────
 //
 // Record (or refresh) a single file's entry in anatomy.md after a Write/Edit.
@@ -93,9 +99,7 @@ export function recordAnatomyWrite(
 
     const desc = extractDescription(absolutePath).slice(0, 100);
     const ext = path.extname(absolutePath).toLowerCase();
-    const codeExts = new Set([".ts", ".js", ".tsx", ".jsx", ".py", ".json", ".yaml", ".yml", ".css"]);
-    const proseExts = new Set([".md", ".txt", ".rst"]);
-    const type = codeExts.has(ext) ? "code" : proseExts.has(ext) ? "prose" : "mixed";
+    const type = CODE_EXTS.has(ext) ? "code" : PROSE_EXTS.has(ext) ? "prose" : "mixed";
     const tokens = estimateTokens(fileContent, type as "code" | "prose" | "mixed");
 
     if (!sections.has(sectionKey)) sections.set(sectionKey, []);
@@ -180,8 +184,7 @@ async function main(): Promise<void> {
     const relFile = normalizePath(path.relative(projectRoot, absolutePath));
     const fileContent = input.tool_input?.content ?? "";
     const ext = path.extname(absolutePath).toLowerCase();
-    const codeExts = new Set([".ts", ".js", ".tsx", ".jsx", ".py", ".json", ".yaml", ".yml", ".css"]);
-    const type = codeExts.has(ext) ? "code" : "mixed";
+    const type = CODE_EXTS.has(ext) ? "code" : PROSE_EXTS.has(ext) ? "prose" : "mixed";
     const writeTokens = estimateTokens(fileContent || newStr, type as "code" | "prose" | "mixed");
 
     let changeDesc = "";
