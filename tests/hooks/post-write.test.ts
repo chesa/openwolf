@@ -101,7 +101,7 @@ describe("autoDetectBugFix — only flags code files", () => {
         "function load() { try { return JSON.parse(read()); } catch (e) { return null; } }";
       autoDetectBugFix(dir, path.join(dir, "src", "foo.ts"), dir, oldStr, newStr);
       const entries = readBugEntries(dir);
-      expect(entries.length).toBeGreaterThanOrEqual(1);
+      expect(entries).toHaveLength(1);
       expect(entries[0].tags).toContain("auto-detected");
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -249,7 +249,7 @@ describe("autoDetectBugFix — acme prose field replay (R5)", () => {
       const newStr = 'const headerName = "acme_api_key_id";';
       autoDetectBugFix(dir, tsPath, dir, oldStr, newStr);
       const entries = readBugEntries(dir);
-      expect(entries.length).toBeGreaterThanOrEqual(1);
+      expect(entries).toHaveLength(1);
       expect(entries[0].tags).toContain("auto-detected");
     } finally {
       rmSync(dir, { recursive: true, force: true });
