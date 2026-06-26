@@ -2,6 +2,8 @@
   "version": 1,
   "openwolf": {
     "enabled": true,
+    "execution_layer": null,
+    "execution_layer_note": "Optional: set to your execution layer name so OpenWolf can point resume at its plan/status on session start. When null the generic 3-step resume order applies (execution layer plan/status, then cerebrum.md, then memory.md).",
     "anatomy": {
       "auto_scan_on_init": true,
       "rescan_interval_hours": 6,
