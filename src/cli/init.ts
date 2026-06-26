@@ -182,9 +182,9 @@ export function checkRootGitIgnore(projectRoot: string): void {
     // Match bare `.wolf`, `.wolf/`, anchored `/.wolf`, `/.wolf/`, `**/.wolf`,
     // and `**/.wolf/` — including negated forms. Comments are skipped.
     const isBlanketWolf = (line: string): boolean => {
-      const trimmed = line.trimStart();
+      const trimmed = line.trimStart().trimEnd();
       if (trimmed.startsWith("#")) return false;
-      return /^!?\/?\.wolf\/?$|^!?\*\*\/\.wolf\/?$/.test(trimmed);
+      return /^!?\/?\.wolf(\/|\/\*|\/\*\*)?$|^!?\*\*\/\.wolf(\/|\/\*|\/\*\*)?$/.test(trimmed);
     };
 
     if (lines.some(isBlanketWolf)) {
