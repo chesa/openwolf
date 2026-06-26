@@ -6,18 +6,25 @@ import { initCommand } from "./init.js";
 import { statusCommand } from "./status.js";
 import { scanCommand } from "./scan.js";
 import { dashboardCommand } from "./dashboard.js";
+import { findProjectRoot } from "../scanner/project-root.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function getVersion(): string {
-  try {
-    const pkgPath = path.resolve(__dirname, "../../../package.json");
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-    return pkg.version || "unknown";
-  } catch {
-    return "unknown";
+  const candidates = [
+    path.resolve(findProjectRoot(), "package.json"),
+    path.resolve(__dirname, "../../../package.json"),
+  ];
+  for (const pkgPath of candidates) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+      if (pkg.version) return pkg.version;
+    } catch {
+      // fall through to next candidate
+    }
   }
+  return "unknown";
 }
 
 export function createProgram(): Command {
