@@ -161,6 +161,13 @@ export function collectAllEntries(): ProposalEntry[] {
 // R9 freshness hash engine
 // ---------------------------------------------------------------------------
 
+/**
+ * Normalizes cerebrum.md content for hashing. The "Last updated" line is
+ * stripped, then ALL whitespace is removed. This is intentional: date-only
+ * bumps and cosmetic whitespace changes must not alter the hash. If future
+ * requirements need word-boundary detection, collapse whitespace to a single
+ * space instead of removing it entirely.
+ */
 export function normalizeCerebrumBody(content: string): string {
   return content
     .replace(/^>\s*Last\s+updated\s*:.*$/gim, "")
