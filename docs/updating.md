@@ -20,6 +20,7 @@ openwolf update
 
 1. **Creates a timestamped backup** of each project's `.wolf/` directory before making any changes
 2. **Overwrites protocol files** with the latest versions:
+   - `.wolf/.gitignore`
    - `.wolf/OPENWOLF.md`
    - `.wolf/reframe-frameworks.md`
    - Hook scripts in `.wolf/hooks/`
