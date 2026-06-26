@@ -86,6 +86,7 @@ export function recordAnatomyWrite(
     let fileContent = "";
     try {
       fileContent = fs.readFileSync(absolutePath, "utf-8");
+      if (fileContent.includes("\0")) return;
     } catch {
       fileContent = contentFallback;
     }
