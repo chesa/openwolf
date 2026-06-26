@@ -152,9 +152,8 @@ describe("learnings-cmd - learningsCheckCommand", () => {
   });
 
   it("returns 2 on operational error and prints to stderr unless quiet", async () => {
-    const sessionsDir = path.join(tmpDir, "sessions");
-    mkdirSync(sessionsDir, { recursive: true });
-    writeFileSync(path.join(sessionsDir, "not-a-dir"), "file", "utf-8");
+    // Make sessions itself a file so fs.readdirSync throws.
+    writeFileSync(path.join(tmpDir, "sessions"), "not-a-directory", "utf-8");
 
     const { learningsCheckCommand } = await import("../../src/cli/learnings-cmd.js");
     const code = learningsCheckCommand({});

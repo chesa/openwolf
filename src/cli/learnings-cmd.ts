@@ -3,8 +3,10 @@ import * as path from "node:path";
 import * as readline from "node:readline";
 import { getWolfDir } from "../hooks/wolf-paths.js";
 import { withFileLock } from "../hooks/wolf-lock.js";
+import { writeJSON } from "../hooks/wolf-json.js";
 import {
   collectAllEntries,
+  hashCerebrumBody,
   parseProposals,
   type ProposalEntry,
 } from "../hooks/wolf-pantry.js";
@@ -36,6 +38,88 @@ export function listProposals(entries: ProposalEntry[]): void {
     const truncated = preview.length > 60 ? preview.slice(0, 57) + "..." : preview;
     console.log(
       `${entry.sessionId.padEnd(14)} ${entry.timestamp.padEnd(28)} ${entry.target.padEnd(12)} ${truncated}`
+    );
+  }
+}
+
+export function learningsCheckCommand(opts: { json?: boolean; quiet?: boolean }): 0 | 1 | 2 {
+  try {
+    const entries = collectAllEntries();
+
+    if (opts.json) {
+      const payload = {
+        pending: entries.length,
+        entries: entries.map((e) => ({
+          sessionId: e.sessionId,
+          timestamp: e.timestamp,
+          target: e.target,
+          content: e.content.slice(0, 120),
+        })),
+      };
+      process.stdout.write(JSON.stringify(payload) + "\n");
+    }
+
+    if (entries.length === 0) return 0;
+
+    if (!opts.quiet && !opts.json) {
+      emitLearningsSummaryToStderr(entries);
+    }
+
+    return 1;
+  } catch (err) {
+    if (!opts.quiet) {
+      process.stderr.write(
+        `OpenWolf: cannot check learnings: ${err instanceof Error ? err.message : String(err)}\n`,
+      );
+    }
+    return 2;
+  }
+}
+
+function emitLearningsSummaryToStderr(entries: ProposalEntry[]): void {
+  const bySession = new Map<string, number>();
+  for (const entry of entries) {
+    bySession.set(entry.sessionId, (bySession.get(entry.sessionId) || 0) + 1);
+  }
+
+  process.stderr.write(
+    `⚠ ${entries.length} learnings awaiting review across ${bySession.size} sessions:\n`,
+  );
+
+  const sessions = [...bySession.entries()];
+  for (let i = 0; i < Math.min(5, sessions.length); i++) {
+    const [sessionId, count] = sessions[i];
+    process.stderr.write(`  • ${sessionId} (${count})\n`);
+  }
+
+  if (sessions.length > 5) {
+    process.stderr.write(`  … + ${sessions.length - 5} more sessions\n`);
+  }
+
+  process.stderr.write("Run `openwolf learnings merge` to review and promote.\n");
+}
+
+export function learningsAcceptCommand(): void {
+  try {
+    const wolfDir = getWolfDir();
+    const cerebrumPath = path.join(wolfDir, "cerebrum.md");
+    const content = fs.readFileSync(cerebrumPath, "utf-8");
+    const hash = hashCerebrumBody(content);
+    const match = content.match(/>\s*Last\s+updated\s*:\s*(.+)/i);
+    const lastSeen = match?.[1].trim() ?? new Date().toISOString().split("T")[0];
+
+    writeJSON(path.join(wolfDir, "cerebrum-freshness.json"), {
+      version: 1,
+      content_sha256: hash,
+      last_updated_seen: lastSeen,
+      captured_at: new Date().toISOString(),
+      captured_by: "learnings-accept",
+    });
+
+    console.log("✓ cerebrum.md freshness baseline updated");
+  } catch (err) {
+    process.stderr.write(
+      `OpenWolf: failed to accept cerebrum baseline: ${err instanceof Error ? err.message : String(err)}\n`,
     );
   }
 }
@@ -72,7 +156,7 @@ export function learningsCommand(sessionFilter?: string): void {
 }
 
 export async function learningsMergeCommand(): Promise<void> {
-  const entries = collectAllEntries();
+  const entries = collectAllEntries().filter((e) => !e.isStub);
 
   if (entries.length === 0) {
     console.log("No pending proposals found");
@@ -199,6 +283,28 @@ export async function learningsMergeCommand(): Promise<void> {
     process.stderr.write(
       `OpenWolf: ${failedCount} of ${results.length} entries could not be merged. See warnings above.\n`
     );
+  }
+
+  if (successEntries.some((e) => e.target === "cerebrum")) {
+    try {
+      const cerebrumPath = path.join(wolfDir, "cerebrum.md");
+      const content = fs.readFileSync(cerebrumPath, "utf-8");
+      const hash = hashCerebrumBody(content);
+      const match = content.match(/>\s*Last\s+updated\s*:\s*(.+)/i);
+      const lastSeen = match?.[1].trim() ?? new Date().toISOString().split("T")[0];
+
+      writeJSON(path.join(wolfDir, "cerebrum-freshness.json"), {
+        version: 1,
+        content_sha256: hash,
+        last_updated_seen: lastSeen,
+        captured_at: new Date().toISOString(),
+        captured_by: "learnings-merge",
+      });
+    } catch (err) {
+      process.stderr.write(
+        `OpenWolf: failed to update cerebrum baseline: ${err instanceof Error ? err.message : String(err)}\n`,
+      );
+    }
   }
 }
 

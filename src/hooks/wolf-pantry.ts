@@ -29,6 +29,7 @@ export interface ProposalEntry {
   target: "cerebrum" | "anatomy";
   content: string;
   raw: string;
+  isStub?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -136,6 +137,7 @@ export function collectAllEntries(): ProposalEntry[] {
           target: "cerebrum",
           content: "(staged stub — review and replace with explicit learning)",
           raw: trimmedRaw,
+          isStub: true,
         });
       } else {
         entries.push(...parsed);

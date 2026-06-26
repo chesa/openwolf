@@ -187,5 +187,23 @@ export function createProgram(): Command {
       await learningsMergeCommand();
     });
 
+  learnings
+    .command("check")
+    .description("Exit non-zero if staged learnings await review")
+    .option("--json", "Emit structured JSON to stdout")
+    .option("--quiet", "Mute all output; return exit code only")
+    .action(async (opts: { json?: boolean; quiet?: boolean }) => {
+      const { learningsCheckCommand } = await import("./learnings-cmd.js");
+      process.exitCode = learningsCheckCommand(opts);
+    });
+
+  learnings
+    .command("accept")
+    .description("Re-baseline cerebrum.md freshness after a blessed hand-edit")
+    .action(async () => {
+      const { learningsAcceptCommand } = await import("./learnings-cmd.js");
+      learningsAcceptCommand();
+    });
+
   return program;
 }
