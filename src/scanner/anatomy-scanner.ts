@@ -5,6 +5,7 @@ import { readJSON, writeText } from "../utils/fs-safe.js";
 import { normalizePath } from "../utils/paths.js";
 import {
   parseAnatomy,
+  serializeAnatomy,
   type AnatomyEntry,
   withFileLock,
   shouldExclude,
@@ -140,35 +141,6 @@ function walkDir(
       if (totalFiles >= maxFiles) return;
     }
   }
-}
-
-export function serializeAnatomy(
-  sections: Map<string, AnatomyEntry[]>,
-  metadata: { lastScanned: string; fileCount: number; hits: number; misses: number }
-): string {
-  const lines: string[] = [
-    "# anatomy.md",
-    "",
-    `> Auto-maintained by OpenWolf. Last scanned: ${metadata.lastScanned}`,
-    `> Files: ${metadata.fileCount} tracked | Anatomy hits: ${metadata.hits} | Misses: ${metadata.misses}`,
-    "",
-  ];
-
-  const sortedKeys = [...sections.keys()].sort();
-
-  for (const key of sortedKeys) {
-    lines.push(`## ${key}`);
-    lines.push("");
-    const entries = sections.get(key)!;
-    entries.sort((a, b) => a.file.localeCompare(b.file));
-    for (const entry of entries) {
-      const desc = entry.description ? ` — ${entry.description}` : "";
-      lines.push(`- \`${entry.file}\`${desc} (~${entry.tokens} tok)`);
-    }
-    lines.push("");
-  }
-
-  return lines.join("\n");
 }
 
 /**
