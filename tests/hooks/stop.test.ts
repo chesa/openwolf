@@ -318,7 +318,7 @@ describe("R7a capture stub guard cases", () => {
         finalizeSession(wolfDir, sessionDir, baseSession({
             files_written: [
                 { file: "/project/.wolf/cerebrum.md", action: "edit", tokens: 10, at: "2026-06-25T00:00:00Z" },
-                { file: "/project/.tmp/scratch.txt", action: "edit", tokens: 5, at: "2026-06-25T00:00:00Z" },
+                { file: "/project/scratch.tmp", action: "edit", tokens: 5, at: "2026-06-25T00:00:00Z" },
             ],
         }));
         expect(appendProposal).not.toHaveBeenCalled();
