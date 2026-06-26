@@ -7,6 +7,10 @@
 # Leak class 1 (E7): out-of-project /tmp-style scratch dir leaked in via post-write hook
 ## .claude/plans/tmp.pwYfhCNiar/draft/
 
+> Note: the original heading in acme's anatomy.md began with `../` because this
+> path resolved outside the project root. The heading above is normalized for
+> readability; the R3 guard checks the `../` prefix on the raw relative path.
+
 - `pre-commit-to-claude-hooks.md` — Migration Plan: Pre-Commit Git Hooks → Claude Hooks (~3162 tok)
 - `tmp.zIDPKm5EAB` (~574 tok)
 
