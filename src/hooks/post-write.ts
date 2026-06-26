@@ -241,13 +241,16 @@ function summarizeEdit(oldStr: string, newStr: string, filename: string): string
   const oldCount = oldLines.length;
   const newCount = newLines.length;
   const ext = path.extname(filename).toLowerCase();
+  const proseExts = new Set([".md", ".txt", ".rst"]);
 
-  // --- Structural fixes ---
-  if (newStr.includes("try") && newStr.includes("catch") && !oldStr.includes("catch")) {
-    return "added error handling";
+  // --- Structural fixes (code only) ---
+  if (!proseExts.has(ext)) {
+    if (newStr.includes("try") && newStr.includes("catch") && !oldStr.includes("catch")) {
+      return "added error handling";
+    }
+    if (newStr.includes("?.") && !oldStr.includes("?.")) return "added optional chaining";
+    if (newStr.includes("?? ") && !oldStr.includes("?? ")) return "added nullish coalescing";
   }
-  if (newStr.includes("?.") && !oldStr.includes("?.")) return "added optional chaining";
-  if (newStr.includes("?? ") && !oldStr.includes("?? ")) return "added nullish coalescing";
 
   // --- Deleted code ---
   if (!newStr.trim() || newStr.trim().length < oldStr.trim().length * 0.2) {
