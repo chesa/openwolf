@@ -3,7 +3,11 @@ import * as path from "node:path";
 import { extractDescription, capDescription } from "./description-extractor.js";
 import { readJSON, writeText } from "../utils/fs-safe.js";
 import { normalizePath } from "../utils/paths.js";
-import { parseAnatomy, type AnatomyEntry } from "../hooks/shared.js";
+import {
+  parseAnatomy,
+  type AnatomyEntry,
+  withFileLock,
+} from "../hooks/shared.js";
 import { CODE_EXTENSIONS, PROSE_EXTENSIONS } from "../utils/extensions.js";
 // `ignore` powers the opt-in respect_gitignore feature. It is a CLI/daemon-only
 // dependency: this module (src/scanner) must NEVER be imported by a hook
@@ -228,60 +232,62 @@ export function updateAnatomyEntry(
   action: "upsert" | "delete"
 ): void {
   const anatomyPath = path.join(wolfDir, "anatomy.md");
-  let content: string;
-  try {
-    content = fs.readFileSync(anatomyPath, "utf-8");
-  } catch {
-    content = "# anatomy.md\n\n> Auto-maintained by OpenWolf.\n";
-  }
-
-  const sections = parseAnatomy(content);
-  const relPath = normalizePath(path.relative(projectRoot, filePath));
-  const dir = path.dirname(relPath);
-  const fileName = path.basename(relPath);
-  const sectionKey = dir === "." ? "./" : dir + "/";
-
-  if (action === "delete") {
-    const entries = sections.get(sectionKey);
-    if (entries) {
-      const idx = entries.findIndex((e) => e.file === fileName);
-      if (idx !== -1) entries.splice(idx, 1);
-      if (entries.length === 0) sections.delete(sectionKey);
-    }
-  } else {
-    // upsert
-    let fileContent: string;
+  withFileLock(anatomyPath, () => {
+    let content: string;
     try {
-      fileContent = fs.readFileSync(filePath, "utf-8");
+      content = fs.readFileSync(anatomyPath, "utf-8");
     } catch {
-      return;
+      content = "# anatomy.md\n\n> Auto-maintained by OpenWolf.\n";
     }
 
-    const desc = capDescription(extractDescription(filePath));
-    const tokens = estimateTokens(fileContent, filePath);
-    const entry: AnatomyEntry = { file: fileName, description: desc, tokens };
+    const sections = parseAnatomy(content);
+    const relPath = normalizePath(path.relative(projectRoot, filePath));
+    const dir = path.dirname(relPath);
+    const fileName = path.basename(relPath);
+    const sectionKey = dir === "." ? "./" : dir + "/";
 
-    if (!sections.has(sectionKey)) {
-      sections.set(sectionKey, []);
-    }
-    const entries = sections.get(sectionKey)!;
-    const idx = entries.findIndex((e) => e.file === fileName);
-    if (idx !== -1) {
-      entries[idx] = entry;
+    if (action === "delete") {
+      const entries = sections.get(sectionKey);
+      if (entries) {
+        const idx = entries.findIndex((e) => e.file === fileName);
+        if (idx !== -1) entries.splice(idx, 1);
+        if (entries.length === 0) sections.delete(sectionKey);
+      }
     } else {
-      entries.push(entry);
+      // upsert
+      let fileContent: string;
+      try {
+        fileContent = fs.readFileSync(filePath, "utf-8");
+      } catch {
+        return;
+      }
+
+      const desc = capDescription(extractDescription(filePath));
+      const tokens = estimateTokens(fileContent, filePath);
+      const entry: AnatomyEntry = { file: fileName, description: desc, tokens };
+
+      if (!sections.has(sectionKey)) {
+        sections.set(sectionKey, []);
+      }
+      const entries = sections.get(sectionKey)!;
+      const idx = entries.findIndex((e) => e.file === fileName);
+      if (idx !== -1) {
+        entries[idx] = entry;
+      } else {
+        entries.push(entry);
+      }
     }
-  }
 
-  let fileCount = 0;
-  for (const [, list] of sections) fileCount += list.length;
+    let fileCount = 0;
+    for (const [, list] of sections) fileCount += list.length;
 
-  const serialized = serializeAnatomy(sections, {
-    lastScanned: new Date().toISOString(),
-    fileCount,
-    hits: 0,
-    misses: 0,
+    const serialized = serializeAnatomy(sections, {
+      lastScanned: new Date().toISOString(),
+      fileCount,
+      hits: 0,
+      misses: 0,
+    });
+
+    writeText(anatomyPath, serialized);
   });
-
-  writeText(anatomyPath, serialized);
 }
