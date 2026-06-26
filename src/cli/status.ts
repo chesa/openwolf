@@ -173,30 +173,34 @@ export async function statusCommand(): Promise<void> {
   const cerebrumPath = path.join(wolfDir, "cerebrum.md");
   const sidecarPath = path.join(wolfDir, "cerebrum-freshness.json");
   try {
-    const content = readText(cerebrumPath);
-    const currentHash = hashCerebrumBody(content);
-    const sidecar = readJSON<FreshnessSidecar | null>(sidecarPath, null);
-    const dateMatch = content.match(/>\s*Last\s+updated\s*:\s*(.+)/i);
-    const currentDate = dateMatch ? dateMatch[1].trim() : "—";
+    if (!fs.existsSync(cerebrumPath)) {
+      console.log("  - cerebrum.md: not present (skipped baseline)");
+    } else {
+      const content = readText(cerebrumPath);
+      const currentHash = hashCerebrumBody(content);
+      const sidecar = readJSON<FreshnessSidecar | null>(sidecarPath, null);
+      const dateMatch = content.match(/>\s*Last\s+updated\s*:\s*(.+)/i);
+      const currentDate = dateMatch ? dateMatch[1].trim() : "—";
 
-    if (!sidecar) {
-      // Bootstrap-on-missing — the ONE write status may do (D12-14)
-      writeJSON(sidecarPath, {
-        version: 1,
-        content_sha256: currentHash,
-        last_updated_seen: currentDate,
-        captured_at: new Date().toISOString(),
-        captured_by: "status-bootstrap",
-      });
-      console.log("  - cerebrum.md: baseline captured (no prior history)");
-    } else if (currentHash === sidecar.content_sha256) {
-      if (currentDate !== sidecar.last_updated_seen) {
-        console.log(`  ✗ cerebrum.md: "Last updated" bumped with no content change (freshness theater)`);
+      if (!sidecar) {
+        // Bootstrap-on-missing — the ONE write status may do (D12-14)
+        writeJSON(sidecarPath, {
+          version: 1,
+          content_sha256: currentHash,
+          last_updated_seen: currentDate,
+          captured_at: new Date().toISOString(),
+          captured_by: "status-bootstrap",
+        });
+        console.log("  - cerebrum.md: baseline captured (no prior history)");
+      } else if (currentHash === sidecar.content_sha256) {
+        if (currentDate !== sidecar.last_updated_seen) {
+          console.log(`  ✗ cerebrum.md: "Last updated" bumped with no content change (freshness theater)`);
+        } else {
+          console.log("  ✓ cerebrum.md: current");
+        }
       } else {
         console.log("  ✓ cerebrum.md: current");
       }
-    } else {
-      console.log("  ✓ cerebrum.md: current");
     }
   } catch {
     console.log("  - cerebrum.md: (freshness check unavailable)");

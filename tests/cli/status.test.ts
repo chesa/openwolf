@@ -370,4 +370,26 @@ describe("status.ts", () => {
 
         rmSync(dir, { recursive: true, force: true });
     });
+
+    it("does not bootstrap a sidecar when cerebrum.md is absent", async () => {
+        const dir = mkdtempSync(path.join(tmpdir(), "ow-status-nocerebrum-"));
+        const wolfDir = path.join(dir, ".wolf");
+        fs.mkdirSync(wolfDir, { recursive: true });
+
+        vi.mocked(findProjectRoot).mockReturnValue(dir);
+        vi.mocked(detectWorktreeContext).mockReturnValue({
+            isWorktree: false,
+            mainRepoRoot: dir,
+            worktreePath: dir,
+            branch: "main",
+        });
+        vi.mocked(getWolfDir).mockReturnValue(wolfDir);
+
+        await statusCommand();
+        const lines = consoleLogSpy.mock.calls.map((c) => String(c[0] ?? ""));
+        expect(lines.some((l) => l.includes("not present") && l.includes("skipped baseline"))).toBe(true);
+        expect(fs.existsSync(path.join(wolfDir, "cerebrum-freshness.json"))).toBe(false);
+
+        rmSync(dir, { recursive: true, force: true });
+    });
 });
