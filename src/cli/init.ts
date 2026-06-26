@@ -232,7 +232,9 @@ function writeClaudeRules(projectRoot: string, templatesDir: string): void {
     console.warn(`  ⚠ Template not found: ${srcPath}. Claude rules were not installed.`);
   }
 
-  // Insert @.wolf/OPENWOLF.md reference at the top of CLAUDE.md if not present
+  // Insert @.wolf/OPENWOLF.md reference into CLAUDE.md if not present.
+  // If the existing file starts with YAML frontmatter, insert the marker
+  // after the closing --- block so frontmatter parsers remain valid.
   const claudeMdPath = path.join(projectRoot, "CLAUDE.md");
   const marker = "@.wolf/OPENWOLF.md";
   const fullSnippet = `# CLAUDE.md\n\n${marker}\n\nThis project uses OpenWolf for context management. Read and follow .wolf/OPENWOLF.md every session. Check .wolf/cerebrum.md before generating code. Check .wolf/anatomy.md before reading files.`;
@@ -240,7 +242,23 @@ function writeClaudeRules(projectRoot: string, templatesDir: string): void {
     if (fs.existsSync(claudeMdPath)) {
       const content = fs.readFileSync(claudeMdPath, "utf-8");
       if (!content.includes("OpenWolf") && !content.includes(marker)) {
-        fs.writeFileSync(claudeMdPath, marker + "\n\n" + content, "utf-8");
+        const frontmatterEnd = /^---\s*$/m;
+        let insertion = 0;
+        if (content.startsWith("---\n")) {
+          const m = content.slice(4).match(frontmatterEnd);
+          if (m && m.index !== undefined) {
+            insertion = 4 + m.index + m[0].length;
+          }
+        }
+        fs.writeFileSync(
+          claudeMdPath,
+          content.slice(0, insertion) +
+            (insertion > 0 ? "\n" : "") +
+            marker +
+            "\n\n" +
+            content.slice(insertion),
+          "utf-8",
+        );
       }
     } else {
       fs.writeFileSync(claudeMdPath, fullSnippet + "\n", "utf-8");
