@@ -111,4 +111,52 @@ describe("status.ts", () => {
 
         rmSync(dir, { recursive: true, force: true });
     });
+
+    it("shows Execution layer line when config sets openwolf.execution_layer", async () => {
+        const dir = mkdtempSync(path.join(tmpdir(), "ow-status-"));
+        fs.mkdirSync(path.join(dir, ".wolf"), { recursive: true });
+        writeFileSync(
+            path.join(dir, ".wolf", "config.json"),
+            JSON.stringify({ openwolf: { execution_layer: "gsd" } }),
+            "utf-8"
+        );
+
+        vi.mocked(findProjectRoot).mockReturnValue(dir);
+        vi.mocked(detectWorktreeContext).mockReturnValue({
+            isWorktree: false,
+            mainRepoRoot: dir,
+            worktreePath: dir,
+            branch: "main",
+        });
+
+        await statusCommand();
+        const lines = consoleSpy.log.mock.calls.map((c) => String(c[0] ?? ""));
+        expect(lines.some((l) => l.includes("Execution layer: gsd"))).toBe(true);
+
+        rmSync(dir, { recursive: true, force: true });
+    });
+
+    it("does NOT show Execution layer line when openwolf.execution_layer is null", async () => {
+        const dir = mkdtempSync(path.join(tmpdir(), "ow-status-"));
+        fs.mkdirSync(path.join(dir, ".wolf"), { recursive: true });
+        writeFileSync(
+            path.join(dir, ".wolf", "config.json"),
+            JSON.stringify({ openwolf: { execution_layer: null } }),
+            "utf-8"
+        );
+
+        vi.mocked(findProjectRoot).mockReturnValue(dir);
+        vi.mocked(detectWorktreeContext).mockReturnValue({
+            isWorktree: false,
+            mainRepoRoot: dir,
+            worktreePath: dir,
+            branch: "main",
+        });
+
+        await statusCommand();
+        const lines = consoleSpy.log.mock.calls.map((c) => String(c[0] ?? ""));
+        expect(lines.some((l) => l.includes("Execution layer"))).toBe(false);
+
+        rmSync(dir, { recursive: true, force: true });
+    });
 });

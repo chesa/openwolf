@@ -31,6 +31,16 @@ export async function statusCommand(): Promise<void> {
   } else {
     console.log(`  Mode: Main checkout`);
   }
+
+  // Surface optional execution_layer hint from config.json (D11-07)
+  const config = readJSON<{
+    openwolf?: { execution_layer?: string | null };
+  }>(path.join(wolfDir, "config.json"), {});
+  const executionLayer = config.openwolf?.execution_layer ?? null;
+  if (executionLayer) {
+    console.log(`  Execution layer: ${executionLayer}`);
+  }
+
   console.log("");
 
   // File integrity check
