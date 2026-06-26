@@ -22,7 +22,10 @@ vi.mock("../../src/utils/worktree.js", async (importOriginal) => {
 
 vi.mock("node:fs", async (importOriginal) => {
   const mod = await importOriginal<typeof import("node:fs")>();
-  return { ...mod, existsSync: vi.fn() };
+  // Default to the real implementation so tests outside the worktree guard
+  // are not surprised by an undefined return. Specific tests can still
+  // override the implementation via vi.mocked(fs.existsSync).
+  return { ...mod, existsSync: vi.fn(mod.existsSync) };
 });
 
 // A fixed test project root used wherever tests need a concrete HOOK_SETTINGS
