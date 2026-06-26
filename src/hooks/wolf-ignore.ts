@@ -59,8 +59,13 @@ function globToRegExp(glob: string): RegExp {
         const c = glob[i];
         if (c === "*") {
             if (glob[i + 1] === "*") {
-                re += ".*"; // ** spans path segments
-                i++; // consume the second "*"
+                if (glob[i + 2] === "/") {
+                    re += "(?:.*/)?"; // **/ matches zero or more segments
+                    i += 2; // consume the trailing "/"
+                } else {
+                    re += ".*"; // ** spans path segments
+                    i++; // consume the second "*"
+                }
             } else {
                 re += "[^/]*"; // * stays within one segment
             }
