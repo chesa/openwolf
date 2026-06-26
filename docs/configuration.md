@@ -164,7 +164,7 @@ Controls the DesignQC screenshot capture system.
 | Key | Default | Description |
 |-----|---------|-------------|
 | `enabled` | `true` | Enable DesignQC features. |
-| `viewports` | `[{desktop: 1440x900}, {mobile: 375x812}]` | Capture viewports. |
+| `viewports` | `[{ "name": "desktop", "width": 1440, "height": 900 }, { "name": "mobile", "width": 375, "height": 812 }]` | Capture viewports. |
 | `max_screenshots` | `6` | Maximum screenshots per run. |
 | `chrome_path` | `null` | Custom Chrome or Edge executable path. |
 
