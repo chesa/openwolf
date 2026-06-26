@@ -70,7 +70,7 @@ async function main(): Promise<void> {
     const config = JSON.parse(configText) as {
       openwolf?: { execution_layer?: string | null };
     };
-    const hint = config.openwolf?.execution_layer ?? null;
+    const hint = (config.openwolf?.execution_layer ?? "").trim();
     if (hint) {
       process.stderr.write(
         `OpenWolf: execution layer = ${hint} — read its plan/status first.\n`

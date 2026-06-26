@@ -51,7 +51,7 @@ export async function statusCommand(): Promise<void> {
   const config = readJSON<{
     openwolf?: { execution_layer?: string | null };
   }>(path.join(wolfDir, "config.json"), {});
-  const executionLayer = config.openwolf?.execution_layer ?? null;
+  const executionLayer = (config.openwolf?.execution_layer ?? "").trim();
   if (executionLayer) {
     console.log(`  Execution layer: ${executionLayer}`);
   }
