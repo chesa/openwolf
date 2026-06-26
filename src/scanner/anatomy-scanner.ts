@@ -235,6 +235,9 @@ export function updateAnatomyEntry(
   projectRoot: string,
   action: "upsert" | "delete"
 ): void {
+  const relPath = normalizePath(path.relative(projectRoot, filePath));
+  if (relPath.startsWith("../") || path.isAbsolute(relPath)) return;
+
   const anatomyPath = path.join(wolfDir, "anatomy.md");
   withFileLock(anatomyPath, () => {
     let content: string;
@@ -245,7 +248,6 @@ export function updateAnatomyEntry(
     }
 
     const sections = parseAnatomy(content);
-    const relPath = normalizePath(path.relative(projectRoot, filePath));
     const dir = path.dirname(relPath);
     const fileName = path.basename(relPath);
     const sectionKey = dir === "." ? "./" : dir + "/";
