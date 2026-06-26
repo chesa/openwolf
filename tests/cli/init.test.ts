@@ -470,111 +470,111 @@ describe("wolf-gitignore template content (D-09-01 through D-09-06)", () => {
 // ---------------------------------------------------------------------------
 describe("checkRootGitIgnore advisory (D-09-09)", () => {
   // Each test creates a real tmpdir, writes a .gitignore, calls the function,
-  // and asserts on console.log spy output. Uses real fs (the vi.mock only
+  // and asserts on console.warn spy output. Uses real fs (the vi.mock only
   // overrides existsSync, not readFileSync).
 
   it("still warns when root .gitignore contains the blanket .wolf/ line", () => {
     const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "wolf-advisory-")));
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       writeFileSync(path.join(dir, ".gitignore"), ".wolf/\n");
       checkRootGitIgnore(dir);
-      expect(logSpy).toHaveBeenCalledWith(
+      expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining(".wolf/")
       );
     } finally {
-      logSpy.mockRestore();
+      warnSpy.mockRestore();
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
   it("warns on a .wolf/-prefixed path rule even without the blanket .wolf/ line (D-09-09)", () => {
     const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "wolf-advisory-")));
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       // .wolf/hooks/ is the acme_translators regression vector — no blanket .wolf/
       writeFileSync(path.join(dir, ".gitignore"), ".wolf/hooks/\n");
       checkRootGitIgnore(dir);
-      expect(logSpy).toHaveBeenCalledWith(
+      expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining(".wolf/-prefixed path rule")
       );
     } finally {
-      logSpy.mockRestore();
+      warnSpy.mockRestore();
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  it("logs nothing when root .gitignore has no .wolf references", () => {
+  it("warns nothing when root .gitignore has no .wolf references", () => {
     const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "wolf-advisory-")));
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       writeFileSync(path.join(dir, ".gitignore"), "node_modules/\ndist/\n*.log\n");
       checkRootGitIgnore(dir);
       // No advisory should fire
-      const wolfCalls = logSpy.mock.calls.filter((args) =>
+      const wolfCalls = warnSpy.mock.calls.filter((args) =>
         typeof args[0] === "string" && args[0].includes(".wolf")
       );
       expect(wolfCalls).toHaveLength(0);
     } finally {
-      logSpy.mockRestore();
+      warnSpy.mockRestore();
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  it("logs nothing and does not throw when no .gitignore exists", () => {
+  it("warns nothing and does not throw when no .gitignore exists", () => {
     const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "wolf-advisory-")));
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       // No .gitignore written — function must catch the ENOENT silently
       expect(() => checkRootGitIgnore(dir)).not.toThrow();
-      expect(logSpy).not.toHaveBeenCalled();
+      expect(warnSpy).not.toHaveBeenCalled();
     } finally {
-      logSpy.mockRestore();
+      warnSpy.mockRestore();
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
   it("warns on bare .wolf rule without trailing slash (D-09-09)", () => {
     const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "wolf-advisory-")));
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       writeFileSync(path.join(dir, ".gitignore"), ".wolf\n");
       checkRootGitIgnore(dir);
-      expect(logSpy).toHaveBeenCalledWith(
+      expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining(".wolf/-prefixed path rule")
       );
     } finally {
-      logSpy.mockRestore();
+      warnSpy.mockRestore();
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
   it("warns on anchored root /.wolf/ rule (D-09-09)", () => {
     const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "wolf-advisory-")));
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       writeFileSync(path.join(dir, ".gitignore"), " /.wolf/\n");
       checkRootGitIgnore(dir);
-      expect(logSpy).toHaveBeenCalledWith(
+      expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining(".wolf/-prefixed path rule")
       );
     } finally {
-      logSpy.mockRestore();
+      warnSpy.mockRestore();
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
   it("warns on negated re-include rule !.wolf/hooks/ (D-09-09)", () => {
     const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "wolf-advisory-")));
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       writeFileSync(path.join(dir, ".gitignore"), "!.wolf/hooks/\n");
       checkRootGitIgnore(dir);
-      expect(logSpy).toHaveBeenCalledWith(
+      expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining(".wolf/-prefixed path rule")
       );
     } finally {
-      logSpy.mockRestore();
+      warnSpy.mockRestore();
       rmSync(dir, { recursive: true, force: true });
     }
   });

@@ -177,11 +177,11 @@ export function checkRootGitIgnore(projectRoot: string): void {
   try {
     const content = fs.readFileSync(gitignorePath, "utf-8");
     if (content.includes(".wolf/")) {
-      console.log("");
-      console.log("  ℹ Your .gitignore contains '.wolf/' which blocks all wolf files.");
-      console.log("    To use the mixed commit strategy (recommended for teams), remove");
-      console.log("    the '.wolf/' line — the new .wolf/.gitignore handles per-file");
-      console.log("    exclusions.");
+      console.warn("");
+      console.warn("  ℹ Your .gitignore contains '.wolf/' which blocks all wolf files.");
+      console.warn("    To use the mixed commit strategy (recommended for teams), remove");
+      console.warn("    the '.wolf/' line — the new .wolf/.gitignore handles per-file");
+      console.warn("    exclusions.");
     }
     // D-09-09: also warn when any .wolf/-prefixed path override exists (e.g.
     // `.wolf/hooks/` or `.wolf/anatomy.md`). These are distinct from the blanket
@@ -200,11 +200,11 @@ export function checkRootGitIgnore(projectRoot: string): void {
         return /^!?(?:\/?\.wolf)(?:\/.*)?$|^!?\*\*\/\.wolf(?:\/|$)/.test(trimmed);
       });
     if (hasPrefixedOverride) {
-      console.log("");
-      console.log("  ℹ Your root .gitignore contains a .wolf/-prefixed path rule.");
-      console.log("    Root rules silently override .wolf/.gitignore (git precedence).");
-      console.log("    Remove any .wolf/ path rules from your root .gitignore —");
-      console.log("    .wolf/.gitignore is the single source of truth for .wolf/ tracking.");
+      console.warn("");
+      console.warn("  ℹ Your root .gitignore contains a .wolf/-prefixed path rule.");
+      console.warn("    Root rules silently override .wolf/.gitignore (git precedence).");
+      console.warn("    Remove any .wolf/ path rules from your root .gitignore —");
+      console.warn("    .wolf/.gitignore is the single source of truth for .wolf/ tracking.");
     }
   } catch {
     // No .gitignore or can't read — not an error
