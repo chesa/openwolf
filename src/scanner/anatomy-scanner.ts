@@ -12,10 +12,10 @@ import {
   DEFAULT_EXCLUDE_PATTERNS,
 } from "../hooks/shared.js";
 import { CODE_EXTENSIONS, PROSE_EXTENSIONS } from "../utils/extensions.js";
-// `ignore` powers the opt-in respect_gitignore feature. It is a CLI/daemon-only
-// dependency: this module (src/scanner) must NEVER be imported by a hook
-// (src/hooks compiles standalone with no node_modules), or this require would
-// fail at runtime — the same failure class as the WOLF_ROOT MODULE_NOT_FOUND bug.
+// `ignore` powers the respect_gitignore feature (default true, opt-out). It is a
+// CLI/daemon-only dependency: this module (src/scanner) must NEVER be imported
+// by a hook (src/hooks compiles standalone with no node_modules), or this require
+// would fail at runtime — the same failure class as the WOLF_ROOT MODULE_NOT_FOUND bug.
 import ignore, { type Ignore } from "ignore";
 
 interface WolfConfig {
@@ -56,11 +56,11 @@ function estimateTokens(text: string, filePath: string): number {
   return Math.ceil(text.length / ratio);
 }
 
-// Load the project-root .gitignore into an `ignore` matcher when the opt-in
-// respect_gitignore feature is enabled. Returns null when disabled, or when no
-// .gitignore is present/readable (nothing extra to exclude). Only the root
-// .gitignore is consulted — nested .gitignore files and global excludes are out
-// of scope.
+// Load the project-root .gitignore into an `ignore` matcher when the
+// respect_gitignore feature is enabled (default true, opt-out). Returns null
+// when disabled, or when no .gitignore is present/readable (nothing extra to
+// exclude). Only the root .gitignore is consulted — nested .gitignore files and
+// global excludes are out of scope.
 function loadGitignoreMatcher(projectRoot: string, respect: boolean): Ignore | null {
   if (!respect) return null;
   try {
@@ -168,7 +168,7 @@ export function buildAnatomy(wolfDir: string, projectRoot: string): { content: s
 
   const ig = loadGitignoreMatcher(
     projectRoot,
-    config.openwolf?.anatomy?.respect_gitignore ?? false
+    config.openwolf?.anatomy?.respect_gitignore ?? true
   );
 
   const entries = new Map<string, AnatomyEntry[]>();

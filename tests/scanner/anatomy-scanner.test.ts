@@ -78,7 +78,7 @@ describe("shouldExclude", () => {
   });
 });
 
-describe("buildAnatomy — respect_gitignore (opt-in)", () => {
+describe("buildAnatomy — respect_gitignore (default true, opt-out)", () => {
   // Discriminators chosen NOT to collide with DEFAULT_EXCLUDE_PATTERNS:
   // "*.log" and a "gen/" dir are not default-excluded, so they isolate the
   // gitignore behavior from the built-in pattern excludes.
@@ -110,14 +110,39 @@ describe("buildAnatomy — respect_gitignore (opt-in)", () => {
     }
   });
 
-  it("ignores .gitignore when the option is off (default behavior)", () => {
+  it("ignores .gitignore when the option is explicitly disabled", () => {
     const { root, wolf } = setup(false);
     try {
       const { content } = buildAnatomy(wolf, root);
       expect(content).toContain("keep.ts");
-      // not excluded — feature off, and neither matches a default pattern
+      // not excluded — feature explicitly disabled, and neither matches a default pattern
       expect(content).toContain("secret.log");
       expect(content).toContain("out.js");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("honors .gitignore by default when the option is absent", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "ow-gi-default-"));
+    const wolf = path.join(root, ".wolf");
+    try {
+      mkdirSync(wolf, { recursive: true });
+      writeFileSync(path.join(root, "keep.ts"), "export const a = 1;\n");
+      writeFileSync(path.join(root, "secret.log"), "noise\n");
+      mkdirSync(path.join(root, "gen"), { recursive: true });
+      writeFileSync(path.join(root, "gen", "out.js"), "x\n");
+      writeFileSync(path.join(root, ".gitignore"), "*.log\ngen/\n");
+      // Config omits respect_gitignore — should default to true
+      writeFileSync(
+        path.join(wolf, "config.json"),
+        JSON.stringify({ version: 1, openwolf: { anatomy: {} } })
+      );
+
+      const { content } = buildAnatomy(wolf, root);
+      expect(content).toContain("keep.ts");
+      expect(content).not.toContain("secret.log");
+      expect(content).not.toContain("out.js");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

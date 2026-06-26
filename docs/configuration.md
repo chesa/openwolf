@@ -50,7 +50,7 @@ Controls the project file scanner.
 | `max_description_length` | `100` | Max characters for file descriptions. |
 | `max_files` | `500` | Stop scanning after this many files. |
 | `exclude_patterns` | *(see below)* | Directories and patterns to skip. |
-| `respect_gitignore` | `false` | When `true`, also skip files/dirs matched by the project-root `.gitignore` (union with `exclude_patterns`). |
+| `respect_gitignore` | `true` | When `true`, also skip files/dirs matched by the project-root `.gitignore` (union with `exclude_patterns`). Set to `false` to opt out. |
 
 **Default `exclude_patterns`:**
 

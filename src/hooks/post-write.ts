@@ -43,7 +43,7 @@ export function recordAnatomyWrite(
   // ─── R6 gate: read .wolf/config.json fresh on every call (D10-07/R6-D3 — no caching).
   // Missing, unreadable, or malformed config falls back to defaults silently (T-10-03).
   let excludePatterns: string[] = DEFAULT_EXCLUDE_PATTERNS;
-  let respectGitignore = false;
+  let respectGitignore = true;
   try {
     const rawCfg = fs.readFileSync(path.join(wolfDir, "config.json"), "utf-8");
     const cfg = JSON.parse(rawCfg) as { openwolf?: { anatomy?: { exclude_patterns?: unknown; respect_gitignore?: unknown } } };
@@ -53,7 +53,7 @@ export function recordAnatomyWrite(
       : DEFAULT_EXCLUDE_PATTERNS;
     respectGitignore = typeof cfg.openwolf?.anatomy?.respect_gitignore === "boolean"
       ? cfg.openwolf.anatomy.respect_gitignore as boolean
-      : false;
+      : true;
   } catch {
     // Any I/O or parse failure → defaults (D10-07/R6-D3)
   }
@@ -61,7 +61,7 @@ export function recordAnatomyWrite(
   // Gate 1: exclude_patterns — E6 regression (ROADMAP SC2)
   if (shouldExclude(relPathLocal, excludePatterns)) return;
 
-  // Gate 2: root .gitignore — opt-in only (D10-08/R6-D4: default false)
+  // Gate 2: root .gitignore — enabled by default, opt-out (D10-08/R6-D4)
   if (respectGitignore) {
     try {
       const gi = fs.readFileSync(path.join(projectRoot, ".gitignore"), "utf-8");

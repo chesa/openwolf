@@ -368,7 +368,8 @@ describe("autoDetectBugFix — acme prose field replay (R5)", () => {
 // were IN-PROJECT (relative path does NOT start with "../") so the R3 guard
 // could not catch them.  R6 adds two opt-in gates inside recordAnatomyWrite:
 //   Gate 1 — shouldExclude vs exclude_patterns (E6 regression — ROADMAP SC2)
-//   Gate 2 — parseAndMatchGitignore vs root .gitignore (opt-in via respect_gitignore)
+//   Gate 2 — parseAndMatchGitignore vs root .gitignore (enabled by default,
+//   opt-out via respect_gitignore)
 //
 describe("recordAnatomyWrite — in-project exclusion (R6)", () => {
   it("E6 regression: does NOT record a path under an excluded dir", () => {
@@ -458,19 +459,19 @@ describe("recordAnatomyWrite — in-project exclusion (R6)", () => {
     }
   });
 
-  it("respect_gitignore absent (default false): gitignored path IS recorded (D10-08)", () => {
-    // Without respect_gitignore:true in config, the root .gitignore is NOT consulted.
+  it("respect_gitignore false (explicit opt-out): gitignored path IS recorded (D10-08)", () => {
+    // With respect_gitignore explicitly set to false, the root .gitignore is NOT consulted.
     // The same path-name that was blocked above MUST be recorded here — proving
-    // the gate is strictly opt-in (R6-D4/D10-08).
-    const projectRoot = mkdtempSync(path.join(tmpdir(), "ow-r6-gi-default-"));
+    // the gate is opt-out (R6-D4/D10-08).
+    const projectRoot = mkdtempSync(path.join(tmpdir(), "ow-r6-gi-optout-"));
     try {
       const wolfDir = path.join(projectRoot, ".wolf");
       mkdirSync(wolfDir, { recursive: true });
 
-      // Config with NO respect_gitignore key — defaults to false
+      // Config with respect_gitignore explicitly disabled
       writeFileSync(
         path.join(wolfDir, "config.json"),
-        JSON.stringify({ openwolf: { anatomy: {} } }),
+        JSON.stringify({ openwolf: { anatomy: { respect_gitignore: false } } }),
         "utf-8",
       );
 
@@ -491,6 +492,45 @@ describe("recordAnatomyWrite — in-project exclusion (R6)", () => {
       expect(existsSync(path.join(wolfDir, "anatomy.md"))).toBe(true);
       const anatomy = readFileSync(path.join(wolfDir, "anatomy.md"), "utf-8");
       expect(anatomy).toContain("x.ts");
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("respect_gitignore absent (default true): gitignored path NOT recorded", () => {
+    // Without respect_gitignore in config, the default is true — root .gitignore
+    // is consulted and gitignored paths are excluded.
+    const projectRoot = mkdtempSync(path.join(tmpdir(), "ow-r6-gi-default-"));
+    try {
+      const wolfDir = path.join(projectRoot, ".wolf");
+      mkdirSync(wolfDir, { recursive: true });
+
+      // Config with NO respect_gitignore key — defaults to true
+      writeFileSync(
+        path.join(wolfDir, "config.json"),
+        JSON.stringify({ openwolf: { anatomy: {} } }),
+        "utf-8",
+      );
+
+      // Root .gitignore lists scratch/
+      writeFileSync(
+        path.join(projectRoot, ".gitignore"),
+        "scratch/\n",
+        "utf-8",
+      );
+
+      const scratchFile = path.join(projectRoot, "scratch", "x.ts");
+      mkdirSync(path.dirname(scratchFile), { recursive: true });
+      writeFileSync(scratchFile, "export const x = 1;\n", "utf-8");
+
+      recordAnatomyWrite(wolfDir, scratchFile, projectRoot, "");
+
+      // Gate 2 is on by default — gitignored path must not be recorded
+      if (existsSync(path.join(wolfDir, "anatomy.md"))) {
+        const anatomy = readFileSync(path.join(wolfDir, "anatomy.md"), "utf-8");
+        expect(anatomy).not.toContain("x.ts");
+        expect(anatomy).not.toContain("scratch/");
+      }
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });
     }

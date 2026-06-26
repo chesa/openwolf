@@ -51,7 +51,8 @@ export function writeRegistry(registry: Registry): void {
  */
 export function registerProject(projectRoot: string, name: string, version: string): void {
   const registry = readRegistry();
-  const normalized = normalizePath(projectRoot);
+  const canonicalRoot = fs.realpathSync(projectRoot);
+  const normalized = normalizePath(canonicalRoot);
   const now = new Date().toISOString();
 
   const existing = registry.projects.find(p => normalizePath(p.root) === normalized);
@@ -61,7 +62,7 @@ export function registerProject(projectRoot: string, name: string, version: stri
     existing.version = version;
   } else {
     registry.projects.push({
-      root: projectRoot,
+      root: canonicalRoot,
       name,
       registered_at: now,
       last_updated: now,
@@ -77,7 +78,8 @@ export function registerProject(projectRoot: string, name: string, version: stri
  */
 export function unregisterProject(projectRoot: string): void {
   const registry = readRegistry();
-  const normalized = normalizePath(projectRoot);
+  const canonicalRoot = fs.realpathSync(projectRoot);
+  const normalized = normalizePath(canonicalRoot);
   registry.projects = registry.projects.filter(p => normalizePath(p.root) !== normalized);
   writeRegistry(registry);
 }

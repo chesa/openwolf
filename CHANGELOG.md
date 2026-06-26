@@ -7,6 +7,28 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.3.1-beta] — Canonicalize project roots before baking into settings
+
+### Fixed
+
+- **Symlinked workspace paths no longer leak into `.claude/settings.json`.**
+  `openwolf update` now resolves the registered project root through symlinks
+  (`fs.realpathSync`) before embedding it as the absolute `WOLF_ROOT` in each
+  hook command. The registry also stores canonical roots for new and updated
+  registrations. This prevents machine-specific symlinked paths (e.g.
+  `gsd-workspaces/ACME-757/meep`) from being committed into a shared
+  `.claude/settings.json`.
+
+- **`respect_gitignore` is now opt-out (default `true`).** The scanner and
+  post-write hook now honor the project-root `.gitignore` by default. Set
+  `.wolf/config.json → openwolf.anatomy.respect_gitignore` to `false` to
+  disable.
+
+- **`findProjectRoot` returns canonical real paths.** The project-root scanner
+  now resolves the discovered root through symlinks, so `openwolf init` and
+  `openwolf update` consistently register the canonical repo path even when
+  invoked from a symlinked workspace directory.
+
 ## [1.3.0-beta] — Framework-blind resume protocol
 
 ### Added

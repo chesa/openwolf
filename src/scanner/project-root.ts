@@ -26,12 +26,12 @@ export function findProjectRoot(from?: string): string {
   while (depth < 10) {
     for (const marker of MARKERS) {
       if (fs.existsSync(path.join(dir, marker))) {
-        return dir;
+        return fs.realpathSync(dir);
       }
     }
     // Fallback: .wolf/ directory
     if (fs.existsSync(path.join(dir, ".wolf"))) {
-      return dir;
+      return fs.realpathSync(dir);
     }
     const parent = path.dirname(dir);
     if (parent === dir || parent === root) break;
@@ -39,6 +39,6 @@ export function findProjectRoot(from?: string): string {
     depth++;
   }
 
-  // Default to cwd
-  return path.resolve(from ?? process.cwd());
+  // Default to cwd, resolved through any symlinks.
+  return fs.realpathSync(path.resolve(from ?? process.cwd()));
 }

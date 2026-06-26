@@ -231,7 +231,12 @@ async function updateProject(
     const claudeDir = path.join(root, ".claude");
     ensureDir(claudeDir);
     const settingsPath = path.join(claudeDir, "settings.json");
-    const hookSettings = makeHookSettings(root);
+    // Resolve the registered root through symlinks before baking it into the
+    // generated hook command. Using the canonical path prevents machine-specific
+    // symlinked workspace paths (e.g. gsd-workspaces/...) from leaking into a
+    // committed settings.json shared across the team.
+    const canonicalRoot = fs.realpathSync(root);
+    const hookSettings = makeHookSettings(canonicalRoot);
     if (fs.existsSync(settingsPath)) {
       const existing = readJSON<Record<string, unknown>>(settingsPath, {});
       const merged = replaceOpenWolfHooks(existing, hookSettings);
