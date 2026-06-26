@@ -209,9 +209,12 @@ export async function statusCommand(): Promise<void> {
   );
   console.log(`\nDaemon: ${cronState.engine_status}`);
   if (cronState.last_heartbeat) {
-    const elapsed = Date.now() - new Date(cronState.last_heartbeat).getTime();
-    const mins = Math.floor(elapsed / 60000);
-    console.log(`  Last heartbeat: ${mins} minutes ago`);
+    const last = new Date(cronState.last_heartbeat).getTime();
+    if (!Number.isNaN(last)) {
+      const elapsed = Date.now() - last;
+      const mins = Math.floor(elapsed / 60000);
+      console.log(`  Last heartbeat: ${mins} minutes ago`);
+    }
   }
 
   console.log("");
