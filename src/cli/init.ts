@@ -176,29 +176,38 @@ export function checkRootGitIgnore(projectRoot: string): void {
   const gitignorePath = path.join(projectRoot, ".gitignore");
   try {
     const content = fs.readFileSync(gitignorePath, "utf-8");
-    if (content.includes(".wolf/")) {
+    const lines = content.split("\n");
+
+    // D-09-09: warn on a blanket rule that ignores the entire .wolf/ directory.
+    // Match bare `.wolf`, `.wolf/`, anchored `/.wolf`, `/.wolf/`, `**/.wolf`,
+    // and `**/.wolf/` — including negated forms. Comments are skipped.
+    const isBlanketWolf = (line: string): boolean => {
+      const trimmed = line.trimStart();
+      if (trimmed.startsWith("#")) return false;
+      return /^!?\/?\.wolf\/?$|^!?\*\*\/\.wolf\/?$/.test(trimmed);
+    };
+
+    if (lines.some(isBlanketWolf)) {
       console.warn("");
-      console.warn("  ℹ Your .gitignore contains '.wolf/' which blocks all wolf files.");
+      console.warn("  ℹ Your .gitignore contains a blanket '.wolf/' rule which blocks all wolf files.");
       console.warn("    To use the mixed commit strategy (recommended for teams), remove");
       console.warn("    the '.wolf/' line — the new .wolf/.gitignore handles per-file");
       console.warn("    exclusions.");
     }
+
     // D-09-09: also warn when any .wolf/-prefixed path override exists (e.g.
     // `.wolf/hooks/` or `.wolf/anatomy.md`). These are distinct from the blanket
     // `.wolf/` rule above — they silently override the per-file .wolf/.gitignore
     // template (observed in acme_translators where `.wolf/hooks/` masked the
-    // hook-ignore rule). Scan line-by-line; skip comment lines.
-    const hasPrefixedOverride = content
-      .split("\n")
-      .some((line) => {
-        const trimmed = line.trimStart();
-        if (trimmed.startsWith("#")) return false; // skip comment lines
-        // Match any rule that targets the .wolf directory itself or a .wolf/
-        // prefixed path. This catches bare `.wolf` (no trailing slash), `.wolf/`,
-        // anchored root forms (`/.wolf`, `/.wolf/`), `**/.wolf`, and prefixed
-        // rules like `.wolf/hooks/` — including negated re-includes.
-        return /^!?(?:\/?\.wolf)(?:\/.*)?$|^!?\*\*\/\.wolf(?:\/|$)/.test(trimmed);
-      });
+    // hook-ignore rule). Scan line-by-line; skip comment lines and the blanket
+    // forms handled above so the two advisories never overlap.
+    const hasPrefixedOverride = lines.some((line) => {
+      const trimmed = line.trimStart();
+      if (trimmed.startsWith("#")) return false;
+      if (isBlanketWolf(line)) return false;
+      // Match a rule that targets a path inside .wolf/ (not the directory itself).
+      return /^!?\/?\.wolf\/.+$|^!?\*\*\/\.wolf\/.+$/.test(trimmed);
+    });
     if (hasPrefixedOverride) {
       console.warn("");
       console.warn("  ℹ Your root .gitignore contains a .wolf/-prefixed path rule.");
