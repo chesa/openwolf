@@ -16,9 +16,14 @@ interface FreshnessSidecar {
 export async function statusCommand(): Promise<void> {
   const projectRoot = findProjectRoot();
   const wtCtx = detectWorktreeContext(projectRoot);
-  const wolfDir = wtCtx.isWorktree
-    ? path.join(wtCtx.mainRepoRoot, ".wolf")
-    : path.join(projectRoot, ".wolf");
+
+  // OPENWOLF_METADATA_DIR overrides the default .wolf/ location (D-03).
+  const envDir = process.env.OPENWOLF_METADATA_DIR;
+  const wolfDir = envDir && envDir.trim().length > 0
+    ? path.resolve(envDir.trim())
+    : (wtCtx.isWorktree
+        ? path.join(wtCtx.mainRepoRoot, ".wolf")
+        : path.join(projectRoot, ".wolf"));
 
   if (!fs.existsSync(wolfDir)) {
     console.log("OpenWolf not initialized. Run: openwolf init");
@@ -31,6 +36,8 @@ export async function statusCommand(): Promise<void> {
   const sessionFileDir = wtCtx.isWorktree
     ? path.join(wolfDir, "sessions", wtCtx.worktreeId)
     : wolfDir;
+
+  // (OPENWOLF_METADATA_DIR already folded into wolfDir above.)
 
   if (wtCtx.isWorktree) {
     console.log(`  Mode: Worktree  (${wtCtx.branch || wtCtx.worktreeId})`);
