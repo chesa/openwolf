@@ -259,12 +259,13 @@ function writeClaudeRules(projectRoot: string, templatesDir: string): void {
     if (fs.existsSync(claudeMdPath)) {
       const content = fs.readFileSync(claudeMdPath, "utf-8");
       if (!content.includes("OpenWolf") && !content.includes(marker)) {
-        const frontmatterEnd = /^---\s*$/m;
+        const frontmatterEnd = /^---\s*(?:\r?\n|$)/m;
         let insertion = 0;
-        if (content.startsWith("---\n")) {
-          const m = content.slice(4).match(frontmatterEnd);
+        if (content.startsWith("---\n") || content.startsWith("---\r\n")) {
+          const afterFirstLine = content.startsWith("---\r\n") ? 5 : 4;
+          const m = content.slice(afterFirstLine).match(frontmatterEnd);
           if (m && m.index !== undefined) {
-            insertion = 4 + m.index + m[0].length;
+            insertion = afterFirstLine + m.index + m[0].length;
           }
         }
         fs.writeFileSync(
