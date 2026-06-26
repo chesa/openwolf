@@ -24,7 +24,7 @@
 
 ### Hook Exclusion
 
-- [ ] **R6**: Hook-side in-project path exclusion. Promote the scanner's pure matcher (`globToRegExp`, `matchesPattern`, `shouldExclude` — `src/scanner/anatomy-scanner.ts`) into a single shared dep-free module (`src/hooks/wolf-ignore.ts`, re-exported via `shared.ts`); add a dep-free root-`.gitignore` parser; apply both `exclude_patterns` and `.gitignore` in the post-write hook (`recordAnatomyWrite`, after the R3 `../` guard).
+- [x] **R6**: Hook-side in-project path exclusion. Promote the scanner's pure matcher (`globToRegExp`, `matchesPattern`, `shouldExclude` — `src/scanner/anatomy-scanner.ts`) into a single shared dep-free module (`src/hooks/wolf-ignore.ts`, re-exported via `shared.ts`); add a dep-free root-`.gitignore` parser; apply both `exclude_patterns` and `.gitignore` in the post-write hook (`recordAnatomyWrite`, after the R3 `../` guard).
   *Accept:* an excluded **or** gitignored in-project dir never enters `anatomy.md` via the hook; R3 out-of-project skip preserved; normal in-project files still recorded; `tsc --noEmit -p tsconfig.hooks.json` clean (C2).
   *Decided (→ D-18):* keep the scanner's `ignore` dep for the **CLI/daemon full scan**; the **hook** uses a self-contained zero-dep regex matcher. Accept the hook/scanner `.gitignore` engine split — honors C2, and the full scan stays the authoritative backstop for edge-case syntax.
 

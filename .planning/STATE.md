@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Shared-Context Tracking & Curation
 current_phase: 10
-current_phase_name: Hook-Side In-Project Exclusion
+current_phase_name: hook-side-in-project-exclusion
 status: executing
 stopped_at: Phase 12 context gathered
-last_updated: "2026-06-26T00:57:52.589Z"
+last_updated: "2026-06-26T01:06:57.293Z"
 last_activity: 2026-06-26
-last_activity_desc: Phase 09 complete, transitioned to Phase 10
+last_activity_desc: Phase 10 execution started
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
   percent: 40
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-25)
 
 **Core value:** Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and manageable to keep synced with upstream.
-**Current focus:** Phase 09 — tracking-hygiene-one-authoritative-ignore-list
+**Current focus:** Phase 10 — hook-side-in-project-exclusion
 
 ## Current Position
 
-Phase: 10 — Hook-Side In-Project Exclusion
-Plan: Not started
+Phase: 10 (hook-side-in-project-exclusion) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-06-26 — Phase 09 complete, transitioned to Phase 10
+Last activity: 2026-06-26 — Phase 10 execution started
 
 Progress: [          ] 0/5 phases (v1.2)
 
@@ -56,6 +56,7 @@ Progress: [          ] 0/5 phases (v1.2)
 | Phase 08 P02 | 157s | 1 tasks | 1 files |
 | Phase 09 P01 | 279 | 3 tasks | 3 files |
 | Phase 09 P02 | 115 | 1 tasks | 1 files |
+| Phase 10 P01 | 307 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ Recent decisions affecting current work:
 - [Phase ?]: D-09-08: document human-runnable git rm --cached migration — not CLI-automated due to blast-radius risk
 - [Phase ?]: D-09-09: consumer root .gitignore must not re-list .wolf/ paths — silently overrides per-file template (acme_translators regression vector)
 - [Phase ?]: D-09-07: clone-time hooks/ rebuild is CLI-side via openwolf init/update — hook-side self-heal cannot bootstrap hooks (chicken-and-egg)
+- [Phase ?]: D10-01: Single matcher in wolf-ignore.ts; scanner imports back (no copy drift)
+- [Phase ?]: D10-09: globToRegExp/matchesPattern private to wolf-ignore.ts; 4 public symbols via shared.ts barrel
 
 ### Build-Order Dependency Edges (honor when planning)
 
@@ -106,7 +109,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-26T00:31:19.034Z
+Last session: 2026-06-26T01:06:27.186Z
 Stopped at: Phase 12 context gathered
 Resume file: .planning/phases/12-framework-blind-curation-machinery/12-CONTEXT.md
 
