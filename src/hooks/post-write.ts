@@ -40,9 +40,14 @@ export function recordAnatomyWrite(
   let respectGitignore = false;
   try {
     const rawCfg = fs.readFileSync(path.join(wolfDir, "config.json"), "utf-8");
-    const cfg = JSON.parse(rawCfg) as { openwolf?: { anatomy?: { exclude_patterns?: string[]; respect_gitignore?: boolean } } };
-    excludePatterns = cfg.openwolf?.anatomy?.exclude_patterns ?? DEFAULT_EXCLUDE_PATTERNS;
-    respectGitignore = cfg.openwolf?.anatomy?.respect_gitignore ?? false;
+    const cfg = JSON.parse(rawCfg) as { openwolf?: { anatomy?: { exclude_patterns?: unknown; respect_gitignore?: unknown } } };
+    const rawPatterns = cfg.openwolf?.anatomy?.exclude_patterns;
+    excludePatterns = Array.isArray(rawPatterns) && rawPatterns.every((p) => typeof p === "string")
+      ? (rawPatterns as string[])
+      : DEFAULT_EXCLUDE_PATTERNS;
+    respectGitignore = typeof cfg.openwolf?.anatomy?.respect_gitignore === "boolean"
+      ? cfg.openwolf.anatomy.respect_gitignore as boolean
+      : false;
   } catch {
     // Any I/O or parse failure → defaults (D10-07/R6-D3)
   }
