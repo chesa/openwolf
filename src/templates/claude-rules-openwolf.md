@@ -3,8 +3,8 @@ description: OpenWolf protocol enforcement — active on all files
 globs: **/*
 ---
 
-- Read .wolf/STATUS.md FIRST when resuming a session — it contains current quest, next steps, decisions
-- Update .wolf/STATUS.md (✅ done / 🚀 next quest) when a quest finishes or before suggesting /clear
+- When resuming a session: check your execution layer's plan/status first (if present), then .wolf/cerebrum.md, then recent .wolf/memory.md
+- At session end: update your execution layer's plan/status file (if applicable) so the next session resumes in one read
 - Check .wolf/anatomy.md before reading any project file
 - Check .wolf/cerebrum.md Do-Not-Repeat list before generating code
 - After writing or editing files, update .wolf/anatomy.md and append to .wolf/memory.md

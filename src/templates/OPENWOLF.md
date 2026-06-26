@@ -2,26 +2,26 @@
 
 You are working in an OpenWolf-managed project. These rules apply every turn.
 
-## STATUS.md — Single Source of Truth (READ FIRST)
+## Resume Protocol — Execution Layer Boundary
 
-`.wolf/STATUS.md` is the **first file** you read when resuming a session. It contains:
-- ✅ What is concluded (current quest finished)
-- 🚀 Next quest (objective, files to create, decisions fixed/pending)
-- 📁 Active architecture (stack, tables, patterns)
-- ⚠️ External dependencies
-- 🔧 Useful commands
+OpenWolf does **not** own status, roadmap, or intent. Those belong to the
+execution layer the developer uses (a planner, a task tracker, an agent
+harness — whatever they have chosen). OpenWolf is context infrastructure,
+not a workflow manager.
 
-**At session start:** read `.wolf/STATUS.md` first. It replaces re-reading memory.md, plans, and code to reconstruct context.
+**At session start, resume in this order:**
 
-**MANDATORY — keep STATUS.md fresh:**
-1. When the user signals a quest is done ("done", "complete", "ship it", "next phase", "/clear", "wrap up"):
-   - Move just-finished items from `🚀 Next Phase` → `✅ Done`.
-   - Replace `🚀 Next Phase` with the next planned quest (objective, files, decisions).
-   - Bump "Last updated" date.
-2. After applying a migration, scaffolding a feature, or finishing a multi-file task: update STATUS.md before responding "done".
-3. Before suggesting `/clear` to the user, ensure STATUS.md reflects the current state.
+1. **Your execution layer's plan or status file** (if one is present) — read
+   it first. It tells you what was last decided, what comes next, and what
+   constraints apply. This file lives outside `.wolf/` and is managed by your
+   execution layer, not OpenWolf.
+2. **`.wolf/cerebrum.md`** — project conventions, do-not-repeat list, key
+   learnings. Required reading before generating any code.
+3. **Recent `.wolf/memory.md` entries** — last-session actions and outcomes.
+   Skim the most recent rows for continuity.
 
-**The bar is HIGH for STATUS.md.** Stale STATUS.md = wasted next session. Always treat it as the handoff document.
+These three reads replace re-reading the full codebase each session. Do them
+in order and you resume in minutes, not tokens.
 
 ## File Navigation
 
@@ -159,6 +159,6 @@ When the user asks to change, pick, migrate, or "reframe" their project's UI fra
 
 Before ending or when asked to wrap up:
 
-1. **Update `.wolf/STATUS.md`** — move concluded work to ✅, write next quest in 🚀, bump date. This is the most important step for next session efficiency.
+1. **Update your execution layer's plan or status file** (if applicable) — record what was completed and what comes next so the following session can resume in one read.
 2. Write a session summary to `.wolf/memory.md`.
 3. Review the session: did you learn anything? Did the user correct you? Did you fix a bug? If yes, update `.wolf/cerebrum.md` and/or `.wolf/buglog.ndjson`.
