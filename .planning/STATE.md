@@ -2,56 +2,54 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Shared-Context Tracking & Curation
-current_phase: 12
-status: executing
-stopped_at: Phase 12 context gathered
-last_updated: "2026-06-26T04:01:36.252Z"
+current_phase: null
+status: Milestone complete
+stopped_at: Milestone v1.2 shipped
+last_updated: "2026-06-26T04:09:04.525Z"
 last_activity: 2026-06-26
-last_activity_desc: Phase 12 complete
+last_activity_desc: Milestone v1.2 completed, archived, and tagged
 progress:
   total_phases: 5
   completed_phases: 5
   total_plans: 13
   completed_plans: 13
   percent: 100
-current_phase_name: framework-blind-curation-machinery
+current_phase_name: null
 ---
 
 # Project State: CHESA Fork Team Toolkit
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-25)
+See: `.planning/PROJECT.md` (updated 2026-06-26)
 
-**Core value:** Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, and manageable to keep synced with upstream.
-**Current focus:** Phase 12 — framework-blind-curation-machinery
+**Core value:** Make the CHESA fork of OpenWolf easy to install, safe to collaborate on, manageable to keep synced with upstream, and honest about the context it shares.
+**Current focus:** None — all planned milestones (v1.0, v1.1, v1.2) shipped.
 
 ## Current Position
 
-Phase: 12
-Plan: Not started
-Status: Executing Phase 12
-Last activity: 2026-06-26 — Phase 12 complete
-
-Progress: [          ] 0/5 phases (v1.2)
+Phase: Milestone v1.2 complete
+Plan: —
+Status: Milestone complete
+Last activity: 2026-06-26 — Milestone v1.2 completed, archived, and tagged `v1.2`
 
 ## Performance Metrics
 
-**Velocity (v1.0 reference):**
+**Velocity (cumulative):**
 
 - Total plans completed: 18
-- v1.0 phases: 5 phases, 8 plans
+- Total phases completed: 13
+- Total milestones shipped: 3
 
-**v1.1 By Phase:**
+**v1.2 By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 5. Propose-Mode Infrastructure | 1 | - | - |
-| 6. Learnings Review CLI | 1 | - | - |
-| 7. Concurrency & Integration Tests | 1 | - | - |
-| 09 | 2 | - | - |
-| 10 | 2 | - | - |
-| 12 | 4 | - | - |
+| 08. Verify Landed P0 Hygiene | 1 | - | - |
+| 09. Tracking Hygiene | 2 | - | - |
+| 10. Hook-Side In-Project Exclusion | 1 | - | - |
+| 11. Framework-Blind Resume Protocol | 3 | - | - |
+| 12. Framework-Blind Curation Machinery | 4 | - | - |
 
 *Updated after each plan completion*
 | Phase 08 P01 | 3m | 3 tasks | 3 files |
@@ -68,24 +66,24 @@ Progress: [          ] 0/5 phases (v1.2)
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
+Decisions are logged in `PROJECT.md` Key Decisions table.
+Recent decisions affecting v1.2:
 
-- D-13: Commit model = authored-vs-derived (not shared-vs-per-dev) — drives Phase 9 (R4) ignore-list correction.
-- D-14: Remove STATUS.md; OpenWolf stays framework-blind — drives Phase 11 (R11).
-- D-15: R7 split — capture via stop hook, promotion at the Git boundary — drives Phase 12 (R7a/R7b).
-- D-17: Untrack compiled `hooks/` (Q4) — Phase 9; rebuild-on-clone via self-heal / `openwolf update`.
-- D-18: R6 — keep `ignore` dep CLI/daemon-only; zero-dep matcher in the hook — Phase 10.
-- D-19: R7b — `openwolf learnings check` subcommand (not a `--check` flag) — Phase 12.
-- D-20: R9 — `status` is read-only; baseline updates only via sanctioned curation — Phase 12.
+- D-13: Commit model = authored-vs-derived (not shared-vs-per-dev)
+- D-14: Remove `STATUS.md`; OpenWolf stays framework-blind
+- D-15: R7 split — capture via stop hook, promotion at the Git boundary
+- D-17: Untrack compiled `hooks/` (Q4)
+- D-18: R6 — keep `ignore` dep CLI/daemon-only; zero-dep matcher in the hook
+- D-19: R7b — `openwolf learnings check` subcommand (not a `--check` flag)
+- D-20: R9 — `status` is read-only; baseline updates only via sanctioned curation
 - [Phase ?]: Regression tests grounded in acme field inputs serve as dual-purpose evidence+safety net for Phase 10 (R6)
 - [Phase ?]: R1 field note classified as PASS per VER-D3 — acme predates cac925a fix
 - [Phase ?]: All six P0 behaviors PASS on develop-preview — commit↔behavior map established (VER-01 deliverable complete)
-- [Phase ?]: D-09-08: document human-runnable git rm --cached migration — not CLI-automated due to blast-radius risk
-- [Phase ?]: D-09-09: consumer root .gitignore must not re-list .wolf/ paths — silently overrides per-file template (acme_translators regression vector)
-- [Phase ?]: D-09-07: clone-time hooks/ rebuild is CLI-side via openwolf init/update — hook-side self-heal cannot bootstrap hooks (chicken-and-egg)
-- [Phase ?]: D10-01: Single matcher in wolf-ignore.ts; scanner imports back (no copy drift)
-- [Phase ?]: D10-09: globToRegExp/matchesPattern private to wolf-ignore.ts; 4 public symbols via shared.ts barrel
+- [Phase ?]: D-09-08: document human-runnable `git rm --cached` migration — not CLI-automated due to blast-radius risk
+- [Phase ?]: D-09-09: consumer root `.gitignore` must not re-list `.wolf/` paths — silently overrides per-file template (acme_translators regression vector)
+- [Phase ?]: D-09-07: clone-time `hooks/` rebuild is CLI-side via `openwolf init/update`
+- [Phase ?]: D10-01: Single matcher in `wolf-ignore.ts`; scanner imports back (no copy drift)
+- [Phase ?]: D10-09: `globToRegExp`/`matchesPattern` private to `wolf-ignore.ts`; 4 public symbols via `shared.ts` barrel
 
 ### Build-Order Dependency Edges (honor when planning)
 
@@ -96,11 +94,11 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-None yet.
+None.
 
 ## Deferred Items
 
@@ -108,17 +106,18 @@ None yet.
 |----------|------|--------|-------------|
 | Dashboard | DASH-01, DASH-02 (learning panel) | Deferred to v1.2+ | v1.1 planning |
 | Curation | R10 (cerebrum provenance), R12 (pantry-owner role + runbook) | Deferred to later rollout milestone (D-16) | v1.2 planning |
+| Debug | openwolf-hook-module-missing | awaiting_human_verify — acknowledged at v1.2 close | v1.2 close |
 
 ## Release Note
 
-**v1.2 is a ≥ minor release.** R6 = new matcher API + new hook behavior; R11 = protocol change. Current version `1.3.0-beta` (CONTRIBUTING.md / CLAUDE.md: "format change or new API ≥ minor").
+**v1.2 is a ≥ minor release.** R6 = new matcher API + new hook behavior; R11 = protocol change. Milestone tagged `v1.2`; package version at `1.2.0`.
 
 ## Session Continuity
 
 Last session: 2026-06-26T03:02:15.498Z
-Stopped at: Phase 12 context gathered
-Resume file: .planning/phases/12-framework-blind-curation-machinery/12-CONTEXT.md
+Stopped at: Milestone v1.2 shipped
 
 ## Operator Next Steps
 
-- Plan the first v1.2 phase: `/gsd-plan-phase 8`
+- Start the next milestone with `/gsd-new-milestone`, or
+- Review deferred items and decide whether to schedule a v1.2+ rollout milestone.
