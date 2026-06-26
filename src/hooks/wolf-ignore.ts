@@ -58,13 +58,17 @@ function globToRegExp(glob: string): RegExp {
     for (let i = 0; i < glob.length; i++) {
         const c = glob[i];
         if (c === "*") {
-            if (glob[i + 1] === "*") {
-                if (glob[i + 2] === "/") {
+            // Collapse runs of consecutive ** so pathological patterns like
+            // `****` emit a single `.*` atom instead of adjacent `.*` quantifiers.
+            let starCount = 1;
+            while (glob[i + starCount] === "*") starCount++;
+            if (starCount >= 2) {
+                if (glob[i + starCount] === "/") {
                     re += "(?:.*/)?"; // **/ matches zero or more segments
-                    i += 2; // consume the trailing "/"
+                    i += starCount; // consume the trailing "/"
                 } else {
                     re += ".*"; // ** spans path segments
-                    i++; // consume the second "*"
+                    i += starCount - 1; // collapse the run
                 }
             } else {
                 re += "[^/]*"; // * stays within one segment
