@@ -4,11 +4,11 @@ milestone: v1.2
 milestone_name: Shared-Context Tracking & Curation
 current_phase: 12
 current_phase_name: framework-blind-curation-machinery
-status: planning
+status: executing
 stopped_at: Phase 11 complete — verification passed (12/12)
-last_updated: "2026-06-25T22:05:00.000Z"
+last_updated: "2026-06-26T03:36:55.680Z"
 last_activity: 2026-06-25
-last_activity_desc: Phase 11 complete — VERIFICATION PASSED 12/12
+last_activity_desc: Phase 11 VERIFICATION PASSED 12/12
 progress:
   total_phases: 5
   completed_phases: 4
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-25)
 
 Phase: 12 (framework-blind-curation-machinery) — NOT STARTED
 Plan: 0 of TBD
-Status: Phase 11 COMPLETE — ready to plan Phase 12
+Status: Ready to execute
 Last activity: 2026-06-25 — Phase 11 VERIFICATION PASSED 12/12
 
 Progress: [          ] 0/5 phases (v1.2)
