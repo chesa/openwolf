@@ -527,8 +527,11 @@ function detectFixPattern(oldStr: string, newStr: string, ext: string, filename:
   }
 
   // --- Missing import/require ---
-  const oldImports = new Set((oldStr.match(/(?:import|require)\s*\(?['"]([^'"]+)['"]\)?/g) || []).map(m => m));
-  const newImports = (newStr.match(/(?:import|require)\s*\(?['"]([^'"]+)['"]\)?/g) || []);
+  // Match the module string whether it follows a bare import, require(), or a
+  // named/default/namespace ES module import such as `import { foo } from "bar"`.
+  const importRe = /(?:import|require)\b[\s\S]*?['"]([^'"]+)['"]/g;
+  const oldImports = new Set((oldStr.match(importRe) || []).map(m => m));
+  const newImports = (newStr.match(importRe) || []);
   const addedImports = newImports.filter(i => !oldImports.has(i));
   if (addedImports.length > 0 && newLines.length - oldLines.length <= addedImports.length + 2) {
     const modules = addedImports.map(i => i.match(/['"]([^'"]+)['"]/)?.[1] || "").filter(Boolean);
