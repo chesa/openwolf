@@ -8,9 +8,11 @@
  * with two distinct ids (no lost entry, no duplicate id).
  */
 import { describe, it, expect } from "vitest";
+import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync, readFileSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
+import { pathToFileURL } from "node:url";
 import { appendBugEntry, newBugId, readBugEntries } from "../../src/hooks/buglog-ndjson.js";
 import { autoDetectBugFix, recordAnatomyWrite } from "../../src/hooks/post-write.js";
 import { normalizePath } from "../../src/hooks/shared.js";
@@ -72,6 +74,64 @@ describe("buglog NDJSON appends (Task 8 — autoDetectBugFix path)", () => {
       const obj2 = JSON.parse(lines[1]);
       expect(obj1.error_message).toBe("missing null check");
       expect(obj2.error_message).toBe("unhandled catch");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("two autoDetectBugFix calls append distinct NDJSON lines", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "ow-autodetect-"));
+    const file = path.join(dir, "src", "foo.ts");
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, "export const x = 1;\n");
+    try {
+      const oldStr = "function load() { return JSON.parse(read()); }";
+      const newStr =
+        "function load() { try { return JSON.parse(read()); } catch (e) { return null; } }";
+      autoDetectBugFix(dir, file, dir, oldStr, newStr);
+      autoDetectBugFix(dir, file, dir, oldStr, newStr);
+      const entries = readBugEntries(dir);
+      expect(entries).toHaveLength(2);
+      expect(entries[0].id).not.toBe(entries[1].id);
+      expect(entries[0].error_message).toContain("load");
+      expect(entries[1].error_message).toContain("load");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("two concurrent autoDetectBugFix calls append distinct NDJSON lines", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "ow-concurrent-"));
+    const file = path.join(dir, "src", "foo.ts");
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, "export const x = 1;\n");
+
+    const oldStr = "function load() { return JSON.parse(read()); }";
+    const newStr =
+      "function load() { try { return JSON.parse(read()); } catch (e) { return null; } }";
+    const workerPath = path.join(dir, "worker.mjs");
+    const postWriteModule = path.resolve("dist/hooks/post-write.js");
+    writeFileSync(
+      workerPath,
+      `import { autoDetectBugFix } from ${JSON.stringify(pathToFileURL(postWriteModule).href)};\n` +
+        `autoDetectBugFix(process.argv[2], process.argv[3], process.argv[2], process.argv[4], process.argv[5]);\n`,
+      "utf-8",
+    );
+
+    const runWorker = () =>
+      new Promise<void>((resolve, reject) => {
+        const cp = spawn("node", [workerPath, dir, file, oldStr, newStr], { stdio: "ignore" });
+        cp.on("error", reject);
+        cp.on("exit", (code) =>
+          code === 0 ? resolve() : reject(new Error(`worker exited ${code}`)),
+        );
+      });
+
+    try {
+      await Promise.all([runWorker(), runWorker()]);
+      const entries = readBugEntries(dir);
+      expect(entries).toHaveLength(2);
+      expect(entries[0].id).not.toBe(entries[1].id);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
