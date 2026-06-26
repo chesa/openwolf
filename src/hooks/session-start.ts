@@ -62,6 +62,24 @@ async function main(): Promise<void> {
 `;
   appendMarkdown(memoryPath, header);
 
+  // Surface optional execution_layer hint from config.json (D11-07)
+  // C2: hooks cannot import from src/utils/ — use raw fs.readFileSync + JSON.parse
+  try {
+    const configPath = path.join(wolfDir, "config.json");
+    const configText = fs.readFileSync(configPath, "utf-8");
+    const config = JSON.parse(configText) as {
+      openwolf?: { execution_layer?: string | null };
+    };
+    const hint = config.openwolf?.execution_layer ?? null;
+    if (hint) {
+      process.stderr.write(
+        `OpenWolf: execution layer = ${hint} — read its plan/status first.\n`
+      );
+    }
+  } catch {
+    // config.json missing or unparseable — silently skip (hint is optional)
+  }
+
   // Check cerebrum freshness — remind Claude to learn
   try {
     const cerebrumPath = path.join(wolfDir, "cerebrum.md");
