@@ -139,11 +139,12 @@ that a file git never tracked is a harmless no-op (git will print
 `pathspec '...' did not match any files` — you can safely ignore that).
 
 ```bash
-# Untrack derived build output and legacy artifacts from git's index.
-# These files are now ignored by .wolf/.gitignore and should not be committed.
-git rm -r --cached --ignore-unmatch .wolf/hooks
-git rm --cached --ignore-unmatch .wolf/buglog.json
-git rm --cached --ignore-unmatch .wolf/suggestions.json
+# Derived build output and local state
+git rm -r --cached --ignore-unmatch .wolf/hooks \
+  .wolf/designqc-captures .wolf/backups .wolf/sessions
+git rm --cached --ignore-unmatch .wolf/buglog.json .wolf/anatomy.md \
+  .wolf/memory.md .wolf/token-ledger.json .wolf/cron-state.json \
+  .wolf/designqc-report.json .wolf/suggestions.json
 
 # Commit the index update so teammates get the clean state on next pull.
 git commit -m "chore: untrack .wolf derived files (hooks/, buglog.json, suggestions.json)"
