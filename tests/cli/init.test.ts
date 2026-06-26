@@ -578,4 +578,19 @@ describe("checkRootGitIgnore advisory (D-09-09)", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("warns on anchored root /.wolf/hooks/ rule (D-09-09)", () => {
+    const dir = realpathSync(mkdtempSync(path.join(tmpdir(), "wolf-advisory-")));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      writeFileSync(path.join(dir, ".gitignore"), " /.wolf/hooks/\n");
+      checkRootGitIgnore(dir);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(".wolf/-prefixed path rule")
+      );
+    } finally {
+      warnSpy.mockRestore();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
