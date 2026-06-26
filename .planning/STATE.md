@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Shared-Context Tracking & Curation
-current_phase: 09
-current_phase_name: tracking-hygiene-one-authoritative-ignore-list
+current_phase: 10
+current_phase_name: Hook-Side In-Project Exclusion
 status: verifying
-stopped_at: Phase 8 verification complete
-last_updated: "2026-06-26T00:31:19.041Z"
+stopped_at: Phase 12 context gathered
+last_updated: "2026-06-26T00:44:26.179Z"
 last_activity: 2026-06-26
-last_activity_desc: Phase 09 execution started
+last_activity_desc: Phase 09 complete, transitioned to Phase 10
 progress:
   total_phases: 5
   completed_phases: 2
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-06-25)
 
 ## Current Position
 
-Phase: 09 (tracking-hygiene-one-authoritative-ignore-list) — EXECUTING
-Plan: 2 of 2
+Phase: 10 — Hook-Side In-Project Exclusion
+Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-06-26 — Phase 09 execution started
+Last activity: 2026-06-26 — Phase 09 complete, transitioned to Phase 10
 
 Progress: [          ] 0/5 phases (v1.2)
 
@@ -39,7 +39,7 @@ Progress: [          ] 0/5 phases (v1.2)
 
 **Velocity (v1.0 reference):**
 
-- Total plans completed: 10
+- Total plans completed: 12
 - v1.0 phases: 5 phases, 8 plans
 
 **v1.1 By Phase:**
@@ -49,6 +49,7 @@ Progress: [          ] 0/5 phases (v1.2)
 | 5. Propose-Mode Infrastructure | 1 | - | - |
 | 6. Learnings Review CLI | 1 | - | - |
 | 7. Concurrency & Integration Tests | 1 | - | - |
+| 09 | 2 | - | - |
 
 *Updated after each plan completion*
 | Phase 08 P01 | 3m | 3 tasks | 3 files |

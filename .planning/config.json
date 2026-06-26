@@ -4,7 +4,8 @@
   "workflow": {
     "_auto_chain_active": true,
     "nyquist_validation": true,
-    "ai_integration_phase": true
+    "ai_integration_phase": true,
+    "tdd_mode": true
   },
   "auto_mode": true
 }

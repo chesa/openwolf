@@ -109,6 +109,13 @@ None.
 - [x] Task 1 commit `8a509cc` exists
 - [x] All acceptance criteria verified via grep
 
+## Self-Check: PASSED
+
+- [x] `docs/updating.md` exists and contains `## Tracking hygiene migration (v1.2)` section
+- [x] Commit `8a509cc` exists in git history
+- [x] Final metadata commit `456f36d` exists
+- [x] All acceptance criteria verified via grep
+
 ---
 *Phase: 09-tracking-hygiene-one-authoritative-ignore-list*
 *Completed: 2026-06-26*
