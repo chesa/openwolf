@@ -101,9 +101,11 @@ export function findMissingTemplates(templatesDir: string): string[] {
     // template as missing rather than silently producing a broken .wolf/.
     present = new Set();
   }
-  const required = [...ALWAYS_OVERWRITE, ...CREATE_IF_MISSING].filter(
-    (f) => !RUNTIME_CREATED_NO_TEMPLATE.has(f),
-  );
+  const required = [
+    ...ALWAYS_OVERWRITE,
+    ...CREATE_IF_MISSING,
+    "claude-rules-openwolf.md",
+  ].filter((f) => !RUNTIME_CREATED_NO_TEMPLATE.has(f));
   return required.filter((f) => !present.has(f));
 }
 
@@ -236,6 +238,8 @@ function writeClaudeRules(projectRoot: string, templatesDir: string): void {
   const srcPath = path.join(templatesDir, "claude-rules-openwolf.md");
   if (fs.existsSync(srcPath)) {
     safeCopyFile(srcPath, destPath);
+  } else {
+    console.warn(`  ⚠ Template not found: ${srcPath}. Claude rules were not installed.`);
   }
 
   // Insert @.wolf/OPENWOLF.md reference at the top of CLAUDE.md if not present

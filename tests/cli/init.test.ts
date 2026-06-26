@@ -295,6 +295,7 @@ describe("findMissingTemplates", () => {
     "OPENWOLF.md", "reframe-frameworks.md", "wolf-gitignore",
     "config.json", "identity.md", "cerebrum.md", "memory.md", "anatomy.md",
     "token-ledger.json", "buglog.ndjson", "cron-manifest.json", "cron-state.json",
+    "claude-rules-openwolf.md",
   ];
 
   it("reports required templates absent from the directory", () => {
