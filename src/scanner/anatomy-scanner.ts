@@ -7,6 +7,8 @@ import {
   parseAnatomy,
   type AnatomyEntry,
   withFileLock,
+  shouldExclude,
+  DEFAULT_EXCLUDE_PATTERNS,
 } from "../hooks/shared.js";
 import { CODE_EXTENSIONS, PROSE_EXTENSIONS } from "../utils/extensions.js";
 // `ignore` powers the opt-in respect_gitignore feature. It is a CLI/daemon-only
@@ -14,10 +16,6 @@ import { CODE_EXTENSIONS, PROSE_EXTENSIONS } from "../utils/extensions.js";
 // (src/hooks compiles standalone with no node_modules), or this require would
 // fail at runtime — the same failure class as the WOLF_ROOT MODULE_NOT_FOUND bug.
 import ignore, { type Ignore } from "ignore";
-import {
-  shouldExclude,
-  DEFAULT_EXCLUDE_PATTERNS,
-} from "../hooks/wolf-ignore.js";
 
 interface WolfConfig {
   version?: number;
