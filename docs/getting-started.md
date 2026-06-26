@@ -26,7 +26,7 @@ Install directly from the GitHub repository:
 npm install -g --install-links "chesa/openwolf#develop"
 
 # Pinned to a stable release tag (recommended for team environments)
-npm install -g --install-links "chesa/openwolf#release/1.2.0-beta"
+npm install -g --install-links "chesa/openwolf#release/1.3.2-beta"
 ```
 
 npm accepts a branch name, tag name, or commit SHA after the `#`. Use `#develop`
@@ -47,7 +47,7 @@ source on first install (requires `git` and Node 20+).
    openwolf --version
    ```
 
-   You should see the installed version printed (e.g., `1.2.0-beta`).
+   You should see the installed version printed (e.g., `1.3.2-beta`).
 
 3. (Optional) If you plan to use **Design QC**, install the optional dependency:
 
@@ -115,9 +115,10 @@ That is it. Use `claude` as you normally would. OpenWolf runs invisibly through 
 By default, OpenWolf ignores all `.wolf/` files at the project level. For teams,
 a **mixed commit strategy** is recommended:
 
-- **Commit shared knowledge:** `anatomy.md`, `cerebrum.md`, `OPENWOLF.md`,
+- **Commit shared knowledge:** `cerebrum.md`, `OPENWOLF.md`,
   `config.json`, `buglog.ndjson`, `identity.md`, `hooks/`
-- **Ignore per-developer state:** `memory.md`, `token-ledger.json`, `sessions/`,
+- **Ignore derived/regenerated files:** `anatomy.md` (regenerated locally on each
+  scan — do not commit), `memory.md`, `token-ledger.json`, `sessions/`,
   `backups/`, lock files
 
 Starting with `openwolf init` (v1.1.0-beta+), a `.wolf/.gitignore` is created

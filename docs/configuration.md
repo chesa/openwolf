@@ -10,7 +10,8 @@ OpenWolf is configured through a JSON file in the project workspace and a small 
 |----------|----------|---------|-------------|
 | `OPENWOLF_METADATA_DIR` | Optional | `<project>/.wolf/` | Absolute path to an alternate metadata storage location. If set, OpenWolf stores config, state, and knowledge files at this path instead of the project's `.wolf/` directory. Useful for shared network drives, dedicated volumes, or multi-project setups. Must be an absolute path — relative paths are rejected with a warning and fall back to the default. Hook scripts remain at `<project>/.wolf/hooks/`. |
 | `OPENWOLF_PROJECT_ROOT` | Optional | Auto-detected | Absolute path to the project root. The CLI sets this when spawning the daemon and dashboard so they resolve the correct `.wolf/` directory regardless of working directory. |
-| `CLAUDE_PROJECT_DIR` | Optional | `process.cwd()` | Set by Claude Code to the active project directory. Hooks read this to locate the `.wolf/` folder and write session data. |
+| `WOLF_ROOT` | Optional | — | Set by the shell wrapper in `.claude/settings.json` at runtime by resolving the git repo root from `CLAUDE_PROJECT_DIR`. Hooks prefer this over `CLAUDE_PROJECT_DIR` when both are present, ensuring the correct project root is used even in worktree or subdirectory invocations. |
+| `CLAUDE_PROJECT_DIR` | Optional | `process.cwd()` | Set by Claude Code to the active project directory. Hooks fall back to this when `WOLF_ROOT` is not set (e.g., when hooks are invoked outside of the OpenWolf shell wrapper). |
 | `PROGRAMFILES` | Optional | `C:\Program Files` | Windows only. Used by DesignQC to discover Chrome or Edge installations. |
 | `PROGRAMFILES(X86)` | Optional | `C:\Program Files (x86)` | Windows only. Used by DesignQC to discover 32-bit browser installations. |
 | `LOCALAPPDATA` | Optional | — | Windows only. Used by DesignQC to discover user-local Chrome installations. |
@@ -63,10 +64,10 @@ Controls the project file scanner.
 ]
 ```
 
-**`respect_gitignore`.** With `respect_gitignore: true`, the scanner also loads
-the project-root `.gitignore` and skips anything it matches, in addition to
-`exclude_patterns`. Off by default. Only the root `.gitignore` is read — nested
-`.gitignore` files and global / `core.excludesFile` patterns are not consulted.
+**`respect_gitignore`.** With `respect_gitignore: true` (the default), the scanner
+also loads the project-root `.gitignore` and skips anything it matches, in addition to
+`exclude_patterns`. Set to `false` to opt out. Only the root `.gitignore` is read —
+nested `.gitignore` files and global / `core.excludesFile` patterns are not consulted.
 
 **Pattern matching.** Each entry is matched against every project-relative
 path (forward-slash separated, anchored at the project root):

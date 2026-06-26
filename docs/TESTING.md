@@ -168,10 +168,13 @@ The only CI workflow is `.github/workflows/docs.yml`, which builds and deploys t
 | `tests/cli/hook-settings.test.ts` | Hook settings logic | Unit |
 | `tests/cli/init.test.ts` | CLI init command | Unit |
 | `tests/cli/learnings.test.ts` | Learnings command (unit) | Unit |
+| `tests/cli/learnings-accept.test.ts` | Learnings accept / baseline writers | Unit |
+| `tests/cli/learnings-check.test.ts` | Learnings check command exit codes | Unit |
 | `tests/cli/learnings-integration.test.ts` | Learnings command (integration) | Integration |
 | `tests/cli/merge-accumulation.test.ts` | In-process merge accumulation | Unit |
 | `tests/cli/migrate-buglog.test.ts` | Buglog migration CLI command | Unit |
 | `tests/cli/status.test.ts` | CLI status command | Unit |
+| `tests/cli/update.test.ts` | `openwolf update` — portable hook generation & symlink resolution | Unit |
 | `tests/e2e-concurrency.test.ts` | Cross-process concurrency | E2E |
 | `tests/hooks/buglog-ndjson.test.ts` | NDJSON buglog helpers | Unit |
 | `tests/hooks/post-write.test.ts` | Post-write hook | Unit |

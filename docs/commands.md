@@ -225,28 +225,33 @@ openwolf cron retry cerebrum-reflection
 
 ## `openwolf update`
 
-Update all registered OpenWolf projects to the latest templates.
+Update a registered OpenWolf project to the latest templates.
 
 ```bash
-openwolf update
+openwolf update [name]
 ```
+
+`name` is a partial name match against registered project names. Running bare `openwolf update` (with no `name` and no `--all`) shows usage and exits with code 1.
 
 **Options:**
 
 | Flag | Description |
 |------|-------------|
 | `--dry-run` | Show what would be updated without making changes |
-| `--project <name>` | Update only a specific project (partial name match) |
+| `--all` | Update all registered OpenWolf projects |
 | `--list` | List all registered projects and their paths |
 
 Before making any changes, `update` creates a timestamped backup of the existing `.wolf/` directory. You can restore from these backups with [`openwolf restore`](#openwolf-restore).
 
 ```bash
-# Preview changes without writing anything
-openwolf update --dry-run
+# Update a single project by partial name match
+openwolf update my-app
 
-# Update a single project
-openwolf update --project my-app
+# Update all registered projects
+openwolf update --all
+
+# Preview changes without writing anything
+openwolf update my-app --dry-run
 
 # See all registered projects
 openwolf update --list
@@ -437,6 +442,41 @@ Merge 2 proposals? [y/N] y
 Merged 2 proposal(s) into cerebrum.md/anatomy.md
 ```
 
+### `openwolf learnings check`
+
+Exit non-zero if any staged learnings are awaiting review. Useful in CI or pre-commit hooks to remind contributors to merge proposals before shipping.
+
+```bash
+openwolf learnings check
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Emit structured JSON to stdout instead of human-readable output |
+| `--quiet` | Suppress all output; return exit code only |
+
+Exit code `0` means no pending proposals. Exit code `1` means at least one proposal is staged and unmerged.
+
+```bash
+# Fail CI if unreviewed learnings exist
+openwolf learnings check || echo "Run 'openwolf learnings merge' before merging your PR"
+
+# Machine-readable output
+openwolf learnings check --json
+```
+
+### `openwolf learnings accept`
+
+Re-baseline `cerebrum.md` freshness after a hand-edit that was applied outside the normal `merge` workflow. Clears any "stale" indicators without creating a new merged-learnings entry.
+
+```bash
+openwolf learnings accept
+```
+
+Use this when you edit `cerebrum.md` directly and want OpenWolf to treat the current state as the accepted baseline.
+
 ---
 
 ## `openwolf --version`
@@ -448,5 +488,5 @@ openwolf --version
 ```
 
 ```
-1.2.0-beta
+1.3.2-beta
 ```

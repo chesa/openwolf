@@ -43,8 +43,8 @@ Verify the installation:
 openwolf --version   # → 1.3.x-beta   (the -beta suffix marks the fork build)
 ```
 
-**Upgrade** — same command; afterward run `openwolf update` in each initialized
-project to sync hooks:
+**Upgrade** — same command; afterward run `openwolf update <name>` in each initialized
+project to sync hooks (use `openwolf update --all` to sync every registered project at once):
 
 ```bash
 npm install -g --install-links "chesa/openwolf#develop"
@@ -197,7 +197,13 @@ openwolf cron run <id>     Trigger a task manually
 openwolf cron retry <id>   Retry a dead-lettered task
 openwolf designqc          Capture screenshots for design evaluation
 openwolf bug search <term> Search bug memory for known fixes
-openwolf update            Update all registered projects
+openwolf update <name>     Update a specific project (partial name match)
+openwolf update --all      Update all registered projects
+openwolf update --list     List all registered projects
+openwolf learnings list    Show staged learnings awaiting review
+openwolf learnings merge   Merge staged learnings into cerebrum.md
+openwolf learnings check   Exit non-zero if staged learnings await review
+openwolf learnings accept  Accept and apply staged learnings
 openwolf restore [backup]  Restore .wolf/ from a backup
 ```
 

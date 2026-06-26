@@ -56,10 +56,10 @@ graph TD
 
 A typical OpenWolf interaction flows as follows:
 
-1. **Initialization** (`openwolf init`): The CLI copies templates from `src/templates/` into the project's `.wolf/` directory, copies pre-compiled hooks, writes Claude Code settings and rules, and performs an initial filesystem scan.
+1. **Initialization** (`openwolf init`): The CLI copies templates from `src/templates/` into the project's `.wolf/` directory, copies pre-compiled hooks, writes Claude Code settings and rules, and performs an initial filesystem scan. Hook commands written to `.claude/settings.json` resolve `WOLF_ROOT` at runtime (from `CLAUDE_PROJECT_DIR`, then `process.cwd()`, with a `git rev-parse --git-common-dir` step to handle worktrees) rather than baking a machine-specific absolute path — making settings.json portable across teammates and clone locations (`src/cli/hook-settings.ts`).
 2. **Scanning**: `src/scanner/anatomy-scanner.ts` walks the project tree, skipping excluded paths and binary files. For each file, it extracts a description and estimates token count, writing the results to `.wolf/anatomy.md`.
 3. **Session Start**: When Claude Code starts a session, the `session-start` hook creates a fresh `_session.json`, detects worktree mode, cleans up stale `.tmp` files, appends a session header to `memory.md`, and checks cerebrum and buglog freshness.
-4. **Pre-Read**: Before Claude Code reads a file, the `pre-read` hook checks `anatomy.md`. If the file is already described there, the hook prints the description to stderr as a hint to Claude Code. If the file was already read earlier in the same session, it warns about the repeated read, prompting the developer to reuse existing knowledge.
+4. **Pre-Read**: Before Claude Code reads a file, the `pre-read` hook checks `anatomy.md`. If the file is already described there, the hook prints the description to stderr as a hint to Claude Code. If the file was already read earlier in the same session, it warns about the repeated read, prompting the developer to reuse existing knowledge. Hook scripts resolve the project root from `process.env.WOLF_ROOT` (set by the shell wrapper in `.claude/settings.json`), falling back to `CLAUDE_PROJECT_DIR` then `process.cwd()`.
 5. **Pre-Write**: Before Claude Code writes a file, the `pre-write` hook checks the `cerebrum.md` Do-Not-Repeat section for patterns that should be avoided. It also searches `buglog.ndjson` for similar past bugs when the edit looks like a fix.
 6. **Post-Read**: After Claude Code reads a file, the `post-read` hook updates the token estimate in the session file for that file.
 7. **Post-Write**: After Claude Code writes a file, the `post-write` hook updates `anatomy.md` with a fresh description and token count, appends a structured entry to `memory.md`, tracks edit counts in the session file, and auto-detects bug-fix patterns to log to `buglog.ndjson`.
@@ -73,12 +73,15 @@ A typical OpenWolf interaction flows as follows:
 | `createProgram` | Function | Builds the Commander CLI with all subcommands | `src/cli/index.ts` |
 | `CronEngine` | Class | Schedules and executes cron tasks, handles retries and dead-letter queue | `src/daemon/cron-engine.ts` |
 | `WolfClient` | Class | Dashboard WebSocket client for real-time updates | `src/dashboard/app/lib/wolf-client.ts` |
-| `scanProject` | Function | Walks the project tree and writes `anatomy.md` | `src/scanner/anatomy-scanner.ts` |
+| `scanProject` | Function | Walks the project tree and writes `anatomy.md`; `respect_gitignore` defaults to `true` (opt-out via `openwolf.anatomy.respect_gitignore` in wolf.json) | `src/scanner/anatomy-scanner.ts` |
 | `buildAnatomy` | Function | Builds anatomy content and file count without writing to disk | `src/scanner/anatomy-scanner.ts` |
 | `finalizeSession` | Function | Finalizes session state, performs checks, and writes totals to `token-ledger.json` | `src/hooks/stop.ts` |
 | `logBug` | Function | Appends a structured bug entry to `.wolf/buglog.ndjson` | `src/buglog/bug-tracker.ts` |
 | `safeCompareToken` | Function | Constant-time token comparison for daemon auth | `src/daemon/wolf-daemon.ts` |
 | `ensureWolfDir` | Function | Verifies the `.wolf/` directory exists; exits silently if missing | `src/hooks/shared.ts` |
+| `findProjectRoot` | Function | Walks ancestor directories to locate the project root; resolves symlinks via `fs.realpathSync()` | `src/scanner/project-root.ts` |
+| `registerProject` | Function | Adds or updates a project in `~/.openwolf/registry.json`; canonicalizes the root path via `fs.realpathSync()` before storing | `src/cli/registry.ts` |
+| `makeHookSettings` | Function | Generates portable Claude Code hook configuration with runtime-resolved `WOLF_ROOT`; never bakes a machine-specific path | `src/cli/hook-settings.ts` |
 | `readJSON` / `writeJSON` | Functions | Safe filesystem helpers with defaults | `src/utils/fs-safe.ts` |
 | `Logger` | Class | File-based logger with level filtering | `src/utils/logger.ts` |
 
@@ -108,7 +111,7 @@ openwolf/
 ```
 
 - **`bin/`**: Contains the single entry point script that imports the compiled CLI from `dist/`. It includes a Node.js version gate (requires Node 20+).
-- **`src/cli/`**: Each subcommand lives in its own file. Commands are registered in `index.ts` and loaded on demand to keep startup fast.
+- **`src/cli/`**: Each subcommand lives in its own file. Commands are registered in `index.ts` and loaded on demand to keep startup fast. The `update` subcommand requires either a `<name>` argument (partial project name match) or the `--all` flag — it no longer defaults to updating all registered projects.
 - **`src/daemon/`**: The daemon is a long-running Express server. It serves the dashboard static files, exposes authenticated REST and WebSocket APIs, and embeds the cron engine and file watcher.
 - **`src/dashboard/app/`**: A modern React SPA built with Vite. It uses a custom hook (`useWolfData`) for API communication and TailwindCSS for styling.
 - **`src/hooks/`**: The lifecycle hook scripts are standalone Node scripts executed by Claude Code; they are not imported by the CLI or daemon at runtime. `shared.ts` and the wolf-* modules are imported by the scanner during the core build. `shared.ts` is a thin barrel that re-exports utilities from eight internal `wolf-*` modules (`wolf-paths`, `wolf-files`, `wolf-json`, `wolf-lock`, `wolf-anatomy`, `wolf-describe`, `wolf-misc`, `wolf-ignore`) plus `buglog-ndjson`.
