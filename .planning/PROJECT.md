@@ -100,6 +100,8 @@ All planned milestones shipped. The CHESA fork team toolkit is complete through 
 | D-18: R6 — keep `ignore` dep CLI/daemon-only; zero-dep matcher in the hook | Honors C2 (no deps in hook build); full scan stays the authoritative backstop; accept the hook/scanner `.gitignore` engine split | ✓ Good |
 | D-19: R7b — `openwolf learnings check` subcommand (not a `--check` flag) | Keeps the top-level CLI namespace clean; scales with future `learnings list/prune` | ✓ Good |
 | D-20: R9 — `status` is read-only; baseline updates only via sanctioned curation | A read command must not mutate state; baseline = "last *sanctioned* content" (merge + explicit `learnings accept` + bootstrap-on-missing), not "last content a status run observed" | ✓ Good |
+| D-21: Reconciliation = baseline reset onto upstream v2.5.0 (not rebase or cherry-pick) | 386 ahead / 86 behind merge-base `f68be48` with 45 mutually-touched files, and upstream v2.x is a near-rewrite (hooks 6 → ~15+, new `src/agents/` + `src/anatomy/`, 7 new CLI subcommands); replaying 184 code commits costs more than rebuilding the 5 fork-unique pillars on a clean base. Retires `wolf-lock`/`wolf-ignore` as upstream duplicates pending Q-01 | ◻ Pending |
+| D-22: D-14 reaffirmed — "framework-blind" scopes to the execution layer, not the host agent | D-14's own rationale binds status to the execution layer (planner / task tracker / agent), and D-15 already depends on the universal Claude Code `stop` primitive while claiming framework-blindness — so host-agent integration is sanctioned and execution-layer coupling is not. Makes upstream's `memory-migrate.ts` (cerebrum → native memory) an adoption candidate rather than a violation. Only `STATUS.md` is a genuine D-14 tripwire, already guarded by `tests/cli/init.test.ts:462` | ✓ Good |
 
 ## Evolution
 
@@ -131,4 +133,4 @@ This document evolves at phase transitions and milestone boundaries.
 - Milestone audit: `.planning/milestones/v1.2-MILESTONE-AUDIT.md`
 
 ---
-*Last updated: 2026-06-26 — v1.2 milestone completed*
+*Last updated: 2026-08-24 — D-21/D-22 logged from upstream reconciliation exploration*
