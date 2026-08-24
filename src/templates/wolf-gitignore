@@ -34,6 +34,15 @@ suggestions.json
 backups/
 sessions/
 
+# Daemon runtime artifacts. `daemon-token.tmp` holds the dashboard auth token
+# and is unlinked on clean shutdown — but survives a crash and is present for
+# the whole time the daemon runs, so it shows up as untracked in consumer repos
+# (observed in iconik-spectra-riobroker, 2026-07-16). The logs are append-only
+# local diagnostics.
+daemon-token.tmp
+daemon.log
+dashboard.log
+
 # Derived / regenerated locally — anatomy.md is rebuilt by `openwolf scan`,
 # the daemon, or session-start self-heal. Committing it churned every session
 # and leaked machine-local paths into shared git (see

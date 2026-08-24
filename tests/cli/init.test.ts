@@ -461,6 +461,20 @@ describe("wolf-gitignore template content (D-09-01 through D-09-06)", () => {
   it("does NOT mention STATUS.md anywhere in the template (D-09-05)", () => {
     expect(content).not.toMatch(/STATUS\.md/);
   });
+
+  // Daemon runtime artifacts are per-developer local state. `daemon-token.tmp`
+  // is written for the whole time the daemon runs and survives a crash, so an
+  // unlisted rule leaks it as untracked in every consumer repo (field report:
+  // iconik-spectra-riobroker, 2026-07-16). Same class as the `_session.json`
+  // gap fixed in e9b30a1.
+  it.each(["daemon-token.tmp", "daemon.log", "dashboard.log"])(
+    "has an active ignore rule for %s",
+    (name) => {
+      expect(content).toMatch(
+        new RegExp(`^${name.replace(/\./g, "\\.")}$`, "m")
+      );
+    }
+  );
 });
 
 // ---------------------------------------------------------------------------
